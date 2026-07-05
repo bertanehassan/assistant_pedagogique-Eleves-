@@ -1,0 +1,338 @@
+<template>
+  <!-- ═══════════════════ MODAL : FICHE DE CORRECTION ═══════════════════ -->
+  <div class="modal-overlay" id="correction-modal">
+    <div class="modal-box" style="max-width:680px;max-height:90vh;overflow-y:auto">
+      <div class="corner-deco corner-tl"></div>
+      <div class="corner-deco corner-tr"></div>
+      <div class="corner-deco corner-bl"></div>
+      <div class="corner-deco corner-br"></div>
+
+      <!-- ── Header ── -->
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">📋</span>
+          Générateur de Fiche de Correction
+        </div>
+        <button class="modal-close" id="close-correction-modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- ── Progress bar ── -->
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px">
+          <div class="corr-step-dot active" id="cdot-1">1</div>
+          <div class="corr-step-line" id="cline-1"></div>
+          <div class="corr-step-dot" id="cdot-2">2</div>
+          <div class="corr-step-line" id="cline-2"></div>
+          <div class="corr-step-dot" id="cdot-3">3</div>
+          <div class="corr-step-line" id="cline-3"></div>
+          <div class="corr-step-dot" id="cdot-4">4</div>
+          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="corr-step-label">Contexte pédagogique</div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             ÉTAPE 1 — Contexte pédagogique
+        ══════════════════════════════════════════ -->
+        <div class="corr-step" id="corr-step-1">
+          <div class="info-block" style="border-left-color:var(--neon);margin-bottom:16px">
+            <strong style="color:var(--neon)">🎯 Étape 1 / 4 — Contexte pédagogique</strong><br>
+            Renseignez la discipline, le niveau et le type d'évaluation.
+          </div>
+
+          <!-- Discipline -->
+          <div class="field-group">
+            <label class="field-label">📚 Discipline <span style="color:var(--danger)">*</span></label>
+            <select class="field-input field-select" id="corr-discipline">
+              <option value="">— Choisir une discipline —</option>
+              <optgroup label="Sciences">
+                <option value="SVT">SVT (Sciences de la Vie et de la Terre)</option>
+                <option value="Physique-Chimie">Physique-Chimie</option>
+                <option value="Maths">Mathématiques</option>
+                <option value="Informatique">Informatique / NSI</option>
+              </optgroup>
+              <optgroup label="Lettres & Langues">
+                <option value="Français">Français / Littérature</option>
+                <option value="Anglais">Anglais (English)</option>
+                <option value="Arabe">اللغة العربية (Arabe)</option>
+                <option value="Espagnol">Espagnol</option>
+                <option value="Philosophie">Philosophie</option>
+              </optgroup>
+              <optgroup label="Sciences Humaines">
+                <option value="Histoire-Géo">Histoire-Géographie</option>
+                <option value="Économie">Économie / SES</option>
+                <option value="Géographie">Géographie</option>
+              </optgroup>
+              <optgroup label="Autres">
+                <option value="EPS">EPS</option>
+                <option value="Arts">Arts plastiques / Musique</option>
+                <option value="Autre">Autre discipline</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Discipline personnalisée -->
+          <div class="field-group" id="corr-custom-discipline-group" style="display:none">
+            <label class="field-label">✏️ Nom de la discipline</label>
+            <input type="text" class="field-input" id="corr-custom-discipline"
+              placeholder="Ex : Chimie Organique, Droit, Comptabilité…">
+          </div>
+
+          <!-- Niveau scolaire -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field-group">
+              <label class="field-label">🎓 Niveau scolaire <span style="color:var(--danger)">*</span></label>
+              <select class="field-input field-select" id="corr-niveau">
+                <option value="">— Choisir —</option>
+                <optgroup label="Collège">
+                  <option value="6ème">6ème</option>
+                  <option value="5ème">5ème</option>
+                  <option value="4ème">4ème</option>
+                  <option value="3ème">3ème</option>
+                </optgroup>
+                <optgroup label="Lycée">
+                  <option value="2nde">Seconde</option>
+                  <option value="1ère">Première</option>
+                  <option value="Terminale">Terminale</option>
+                </optgroup>
+                <optgroup label="Supérieur">
+                  <option value="Licence 1">Licence 1 (L1)</option>
+                  <option value="Licence 2">Licence 2 (L2)</option>
+                  <option value="Licence 3">Licence 3 (L3)</option>
+                  <option value="Master">Master</option>
+                </optgroup>
+                <option value="Autre">Autre</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">📝 Type d'évaluation <span style="color:var(--danger)">*</span></label>
+              <select class="field-input field-select" id="corr-type-eval">
+                <option value="Contrôle continu">Contrôle continu (CC)</option>
+                <option value="Devoir surveillé">Devoir surveillé (DS)</option>
+                <option value="Devoir maison">Devoir maison (DM)</option>
+                <option value="Bac blanc">Bac blanc</option>
+                <option value="Examen officiel">Examen officiel</option>
+                <option value="Interrogation">Interrogation rapide</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Niveau de langue (conditionnel) -->
+          <div class="field-group" id="corr-langue-group" style="display:none">
+            <label class="field-label">🗣️ Niveau de langue cible</label>
+            <select class="field-input field-select" id="corr-niveau-langue">
+              <option value="">— Optionnel —</option>
+              <option value="A1">A1 — Débutant</option>
+              <option value="A2">A2 — Élémentaire</option>
+              <option value="B1">B1 — Intermédiaire</option>
+              <option value="B2">B2 — Avancé</option>
+              <option value="C1">C1 — Autonome</option>
+              <option value="C2">C2 — Maîtrise</option>
+              <option value="Natif">Natif</option>
+            </select>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-ghost" id="close-correction-modal-step1">Annuler</button>
+            <button class="btn-primary" id="corr-next-1">Suivant →</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             ÉTAPE 2 — Sujet & Barème
+        ══════════════════════════════════════════ -->
+        <div class="corr-step" id="corr-step-2" style="display:none">
+          <div class="info-block" style="border-left-color:var(--cyan);margin-bottom:16px">
+            <strong style="color:var(--cyan)">📄 Étape 2 / 4 — Sujet & Barème</strong><br>
+            Collez votre sujet complet ci-dessous. Indiquez le barème si disponible.
+          </div>
+
+          <!-- Zone sujet -->
+          <div class="field-group">
+            <label class="field-label">📋 Sujet complet <span style="color:var(--danger)">*</span></label>
+            <textarea class="field-textarea" id="corr-sujet" rows="8"
+              placeholder="Collez ici le texte complet de votre exercice ou contrôle…&#10;&#10;Exemple :&#10;Question 1 (4 pts) : Décrivez les étapes de la respiration cellulaire.&#10;Question 2 (6 pts) : À partir du document 1, proposez deux hypothèses…&#10;&#10;Conseil : Plus le sujet est complet, plus la fiche sera précise."></textarea>
+            <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+              <label for="corr-pdf-upload" class="corr-upload-btn">
+                <span style="font-size:13px">📎</span>
+                Importer un fichier (PDF ou TXT)
+              </label>
+              <input type="file" id="corr-pdf-upload" accept=".pdf,.txt,.md" style="display:none">
+              <span id="corr-pdf-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
+            </div>
+            <div id="corr-pdf-info" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:6px;font-size:11px;color:#a78bfa">
+              ✅ Texte extrait du PDF et collé dans la zone ci-dessus. Vous pouvez le modifier avant de passer à l'étape suivante.
+            </div>
+          </div>
+
+          <!-- Barème -->
+          <div class="field-group">
+            <label class="field-label">⚖️ Barème détaillé</label>
+            <textarea class="field-textarea" id="corr-bareme" rows="4"
+              placeholder="Exemples :&#10;Q1 : 4 pts (description 2pts + analyse 2pts)&#10;Q2 : 6 pts (hypothèse 1 : 3pts / hypothèse 2 : 3pts)&#10;&#10;Laissez vide → l'IA créera des espaces [À définir]"></textarea>
+            <div class="field-hint">Si le barème est absent, l'IA générera la structure et signalera les zones à compléter.</div>
+          </div>
+
+          <!-- Format de sortie -->
+          <div class="field-group">
+            <label class="field-label">🗂️ Format de sortie souhaité</label>
+            <select class="field-input field-select" id="corr-format">
+              <option value="Tableau 4 colonnes (Numéro, Réponse attendue, Critères+Barème, Compétence) + Conseils pédagogiques">📊 Tableau 4 colonnes + Conseils (défaut)</option>
+              <option value="Texte structuré par question avec sous-sections (réponse, barème, compétence) sans tableau">📝 Texte structuré (sans tableau)</option>
+              <option value="Grille de compétences avec indicateurs de réussite par niveau (insuffisant, en cours, acquis, dépassé)">🏅 Grille de compétences avec niveaux</option>
+              <option value="Fiche courte : réponses synthétiques + points clés uniquement, sans conseils">⚡ Fiche courte (réponses synthétiques)</option>
+            </select>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-ghost" id="corr-back-2">← Retour</button>
+            <button class="btn-primary" id="corr-next-2">Suivant →</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             ÉTAPE 3 — Compétences & Options
+        ══════════════════════════════════════════ -->
+        <div class="corr-step" id="corr-step-3" style="display:none">
+          <div class="info-block" style="border-left-color:#a78bfa;margin-bottom:16px">
+            <strong style="color:#a78bfa">🧠 Étape 3 / 4 — Compétences & Options</strong><br>
+            Les compétences sont pré-remplies selon votre discipline. Modifiez-les si besoin.
+          </div>
+
+          <!-- Compétences -->
+          <div class="field-group">
+            <label class="field-label">🎯 Référentiel de compétences évaluées</label>
+            <textarea class="field-textarea" id="corr-competences" rows="4"
+              placeholder="Pré-remplies automatiquement selon la discipline choisie…"></textarea>
+            <div class="field-hint">Ces compétences alimenteront la 4ème colonne du tableau. Éditez-les librement.</div>
+          </div>
+
+          <!-- Critères personnalisés -->
+          <div class="field-group">
+            <label class="field-label">✅ Critères d'évaluation personnalisés</label>
+            <input type="text" class="field-input" id="corr-criteres"
+              placeholder="Ex : Qualité rédaction, Schéma obligatoire, Orthographe pénalisée…">
+          </div>
+
+          <!-- Consignes supplémentaires -->
+          <div class="field-group">
+            <label class="field-label">💬 Consignes supplémentaires à l'IA</label>
+            <textarea class="field-textarea" id="corr-consignes" rows="3"
+              placeholder="Ex : Réponses très courtes pour Q1 / Valoriser les schémas-blocs / Ne pas pénaliser l'orthographe / Indiquer les erreurs classiques attendues…"></textarea>
+          </div>
+
+          <!-- Exemple modèle (optionnel) -->
+          <div class="field-group">
+            <label class="field-label">📎 Exemple de correction modèle <span style="font-weight:normal;color:var(--text-dim)">(optionnel)</span></label>
+            <textarea class="field-textarea" id="corr-exemple" rows="3"
+              placeholder="Collez une ancienne fiche de correction pour guider le style et le niveau de détail… (optionnel)"></textarea>
+            <div class="field-hint">Si fourni, l'IA calquera son style sur cet exemple.</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-ghost" id="corr-back-3">← Retour</button>
+            <button class="btn-primary" id="corr-next-3">Vérifier →</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             ÉTAPE 4 — Résumé & Génération
+        ══════════════════════════════════════════ -->
+        <div class="corr-step" id="corr-step-4" style="display:none">
+          <div class="info-block" style="border-left-color:#f59e0b;margin-bottom:16px">
+            <strong style="color:#f59e0b">🚀 Étape 4 / 4 — Prêt à générer</strong><br>
+            Vérifiez le résumé ci-dessous avant de lancer la génération.
+          </div>
+
+          <!-- Résumé -->
+          <div id="corr-summary" style="background:var(--void);border:1px solid var(--grid);border-radius:var(--r);padding:14px;font-size:12px;line-height:1.8;margin-bottom:16px">
+            <!-- Rempli dynamiquement -->
+          </div>
+
+          <!-- Option export Word -->
+          <div class="field-group" style="margin-bottom:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim)">
+              <input type="checkbox" id="corr-export-word" style="accent-color:var(--neon)">
+              <span>📄 Exporter automatiquement en Word (.doc) après génération</span>
+            </label>
+          </div>
+
+          <!-- Info moteur IA utilisé -->
+          <div id="corr-engine-gemini" style="display:none;font-size:11px;color:#34d399;margin-bottom:12px;padding:8px 12px;background:rgba(52,211,153,0.08);border-radius:6px;border:1px solid rgba(52,211,153,0.3)">
+            ✨ <strong>Gemini 2.5 Flash activé</strong> — Le PDF sera envoyé en vision native.<br>
+            Gemini lira directement vos graphiques, schémas et tableaux sans OCR.
+          </div>
+          <div id="corr-engine-mistral" style="font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px;background:rgba(0,229,255,0.05);border-radius:6px;border:1px solid rgba(0,229,255,0.1)">
+            💡 La fiche sera générée <strong style="color:var(--cyan)">directement dans le chat</strong> en streaming (Mistral).<br>
+            Pour utiliser Gemini Vision sur vos PDFs avec graphiques, ajoutez votre clé Google AI dans Paramètres API.
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-ghost" id="corr-back-4">← Retour</button>
+            <button class="btn-primary" id="corr-generate-btn" style="background:linear-gradient(135deg,var(--neon),var(--cyan));color:#000;font-weight:700;gap:8px">
+              <span>🎯</span> GÉNÉRER LA FICHE
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /modal-body -->
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { t } from '../../i18n.js';
+</script>
+
+<style scoped>
+.corr-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--grid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+.corr-step-dot.active {
+  border-color: var(--neon);
+  color: var(--neon);
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.4);
+}
+.corr-step-dot.done {
+  border-color: var(--cyan);
+  background: rgba(0, 229, 255, 0.15);
+  color: var(--cyan);
+}
+.corr-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--grid);
+  transition: background 0.3s;
+}
+.corr-step-line.done {
+  background: var(--cyan);
+}
+.corr-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px 12px;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--cyan);
+  background: rgba(0, 229, 255, 0.07);
+  transition: background 0.2s, border-color 0.2s;
+  user-select: none;
+}
+.corr-upload-btn:hover {
+  background: rgba(0, 229, 255, 0.14);
+  border-color: rgba(0, 229, 255, 0.6);
+}
+</style>
