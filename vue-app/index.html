@@ -254,9 +254,9 @@
   </head>
   <body class="bg-background text-on-surface font-body-md overflow-hidden h-[100dvh] flex flex-col">
     <div id="app" class="h-full w-full flex flex-col"></div>
-    <script src="libs/pdf.min.js"></script>
-    <script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='libs/pdf.worker.min.js';</script>
-    <script type="module" src="/src/main.js"></script>
+    <script src="/libs/pdf.min.js"></script>
+    <script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='/libs/pdf.worker.min.js';</script>
+    <script type="module" src="./src/main.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
