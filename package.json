@@ -4,9 +4,9 @@
   "version": "4.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "cd vue-app && npm run dev",
+    "build": "cd vue-app && npm install && npm run build",
+    "preview": "cd vue-app && npm run preview"
   },
   "devDependencies": {
     "vite": "^5.0.0",
