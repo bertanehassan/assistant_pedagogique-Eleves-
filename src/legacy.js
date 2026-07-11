@@ -8357,6 +8357,10 @@ function bindEvents() {
   document.addEventListener('do-delete-correction-config', window._corrDeleteHandler);
 
   const generateCorrectionSheet = async () => {
+    if (state.isGenerating) {
+      console.warn("Génération déjà en cours, annulation du deuxième appel.");
+      return;
+    }
     const get = (id) => ($(`#${id}`)?.value || '').trim();
     const discipline = get('corr-discipline') === 'Autre'
       ? (get('corr-custom-discipline') || 'Autre')
@@ -8543,31 +8547,6 @@ function bindEvents() {
       if (titleMatch) {
         extractedTitle = titleMatch[1].trim().replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '_');
         geminiText = geminiText.replace(titleMatch[0], '').trim();
-        // ── Wiring des boutons (via Event Delegation) ────────────────────────
-        document.addEventListener('click', (e) => {
-          const t = e.target;
-          if (t.closest('#open-correction-modal')) openCorrectionModal();
-          else if (t.closest('#close-correction-modal') || t.closest('#close-correction-modal-step1')) closeCorrectionModal();
-          else if (t.id === 'correction-modal') closeCorrectionModal();
-          
-          else if (t.closest('#corr-next-1')) {
-            if (!corrValidateStep1()) return;
-            corrFillCompetences();
-            corrShowStep(2);
-          }
-          else if (t.closest('#corr-next-2')) {
-            if (!corrValidateStep2()) return;
-            corrShowStep(3);
-          }
-          else if (t.closest('#corr-next-3')) {
-            corrBuildSummary();
-            corrShowStep(4);
-          }
-          else if (t.closest('#corr-back-2')) corrShowStep(1);
-          else if (t.closest('#corr-back-3')) corrShowStep(2);
-          else if (t.closest('#corr-back-4')) corrShowStep(3);
-          // corr-save-btn and corr-load-btn are handled by Vue @click + CustomEvents
-        });
         if (state.messages && state.messages.length >= 2) {
            const lastUserMsg = state.messages[state.messages.length - 2];
            if (lastUserMsg && lastUserMsg.role === 'user') {
