@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/api/gemini/(.*)", "destination": "https://generativelanguage.googleapis.com/$1" },
+    { "source": "/api/openrouter/(.*)", "destination": "https://openrouter.ai/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
