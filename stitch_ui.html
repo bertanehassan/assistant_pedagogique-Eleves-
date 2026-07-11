@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Luminous AI | Assistant</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&amp;family=Inter:wght@400;500&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .ai-bubble-gradient {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+        }
+        .primary-gradient {
+            background: linear-gradient(135deg, #c0c1ff 0%, #8083ff 100%);
+        }
+        .aether-glow {
+            filter: drop-shadow(0 0 15px rgba(192, 193, 255, 0.3));
+        }
+        /* Custom scrollbar for chat area */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#0b1326",
+                        "on-surface-variant": "#c7c4d7",
+                        "on-secondary": "#490080",
+                        "primary": "#c0c1ff",
+                        "outline-variant": "#464554",
+                        "on-background": "#dae2fd",
+                        "tertiary": "#4cd7f6",
+                        "surface-bright": "#31394d",
+                        "on-surface": "#dae2fd",
+                        "on-tertiary": "#003640",
+                        "outline": "#908fa0",
+                        "secondary-fixed-dim": "#ddb7ff",
+                        "on-secondary-fixed-variant": "#6900b3",
+                        "on-error-container": "#ffdad6",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "surface": "#0b1326",
+                        "surface-container-highest": "#2d3449",
+                        "inverse-on-surface": "#283044",
+                        "surface-dim": "#0b1326",
+                        "surface-container-high": "#222a3d",
+                        "tertiary-fixed-dim": "#4cd7f6",
+                        "surface-container-lowest": "#060e20",
+                        "inverse-surface": "#dae2fd",
+                        "on-tertiary-container": "#002f38",
+                        "on-primary-container": "#0d0096",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "on-tertiary-fixed-variant": "#004e5c",
+                        "secondary-fixed": "#f0dbff",
+                        "inverse-primary": "#494bd6",
+                        "secondary-container": "#6f00be",
+                        "primary-container": "#8083ff",
+                        "on-secondary-container": "#d6a9ff",
+                        "on-tertiary-fixed": "#001f26",
+                        "surface-container": "#171f33",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-variant": "#2d3449",
+                        "error-container": "#93000a",
+                        "on-secondary-fixed": "#2c0051",
+                        "on-primary": "#1000a9",
+                        "on-primary-fixed": "#07006c",
+                        "surface-tint": "#c0c1ff",
+                        "surface-container-low": "#131b2e",
+                        "secondary": "#ddb7ff",
+                        "tertiary-container": "#009eb9",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#acedff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "48px",
+                        "max-width": "1200px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-caps": ["Geist"],
+                        "headline-xl": ["Plus Jakarta Sans"],
+                        "code-snippet": ["Geist"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "code-snippet": ["14px", {"lineHeight": "22px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden h-screen flex flex-col">
+<!-- Top Navigation Anchor -->
+<header class="w-full top-0 sticky z-50 backdrop-blur-[40px] border-b border-white/15 shadow-sm bg-white/10 flex justify-between items-center px-margin-mobile py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full border border-white/20 overflow-hidden ring-2 ring-primary/20">
+<img class="w-full h-full object-cover" data-alt="A professional close-up portrait of a sophisticated person in a high-tech environment. The lighting is moody and cinematic with soft violet and blue rim lighting that reflects a premium glassmorphic UI. The subject has a calm expression, suggesting a premium user of an advanced AI assistant. The background is a soft-focus laboratory or modern office with glowing digital elements." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBA2gULPIblFj5qHM3_dJxPDbMOZbehjQJcIxIDhUrSh-Fff2c-ZnNsnVym7egOKoHdjOsc3XVL5103hXSYU3uJIxNVszfaCoP5gYG29Q0Ldsj3QzblUCTqUuNQjpLsnxaTWEm50Iz6_BeUdA4zB3cQxHyIHSvM6VmLv9a9p68yAjrbfRgQcSUnUua6XtBD4ocYXlWDJBwizCSNAtQllpaxkL6nJSFygfvM8T7WTQqjysZ5dmRqYrKoksq_-2tU46hDjx23Gooy3rOU"/>
+</div>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface">Luminous AI</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary">settings</span>
+</button>
+</header>
+<!-- Main Chat Canvas -->
+<main class="flex-1 overflow-y-auto px-margin-mobile py-6 flex flex-col gap-6 hide-scrollbar">
+<!-- Day Divider -->
+<div class="flex justify-center items-center py-4">
+<span class="px-3 py-1 rounded-full bg-white/5 text-label-caps font-label-caps text-on-surface-variant uppercase tracking-widest text-[10px]">Today</span>
+</div>
+<!-- AI Message -->
+<div class="flex flex-col gap-2 max-w-[85%] self-start">
+<div class="glass-panel ai-bubble-gradient p-4 rounded-xl rounded-tl-none shadow-sm">
+<p class="font-body-md text-on-surface leading-relaxed">Good evening, Julian. I've finished analyzing your project timeline. Would you like to see the optimized workflow for the upcoming sprint?</p>
+</div>
+<span class="text-[10px] font-label-caps text-on-surface-variant/60 ml-1 uppercase">18:42 • AI Assistant</span>
+</div>
+<!-- User Message -->
+<div class="flex flex-col gap-2 max-w-[80%] self-end items-end">
+<div class="primary-gradient p-4 rounded-xl rounded-tr-none shadow-md">
+<p class="font-body-md text-on-primary-fixed font-medium">Yes, please. Also, highlight any potential bottlenecks in the API integration phase.</p>
+</div>
+<span class="text-[10px] font-label-caps text-on-surface-variant/60 mr-1 uppercase">18:43 • Delivered</span>
+</div>
+<!-- AI Thinking/Processing Component -->
+<div class="flex flex-col gap-3 max-w-[85%] self-start mt-2">
+<div class="flex items-center gap-2 mb-1">
+<div class="w-2 h-2 bg-tertiary rounded-full animate-pulse shadow-[0_0_8px_rgba(76,215,246,0.6)]"></div>
+<span class="text-label-caps font-label-caps text-tertiary uppercase text-[10px]">Analyzing Data</span>
+</div>
+<div class="glass-panel ai-bubble-gradient p-4 rounded-xl rounded-tl-none relative overflow-hidden">
+<!-- Aether Wave Placeholder -->
+<div class="absolute inset-0 opacity-20">
+
+</div>
+<div class="relative z-10 flex flex-col gap-3">
+<p class="font-body-md text-on-surface">Generating visual workflow map...</p>
+<div class="w-full h-32 rounded-lg bg-surface-container-highest/40 border border-white/5 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A complex architectural diagram of software API endpoints connected by glowing neon lines of electric blue and soft violet. The background is a deep charcoal glass with microscopic grid patterns. The image conveys high-level technical analysis and data visualization, perfectly matching a premium AI's sophisticated output style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvm5O4krkJkJtsJdwpQVHHvoTDH3j1tTKzCBSo5vvXdFMBqOl4eBU1dzhUWQ-x_xz-um7uvEmxBqmd8pcE7kee_f8j_YRZ0ZU3J_JhwfM8bTI-8TVL5XMFBhJUxLeCI9z1w0ovD-TY8edyRppR34la061GI9Wd-fcT9fUhffn3uFKDzOCOxcuN8hHPa8lbHwabT5sEo7USpSHt6JRXD2Fa-i45nhmT5x1q3yRkcuSr6SxLWZXUeyRGHR3-Ot3eRHVCUIeAsYItk1fx"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Suggested Actions (Chips) -->
+<div class="flex gap-2 overflow-x-auto py-2 hide-scrollbar">
+<button class="whitespace-nowrap px-4 py-2 rounded-full glass-panel bg-primary/10 border-primary/20 text-primary font-label-caps text-label-caps transition-all active:scale-95">
+                Explain bottlenecks
+            </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full glass-panel bg-white/5 border-white/10 text-on-surface-variant font-label-caps text-label-caps transition-all active:scale-95">
+                Export to Jira
+            </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full glass-panel bg-white/5 border-white/10 text-on-surface-variant font-label-caps text-label-caps transition-all active:scale-95">
+                Share with team
+            </button>
+</div>
+<div class="h-24"></div> <!-- Spacer for footer -->
+</main>
+<!-- Bottom Command Bar -->
+<footer class="fixed bottom-0 w-full z-50 backdrop-blur-[60px] border-t border-white/15 bg-white/10 px-margin-mobile pt-4 pb-safe flex flex-col gap-4">
+<div class="flex items-end gap-3 pb-4">
+<!-- Glass pill input container -->
+<div class="flex-1 glass-panel rounded-2xl flex items-center px-4 py-2 min-h-[52px] group focus-within:ring-2 ring-primary/30 transition-all">
+<button class="p-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<textarea class="bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant/50 w-full font-body-md resize-none py-2 px-2" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" placeholder="Ask anything..." rows="1"></textarea>
+<button class="p-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mic</span>
+</button>
+</div>
+<!-- Send Button -->
+<button class="w-12 h-12 rounded-xl primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 hover:brightness-110 active:scale-90 duration-150 group">
+<span class="material-symbols-outlined text-on-primary font-bold group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">send</span>
+</button>
+</div>
+</footer>
+<!-- Interactive Navigation Shell -->
+<nav class="fixed bottom-0 hidden w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-white/10 backdrop-blur-[60px] border-t border-white/15 rounded-t-xl">
+<button class="flex flex-col items-center justify-center bg-primary/20 text-primary rounded-xl p-2 active:scale-90 duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-all active:scale-90 duration-150">
+<span class="material-symbols-outlined">history</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-all active:scale-90 duration-150">
+<span class="material-symbols-outlined">explore</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-all active:scale-90 duration-150">
+<span class="material-symbols-outlined">person</span>
+</button>
+</nav>
+<script>
+        // Simple auto-scroll to bottom of chat
+        const chatContainer = document.querySelector('main');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // Interaction for input height
+        const textarea = document.querySelector('textarea');
+        textarea.addEventListener('input', function() {
+            if (this.scrollHeight > 150) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,1988 @@
+﻿diff --git a/src/legacy.js b/src/legacy.js
+index d4b7b96..b94b808 100644
+--- a/src/legacy.js
++++ b/src/legacy.js
+@@ -21,6 +21,112 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
+   return fetchWithRetryBase(url, options, maxRetries, toast);
+ }
+ 
++// ════════════════════════════════════════
++// UTILITAIRES CHARGEMENT DYNAMIQUE
++// ════════════════════════════════════════
++
++/**
++ * Charge un script externe dynamiquement (une seule fois).
++ */
++function loadScript(src) {
++  return new Promise((resolve, reject) => {
++    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
++    const s = document.createElement('script');
++    s.src = src;
++    s.onload = resolve;
++    s.onerror = () => reject(new Error(`Impossible de charger : ${src}`));
++    document.head.appendChild(s);
++  });
++}
++
++// ════════════════════════════════════════
++// EXTRACTION PDF (TEXTE NATIF + OCR)
++// ════════════════════════════════════════
++
++/**
++ * Extrait le texte d'un fichier PDF.
++ * 1. Tente l'extraction texte natif via pdfjsLib (rapide, instantané).
++ * 2. Si texte insuffisant (PDF scanné / image), charge Tesseract.js et
++ *    effectue un OCR page par page (fr + en + ar).
++ *
++ * @param {File}     file        – Fichier PDF
++ * @param {Function} onProgress  – Callback(message: string) pour afficher la progression
++ * @returns {Promise<{text: string, method: 'native'|'ocr', pages: number}>}
++ */
++async function extractTextFromPdf(file, onProgress = null) {
++  const notify = (msg) => { if (onProgress) onProgress(msg); };
++
++  // ── Étape 1 : Extraction texte natif ─────────────────────────────────
++  notify('📄 Lecture du PDF en cours…');
++  const arrayBuffer = await file.arrayBuffer();
++  const typedarray  = new Uint8Array(arrayBuffer);
++  const pdf         = await pdfjsLib.getDocument({ data: typedarray }).promise;
++  const totalPages  = pdf.numPages;
++
++  let nativeText = '';
++  for (let i = 1; i <= totalPages; i++) {
++    const page        = await pdf.getPage(i);
++    const textContent = await page.getTextContent();
++    let pageText = '';
++    let lastY;
++    for (const item of textContent.items) {
++      if (lastY !== undefined && Math.abs(lastY - item.transform[5]) > 2) pageText += '\n';
++      pageText += item.str;
++      lastY = item.transform[5];
++    }
++    nativeText += pageText.trim() + '\n\n';
++  }
++  nativeText = nativeText.trim();
++
++  // Si le texte natif est suffisant → retour immédiat
++  if (nativeText.length >= 50) {
++    notify(`✅ Texte extrait (${nativeText.length} caractères).`);
++    return { text: nativeText, method: 'native', pages: totalPages };
++  }
++
++  // ── Étape 2 : OCR via Tesseract.js ──────────────────────────────────
++  notify('🔍 PDF image détecté — chargement du moteur OCR…');
++
++  // Chargement lazy de Tesseract.js (CDN, ~10 Mo, mis en cache)
++  if (typeof Tesseract === 'undefined') {
++    await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
++  }
++
++  notify('🔍 Initialisation OCR (français + anglais + arabe)…');
++  const worker = await Tesseract.createWorker(['fra', 'eng', 'ara'], 1, {
++    logger: (m) => {
++      if (m.status === 'recognizing text') {
++        const pct = Math.round((m.progress || 0) * 100);
++        notify(`🔍 OCR page ${m.userJobId || '?'} — ${pct}%`);
++      }
++    }
++  });
++
++  let ocrText = '';
++  for (let i = 1; i <= totalPages; i++) {
++    notify(`🔍 OCR — page ${i} / ${totalPages}…`);
++    const page     = await pdf.getPage(i);
++    // Rendu haute résolution (scale 2.5 = ~200 DPI, optimal pour OCR)
++    const viewport = page.getViewport({ scale: 2.5 });
++    const canvas   = document.createElement('canvas');
++    canvas.width   = viewport.width;
++    canvas.height  = viewport.height;
++    const ctx      = canvas.getContext('2d');
++    await page.render({ canvasContext: ctx, viewport }).promise;
++    const { data: { text } } = await worker.recognize(canvas, { jobId: String(i) });
++    ocrText += text.trim() + '\n\n';
++    canvas.remove();
++  }
++
++  await worker.terminate();
++  ocrText = ocrText.trim();
++  notify(`✅ OCR terminé — ${ocrText.length} caractères extraits sur ${totalPages} page(s).`);
++
++  return { text: ocrText, method: 'ocr', pages: totalPages };
++}
++
++
++
+ // ════════════════════════════════════════
+ // QCM SHUFFLE ENGINE
+ // ════════════════════════════════════════
+@@ -492,6 +598,40 @@ async function deleteLesson(lessonId, agentId) {
+   } catch(e) { toast("Erreur", "error"); }
+ }
+ 
++function getLlmApiConfig(modelId) {
++  if (!modelId) modelId = state.model || "mistral-large-2512";
++  
++  if (modelId.includes("gemini")) {
++    return {
++      provider: "gemini",
++      url: `/api/gemini/v1beta/models/${modelId}:streamGenerateContent?alt=sse&key=${state.geminiApiKey || ""}`,
++      headers: {
++        "Content-Type": "application/json"
++      }
++    };
++  } else if (modelId.includes("deepseek") || modelId.includes("openrouter")) {
++    return {
++      provider: "openrouter",
++      url: "/api/openrouter/api/v1/chat/completions",
++      headers: {
++        "Authorization": `Bearer ${state.openRouterApiKey || ""}`,
++        "Content-Type": "application/json",
++        "HTTP-Referer": window.location.origin,
++        "X-Title": "Mon Assistant IA"
++      }
++    };
++  } else {
++    return {
++      provider: "mistral",
++      url: "https://api.mistral.ai/v1/chat/completions",
++      headers: {
++        "Authorization": `Bearer ${state.apiKey || ""}`,
++        "Content-Type": "application/json"
++      }
++    };
++  }
++}
++
+ async function clearAgentLessons() {
+   const agentId = document.getElementById('manage-lessons-agent-id').value;
+   if (!agentId) return;
+@@ -672,6 +812,17 @@ function createMessageElement(m) {
+   const memTags = m.memoryUsed?.length ? `<span class="mem-tag">⬡ MEM×${m.memoryUsed.length}</span>` : '';
+   const agentsTags = m.agentsConsulted?.length ? `<span class="mem-tag" style="background:rgba(0,255,157,0.1);color:var(--neon);border-color:rgba(0,255,157,0.3)" title="${m.agentsConsulted.join(', ')}">⚙ ${m.agentsConsulted.length} EXPERTS</span>` : '';
+   const workflowTags = m.workflowUsed ? `<span class="mem-tag" style="background:rgba(0,255,157,0.15);color:var(--neon);border-color:rgba(0,255,157,0.4)">🔗 CHAÎNE : ${m.workflowUsed.toUpperCase()}</span>` : '';
++  
++  let modelTagText = '';
++  if (m.modelUsed) {
++    const apiConf = getLlmApiConfig(m.modelUsed);
++    let providerName = "Mistral API";
++    if (apiConf.provider === 'gemini') providerName = "Gemini API";
++    else if (apiConf.provider === 'openrouter') providerName = "OpenRouter API";
++    modelTagText = `${providerName} • ${m.modelUsed}`;
++  }
++  const modelTag = modelTagText ? `<span class="mem-tag" style="background:rgba(138,180,248,0.15);color:#8ab4f8;border-color:rgba(138,180,248,0.4)" title="API et Modèle">⚡ ${modelTagText}</span>` : '';
++  
+   const label = m.role === 'user' ? '▸ VOUS' : `▸ ${
+     state.selectedWorkflow ? state.selectedWorkflow.name.toUpperCase() :
+     (state.agent && state.agent !== '__ALL_AGENTS__' ? state.agent.name.toUpperCase() :
+@@ -680,10 +831,11 @@ function createMessageElement(m) {
+   }`;
+   const msgId = m.ts || Date.now();
+   const isFcMsg = (m.workflowUsed === 'FC-Fr 1' || m.workflowUsed === 'FC-Fr 2' || m.workflowUsed === 'FC-Ar 1' || m.workflowUsed === 'FC-Ar 2' || m.workflowUsed === 'FC-En 1' || m.workflowUsed === 'FC-En 2');
+-  const wordBtn = m.role === 'assistant' ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${t('btn_word')}</button>` : '';
+-  const qpBtn = m.role === 'assistant' && !isFcMsg ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
++  const isCorrection = !!m.isCorrection;
++  const wordBtn = m.role === 'assistant' ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${isCorrection ? 'Exporter' : t('btn_word')}</button>` : '';
++  const qpBtn = m.role === 'assistant' && !isFcMsg && !isCorrection ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
+   const fcJsonBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="export-fc-json" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">⬇️ JSON QR</button>` : '';
+-  const wqBtn = m.role === 'assistant' && !isFcMsg ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
++  const wqBtn = m.role === 'assistant' && !isFcMsg && !isCorrection ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
+   const fcPlayerBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="test-fc-player" data-id="${msgId}" style="color:#f59e0b;border-color:rgba(245,158,11,0.4)">📇 Tester</button>` : '';
+   const ratingHtml = m.role === 'assistant' ? `<div class="msg-rating" aria-label="Évaluer la réponse"><span class="rating-label">${t('ui_quality')}</span>${[1,2,3,4,5].map(s => `<button class="rating-star${(m.rating||0)>=s?' active':''}" data-action="rate" data-id="${msgId}" data-score="${s}" title="Noter ${s}/5">★</button>`).join('')}</div>` : '';
+   const imgHtml = m.imageData ? `<div class="msg-image"><img src="${m.imageData}" alt="Image jointe" loading="lazy"></div>` : '';
+@@ -709,12 +861,13 @@ function createMessageElement(m) {
+       ${memTags}
+       ${agentsTags}
+       ${workflowTags}
++      ${modelTag}
+     </div>
+     ${ratingHtml}
+     <div class="msg-actions">
+       <button class="msg-action-btn" data-action="copy-msg" data-id="${msgId}">${t('btn_copy')}</button>
+       ${m.role === 'user' ? `<button class="msg-action-btn" data-action="edit-msg" data-id="${msgId}">${t('btn_edit')}</button>` : ''}
+-      ${m.role === 'assistant' ? `<button class="msg-action-btn" data-action="regen-msg" data-id="${msgId}">${t('btn_regen')}</button>` : ''}
++      ${(m.role === 'assistant' && !isCorrection) ? `<button class="msg-action-btn" data-action="regen-msg" data-id="${msgId}">${t('btn_regen')}</button>` : ''}
+       ${wordBtn}
+       ${qpBtn}
+       ${fcJsonBtn}
+@@ -757,11 +910,22 @@ function renderMessages(forceFull = false) {
+   c.scrollTop = c.scrollHeight;
+ }
+ 
+-function showTyping() {
++function showTyping(modelId = '') {
++  let statusText = '';
++  const actualModel = modelId || state.model || "mistral-large-2512";
++  const apiConf = getLlmApiConfig(actualModel);
++  
++  let providerName = "Mistral API";
++  if (apiConf.provider === 'gemini') providerName = "Gemini API";
++  else if (apiConf.provider === 'openrouter') providerName = "OpenRouter API";
++  
++  statusText = `⚡ ${providerName} (${actualModel})`;
++  
+   const div = document.createElement("div");
+   div.className = "typing-indicator";
+   div.id = "typing-indicator";
+-  div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div><div id="orchestrator-status" style="margin-left:10px;font-family:var(--font-mono);font-size:11px;color:var(--cyan);opacity:0.8;display:flex;align-items:center;"></div>';
++  // On place directement les éléments comme enfants pour respecter le CSS .typing-indicator (display: flex)
++  div.innerHTML = `<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div><div id="orchestrator-status" style="margin-left:8px;font-family:monospace;font-size:12px;color:#8ab4f8;font-weight:bold;white-space:nowrap;">${statusText}</div>`;
+   $("#chat-container").appendChild(div);
+   $("#chat-container").scrollTop = $("#chat-container").scrollHeight;
+ }
+@@ -827,13 +991,183 @@ async function handleStreamingResponse(response, onChunk, onFinish, signal) {
+   return fullContent;
+ }
+ 
++/**
++ * Traducteur Universel : route la requête soit vers OpenAI (Mistral/OpenRouter), soit vers Gemini.
++ * @param {Object} reqBody - Requête au format OpenAI/Mistral (model, messages, stream...)
++ * @param {AbortSignal} signal - Signal d'annulation
++ * @param {Function} onChunk - Callback pour le flux
++ * @param {Function} onFinish - Callback de fin
++ */
++async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
++  const apiConf = getLlmApiConfig(reqBody.model);
++
++  if (apiConf.provider === "gemini") {
++    // ── TRADUCTION MISTRAL -> GEMINI ──
++    const geminiPayload = {
++      contents: [],
++      generationConfig: {
++        temperature: reqBody.temperature ?? 0.4,
++        maxOutputTokens: reqBody.max_tokens ?? 8192
++      }
++    };
++
++    let systemText = "";
++    for (const m of reqBody.messages) {
++      if (m.role === "system") {
++        systemText += m.content + "\n";
++      } else {
++        const role = m.role === "assistant" ? "model" : "user";
++        
++        let parts = [];
++        if (Array.isArray(m.content)) {
++          parts = m.content.map(p => {
++            if (p.type === "text") return { text: p.text };
++            if (p.type === "image_url") {
++              const b64 = p.image_url.url.split(',')[1];
++              const mime = p.image_url.url.split(';')[0].split(':')[1];
++              return { inlineData: { mimeType: mime, data: b64 } };
++            }
++            return { text: "" };
++          });
++        } else {
++          parts = [{ text: m.content }];
++        }
++        
++        // ── INJECTION DOCUMENT NATIF (PDF/Docx) ──
++        if (reqBody.rawDocuments && reqBody.rawDocuments.length > 0) {
++          // On ajoute les documents natifs à ce message s'il est de type "user"
++          // et qu'il est le dernier de la liste (ou le plus pertinent)
++          if (role === "user") {
++            reqBody.rawDocuments.forEach(doc => {
++              if (doc.data && doc.mimeType) {
++                 parts.unshift({ inlineData: { mimeType: doc.mimeType, data: doc.data } });
++              }
++            });
++            // On ne les ajoute qu'une seule fois pour éviter les duplicatas
++            delete reqBody.rawDocuments;
++          }
++        }
++
++        geminiPayload.contents.push({ role, parts });
++      }
++    }
++    
++    if (systemText) {
++      geminiPayload.systemInstruction = { parts: [{ text: systemText.trim() }] };
++    }
++
++    const res = await fetchWithRetry(apiConf.url, {
++      method: "POST",
++      headers: apiConf.headers,
++      signal: signal,
++      body: JSON.stringify(geminiPayload)
++    });
++
++    if (!res.ok) {
++      const errText = await res.text();
++      let errMsg = errText.slice(0, 300);
++      try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
++      throw new Error(`Gemini API: ${errMsg}`);
++    }
++
++    if (!reqBody.stream) {
++      const data = await res.json();
++      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
++      if (onChunk) onChunk(text);
++      if (onFinish) onFinish(text);
++      return text;
++    }
++
++    // ── STREAMING GEMINI SSE ──
++    const reader = res.body.getReader();
++    const decoder = new TextDecoder();
++    let fullContent = "";
++    let aborted = false;
++    if (signal) {
++      signal.addEventListener('abort', () => {
++        aborted = true;
++        reader.cancel().catch(() => {});
++      }, { once: true });
++    }
++
++    try {
++      while (true) {
++        if (aborted) break;
++        const { done, value } = await reader.read();
++        if (done) break;
++        
++        const chunk = decoder.decode(value, { stream: true });
++        const lines = chunk.split("\n");
++        
++        for (const line of lines) {
++          if (line.startsWith("data: ")) {
++            const dataStr = line.slice(6).trim();
++            if (dataStr === "[DONE]") continue;
++            try {
++              const data = JSON.parse(dataStr);
++              const delta = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
++              if (delta) {
++                fullContent += delta;
++                if (onChunk) onChunk(fullContent);
++              }
++            } catch (e) {}
++          }
++        }
++      }
++    } catch(e) {
++      if (e.name !== 'AbortError' && !aborted) throw e;
++    }
++    if (onFinish) onFinish(fullContent);
++    return fullContent;
++
++  } else {
++    // ── STANDARD OPENAI (Mistral / OpenRouter) ──
++    // Pour Mistral, on nettoie `rawDocuments` car il ne les supporte pas,
++    // mais on s'assure que le fallback texte est bien dans `messages`.
++    delete reqBody.rawDocuments;
++    
++    const res = await fetchWithRetry(apiConf.url, {
++      method: "POST",
++      headers: apiConf.headers,
++      signal: signal,
++      body: JSON.stringify(reqBody)
++    });
++
++    if (!res.ok) {
++      const err = await res.text();
++      let errMsg = err.slice(0, 300);
++      try { const j = JSON.parse(err); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
++      throw new Error(errMsg);
++    }
++
++    if (!reqBody.stream) {
++      const data = await res.json();
++      const text = data.choices?.[0]?.message?.content || "";
++      if (onChunk) onChunk(text);
++      if (onFinish) onFinish(text);
++      return text;
++    }
++
++    let finalResult = "";
++    await handleStreamingResponse(res, (chunk) => {
++      finalResult = chunk;
++      if (onChunk) onChunk(chunk);
++    }, () => {}, signal);
++    if (onFinish) onFinish(finalResult);
++    return finalResult;
++  }
++}
++
++
+ function updateLiveMessage(content) {
+   const lastMsg = state.messages[state.messages.length - 1];
+   if (lastMsg && lastMsg.role === 'assistant') {
+     lastMsg.content = content;
+     const container = $("#chat-container");
+-    const lastEl = container.lastElementChild;
+-    if (lastEl && lastEl.classList.contains('assistant')) {
++    // On cherche le dernier élément '.message' au lieu du lastElementChild strict (qui pourrait être le typing-indicator)
++    const messageElements = container.querySelectorAll('.message.assistant');
++    const lastEl = messageElements[messageElements.length - 1];
++    if (lastEl) {
+       const contentEl = lastEl.querySelector('.message-content');
+       if (contentEl) {
+         const displayContent = (content || '').replace(/<brouillon>[\s\S]*?(?:<\/brouillon>|$)/gi, '').trim();
+@@ -1131,11 +1465,14 @@ d- Distracteur 3
+ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets TOUJOURS [x] a- pour la bonne réponse.`;
+   }
+   const msgObj = { role:"user", content:userText, ts:now() };
++  let _rawDocuments = [];
+   if (state.attachedFiles && state.attachedFiles.length > 0) {
+      const docs = state.attachedFiles.filter(f => f.type === 'document');
+      if (docs.length > 0) {
+        msgObj.documentContext = docs.map(f => `[CONTENU DU DOCUMENT "${f.name}"]\n\n${f.data}\n\n[FIN DU DOCUMENT]`).join('\n\n');
+        msgObj.documentName = docs.map(f => f.name).join(', ');
++       // Capture les fichiers bruts pour injection native Gemini
++       _rawDocuments = docs.filter(f => f.rawBase64 && f.mimeType).map(f => ({ data: f.rawBase64, mimeType: f.mimeType, name: f.name }));
+      }
+      msgObj.attachedFiles = [...state.attachedFiles];
+      clearAttachedFile();
+@@ -1149,14 +1486,15 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
+   $("#send-btn").disabled = false;
+   $("#send-btn").className = 'stop-btn';
+   $("#send-btn").innerHTML = '⏹ ARRÊTER';
+-  showTyping();
++  const agentModel = agent.modelPref || state.model;
++  showTyping(agentModel);
+   await saveChat();
+ 
+   const relevantMems = memory.getRelevant(txt, 4);
+ 
+   // Préparer le message de l'assistant vide pour le streaming
+   const assistantMsgId = now();
+-  state.messages.push({ role: "assistant", content: "", ts: assistantMsgId, memoryUsed: relevantMems.length ? relevantMems : undefined });
++  state.messages.push({ role: "assistant", content: "", ts: assistantMsgId, memoryUsed: relevantMems.length ? relevantMems : undefined, modelUsed: agent.modelPref || state.model });
+   renderMessages();
+ 
+   try {
+@@ -1248,9 +1586,10 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
+         { role: "user", content: `Question : "${txt}"\n\nRéponses experts :\n${expertBlock}` }
+       ];
+ 
+-      const res = await fetchWithRetry("https://api.mistral.ai/v1/chat/completions", {
++      const _apiConf = getLlmApiConfig(activeModelId || state.model);
++      const res = await fetchWithRetry(_apiConf.url, {
+         method: "POST",
+-        headers: { "Authorization": `Bearer ${state.apiKey}`, "Content-Type": "application/json" },
++        headers: _apiConf.headers,
+         signal: state.abortController?.signal,
+         body: JSON.stringify({
+           model: activeModelId || state.model,
+@@ -1286,12 +1625,10 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
+       hideTyping();
+       await saveChat();
+     } else {
+-      const res = await fetchWithRetry("https://api.mistral.ai/v1/chat/completions", {
++      const _apiConf2 = getLlmApiConfig(activeModelId || state.model);
++      const res2 = await fetchWithRetry(_apiConf2.url, {
+         method: "POST",
+-        headers: {
+-          "Authorization": `Bearer ${state.apiKey}`,
+-          "Content-Type": "application/json"
+-        },
++        headers: _apiConf2.headers,
+         signal: state.abortController?.signal,
+         body: JSON.stringify({
+           model: activeModelId || state.model,
+@@ -1303,14 +1640,14 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
+         })
+       });
+ 
+-      if (!res.ok) {
+-        const err = await res.text();
++      if (!res2.ok) {
++        const err = await res2.text();
+         let errMsg = err.slice(0, 300);
+         try { const j = JSON.parse(err); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
+         throw new Error(errMsg);
+       }
+ 
+-      await handleStreamingResponse(res, updateLiveMessage, () => {}, state.abortController?.signal);
++      await handleStreamingResponse(res2, updateLiveMessage, () => {}, state.abortController?.signal);
+       
+       const lastMsg = state.messages[state.messages.length - 1];
+       if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content.match(/\[EXPORT_WORD\]/i)) {
+@@ -1372,7 +1709,7 @@ async function searchWikipedia(query) {
+ }
+ 
+ // Fonction pour interroger un agent spécifique en arrière-plan (version directe avec objet agent)
+-async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSignal = null, onChunk = null, images = []) {
++async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSignal = null, onChunk = null, images = [], rawDocuments = []) {
+   let systemPrompt = `Tu es l'agent expert : ${agent.name}.\nRôle : ${agent.desc || 'Assistance experte'}\n`;
+   systemPrompt += `Réponds toujours dans la langue de l'utilisateur.\n`;
+   if (agent.primer) systemPrompt += `\nContexte initial : ${agent.primer}\n`;
+@@ -1436,18 +1773,19 @@ async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSign
+     reqBody.stream = true;
+   }
+ 
++  // Injection des documents bruts pour lecture native Gemini (PDF, etc.)
++  // NOTE: Gemini est réservé à generateCorrectionSheet uniquement
++
+   let finalResult = "";
+   let loopCount = 0;
+   const maxLoops = 3;
+ 
+   while (loopCount < maxLoops) {
+     loopCount++;
+-    const res = await fetchWithRetry("https://api.mistral.ai/v1/chat/completions", {
++    const _apiConf = getLlmApiConfig(reqBody.model);
++    const res = await fetchWithRetry(_apiConf.url, {
+       method: "POST",
+-      headers: {
+-        "Authorization": `Bearer ${state.apiKey}`,
+-        "Content-Type": "application/json"
+-      },
++      headers: _apiConf.headers,
+       signal: abortSignal,
+       body: JSON.stringify(reqBody)
+     });
+@@ -1488,7 +1826,7 @@ async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSign
+ // ════════════════════════════════════════
+ // WORKFLOW EXECUTION ENGINE (CHAÎNE SÉQUENTIELLE)
+ // ════════════════════════════════════════
+-async function executeWorkflow(userQuestion, workflow, images = []) {
++async function executeWorkflow(userQuestion, workflow, images = [], rawDocuments = []) {
+   const recentContext = (state.messages || []).filter(m => m.role !== 'system').slice(-6);
+ 
+   // ── Extraire l'instruction dynamique (séquences QCM) de l'input utilisateur ──
+@@ -1579,13 +1917,14 @@ async function executeWorkflow(userQuestion, workflow, images = []) {
+       });
+       let currentStepTitle = `#### ◈ Étape ${i + 1} : ${agent.name}\n`;
+ 
+-      // Seul le premier agent reçoit les images pour l'analyse initiale
++      // Seul le premier agent reçoit les images et les documents bruts pour l'analyse initiale
+       const agentImages = (i === 0) ? images : [];
++      const agentRawDocs = (i === 0) ? rawDocuments : [];
+ 
+       let result = await callSubAgentDirect(agent, stepPrompt, recentContext, state.abortController?.signal, (chunk) => {
+         let displayChunk = chunk.replace(/\[STOP\]/ig, '').replace(/\[GOTO:\d+\]/ig, '').replace(/\[EXPORT_WORD\]/ig, '');
+         updateLiveMessage(finalOutputPrefix + currentStepTitle + displayChunk);
+-      }, agentImages);
++      }, agentImages, agentRawDocs);
+       
+       const currentStepDisplay = i + 1;
+       let branchMsg = "";
+@@ -1757,6 +2096,21 @@ async function loadAgents() {
+       sel.appendChild(wfGroup);
+     }
+ 
++    // ── Outils (Générateurs) ──
++    const toolsGroup = document.createElement("optgroup");
++    toolsGroup.label = "🛠️ OUTILS & GÉNÉRATEURS";
++    const corrOpt = document.createElement("option");
++    corrOpt.value = "__TOOL__correction";
++    corrOpt.textContent = "📋 Fiche de Correction (Générateur)";
++    corrOpt.title = "Générer une fiche de correction détaillée à partir d'un sujet d'évaluation";
++    toolsGroup.appendChild(corrOpt);
++    const svtOpt = document.createElement("option");
++    svtOpt.value = "__TOOL__svt";
++    svtOpt.textContent = "🧬 Fiche SVT — 2e Bac SP Maroc";
++    svtOpt.title = "Générateur spécialisé SVT : référentiel pédagogique marocain officiel, 2e Bac Sciences Physiques";
++    toolsGroup.appendChild(svtOpt);
++    sel.appendChild(toolsGroup);
++
+     // Existing agents in modal (hide workflow-internal agents)
+     const list = $("#agent-existing-list");
+     if (list) {
+@@ -2264,32 +2618,25 @@ function initFileUpload() {
+         };
+         reader.readAsDataURL(file);
+       } else if (isPdf) {
+-        toast(`Extraction de ${file.name}...`, "info");
++        toast(`📄 Extraction de ${file.name}…`, 'info');
++        
++        // Lire le PDF en base64 (pour Gemini vision native)
+         const reader = new FileReader();
+-        reader.onload = async (ev) => {
+-          try {
+-            const typedarray = new Uint8Array(ev.target.result);
+-            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+-            let fullText = "";
+-            for (let i = 1; i <= pdf.numPages; i++) {
+-              const page = await pdf.getPage(i);
+-              const textContent = await page.getTextContent();
+-              let lastY, text = "";
+-              for (const item of textContent.items) {
+-                if (lastY !== undefined && Math.abs(lastY - item.transform[5]) > 2) text += "\n";
+-                text += item.str;
+-                lastY = item.transform[5];
+-              }
+-              fullText += text + "\n\n";
+-            }
+-            state.attachedFiles.push({ type: 'document', data: fullText.trim(), name: file.name, mimeType: file.type });
+-            updateFilePreview();
+-            toast(`${file.name} lu avec succès !`, "success");
+-          } catch (err) {
+-            toast(`Erreur de lecture pour ${file.name}`, "error");
+-          }
++        reader.onload = (ev) => {
++          const rawBase64 = ev.target.result.split(',')[1];
++          extractTextFromPdf(file, (msg) => toast(msg, 'info'))
++            .then(({ text, method, pages }) => {
++              const label = method === 'ocr' ? ' [OCR]' : '';
++              state.attachedFiles.push({ type: 'document', data: text, name: `${file.name}${label}`, mimeType: file.type, rawBase64 });
++              updateFilePreview();
++              const msgTxt = method === 'ocr'
++                ? `✅ ${file.name} — OCR terminé (${pages} page(s), ${text.length} cars.). Vérifiez le contenu.`
++                : `✅ ${file.name} lu (${pages} page(s), ${text.length} cars.).`;
++              toast(msgTxt, 'success');
++            })
++            .catch((err) => toast(`❌ Erreur lecture ${file.name} : ${err.message}`, 'error'));
+         };
+-        reader.readAsArrayBuffer(file);
++        reader.readAsDataURL(file);
+       } else if (isText) {
+         toast(`Lecture de ${file.name}...`, "info");
+         const reader = new FileReader();
+@@ -2395,13 +2742,14 @@ async function sendMessage() {
+     document.getElementById('send-btn').innerHTML = '⏹ ARRÊTER';
+     
+     // 2. Prépare le message assistant final
+-    state.messages.push({ role: "assistant", content: "", ts: now(), workflowUsed: state.selectedWorkflow.name });
++    state.messages.push({ role: "assistant", content: "", ts: now(), workflowUsed: state.selectedWorkflow.name, modelUsed: state.model });
+     renderMessages();
+-    showTyping();
++    showTyping(state.model);
+     await saveChat();
+ 
+     let workflowInput = txt;
+     let workflowImages = [];
++    let workflowRawDocuments = [];
+     if (state.attachedFiles && state.attachedFiles.length > 0) {
+        const docs = state.attachedFiles.filter(f => f.type === 'document');
+        workflowImages = state.attachedFiles.filter(f => f.type === 'image');
+@@ -2410,6 +2758,8 @@ async function sendMessage() {
+            userMsg.documentContext = docText;
+            userMsg.documentName = docs.map(f => f.name).join(', ');
+            workflowInput = `${docText}\n\nInstruction de l'utilisateur : ${txt || "Traite ces documents."}`;
++           // Capture les fichiers bruts PDF pour l'injection native Gemini
++           workflowRawDocuments = docs.filter(f => f.rawBase64 && f.mimeType).map(f => ({ data: f.rawBase64, mimeType: f.mimeType, name: f.name }));
+        }
+        if (workflowImages.length > 0 && docs.length === 0) {
+            workflowInput = txt || "Analyse ce document visuel (photo/schéma) et extrais-en les informations clés.";
+@@ -2422,7 +2772,7 @@ async function sendMessage() {
+ 
+     try {
+       // 3. Exécute la chaîne
+-      const { displayContent, finalResult, accordionHtml } = await executeWorkflow(workflowInput, state.selectedWorkflow, workflowImages);
++      const { displayContent, finalResult, accordionHtml } = await executeWorkflow(workflowInput, state.selectedWorkflow, workflowImages, workflowRawDocuments);
+       
+       // 4. Affiche le résultat final
+       const lastMsg = state.messages[state.messages.length - 1];
+@@ -2487,9 +2837,9 @@ async function sendMessage() {
+     document.getElementById('send-btn').className = 'stop-btn';
+     document.getElementById('send-btn').innerHTML = '⏹ ARRÊTER';
+     
+-    state.messages.push({ role: "assistant", content: "", ts: now() });
++    state.messages.push({ role: "assistant", content: "", ts: now(), modelUsed: state.model });
+     renderMessages();
+-    showTyping();
++    showTyping(state.model);
+     await saveChat();
+     updateContextMeter();
+ 
+@@ -2511,17 +2861,15 @@ async function sendMessage() {
+       const _isRealAgent = state.agent && state.agent !== '__ALL_AGENTS__';
+       const agentTemp = (_isRealAgent && state.agent.temperature !== undefined) ? state.agent.temperature : model.temp;
+       const agentMaxTok = (_isRealAgent && state.agent.maxTokens) ? state.agent.maxTokens : 4096;
+-      const res = await fetchWithRetry("https://api.mistral.ai/v1/chat/completions", {
++      const _apiConf = getLlmApiConfig(state.model);
++      const res = await fetchWithRetry(_apiConf.url, {
+         method: "POST",
+-        headers: { 
+-          "Authorization": `Bearer ${state.apiKey}`, 
+-          "Content-Type": "application/json" 
+-        },
++        headers: _apiConf.headers,
+         signal: state.abortController?.signal,
+-        body: JSON.stringify({ 
+-          model: state.model, 
+-          messages: contextMessages, 
+-          temperature: agentTemp, 
++        body: JSON.stringify({
++          model: state.model,
++          messages: contextMessages,
++          temperature: agentTemp,
+           max_tokens: agentMaxTok,
+           stream: true
+         })
+@@ -2729,18 +3077,19 @@ const AgentFactory = {
+ 
+   // ── Appel API mutualisé ──
+   _callAPI: async (apiKey, messages, maxTokens = 16000, temperature = 0.6) => {
+-    const res = await fetchWithRetry("https://api.mistral.ai/v1/chat/completions", {
++    const _apiConf = getLlmApiConfig(state.model);
++    const res = await fetchWithRetry(_apiConf.url, {
+       method: "POST",
+-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
++      headers: _apiConf.headers,
+       body: JSON.stringify({
+-        model: "mistral-large-2512",
++        model: state.model || "mistral-large-2512",
+         messages,
+         temperature,
+         max_tokens: maxTokens,
+         top_p: 0.92
+       })
+     });
+-    if (!res.ok) throw new Error("API Mistral : " + res.status);
++    if (!res.ok) throw new Error("API : " + res.status);
+     const data = await res.json();
+     const text = data.choices?.[0]?.message?.content || "";
+     return text.replace(/```json|```/g, '').trim();
+@@ -5745,13 +6094,22 @@ export const mountApp = async () => {
+     else modelSel.value = state.model;
+   } catch(e) {}
+ 
+-  // API Key
++  // API Key Mistral & Gemini & OpenRouter
+   const cookieKey = await getCookie("mistral_api_key");
+-  if (cookieKey && isValidApiKey(cookieKey)) {
+-    state.apiKey = cookieKey;
+-    $("#api-status").innerHTML = '<span class="status-dot"></span>EN LIGNE';
+-    $("#api-status").className = "status-pill active";
+-    $("#open-api-modal").textContent = "⬡ CLÉ API";
++  const geminiCookieKey = await getCookie("gemini_api_key");
++  const orCookieKey = await getCookie("openrouter_api_key");
++  
++  if (cookieKey && isValidApiKey(cookieKey)) state.apiKey = cookieKey;
++  if (geminiCookieKey) state.geminiApiKey = geminiCookieKey;
++  if (orCookieKey) state.openRouterApiKey = orCookieKey;
++
++  if (state.apiKey || state.geminiApiKey || state.openRouterApiKey) {
++    const apiBtn = $("#open-api-modal");
++    if (apiBtn) {
++      apiBtn.classList.add("active");
++      const label = $("#api-status");
++      if (label) label.textContent = "API OK";
++    }
+   }
+ 
+   // Init new features
+@@ -6607,9 +6965,25 @@ function exportMessageToWord(msgId) {
+     const sourceHTML = header + htmlContent + "</body></html>";
+     
+     let filename = isFc ? 'FC_Export.doc' : 'QCM_Export.doc';
++    if (msg && msg.isCorrection) filename = 'Fiche_Correction.doc';
++    
+     if (msg && msg.content) {
+-      const subject = extractSubjectFromContent(msg.content);
+-      filename = isFc ? `FC-${subject.replace(/\s+/g,'_')}.doc` : `QCM-${subject.replace(/\s+/g,'_')}.doc`;
++      // Find associated user message for correction sheet titles
++      let subject = 'fiche';
++      if (msg.isCorrection) {
++        const idx = state.messages.findIndex(m => m.ts === msg.ts);
++        const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
++        if (userMsg && userMsg.content) {
++           const match = userMsg.content.match(/—\s*(.*)$/);
++           subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
++        } else {
++           subject = extractSubjectFromContent(msg.content);
++        }
++        filename = `Fiche_${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
++      } else {
++        subject = extractSubjectFromContent(msg.content);
++        filename = isFc ? `FC-${subject.replace(/\s+/g,'_').slice(0, 50)}.doc` : `QCM-${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
++      }
+     }
+     
+     const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+@@ -6933,8 +7307,9 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
+       ? "أنت خبير تعليمي. يجب عليك تقديم شرح واضح ومبسط ومفصل. أجب باللغة العربية حصراً."
+       : (isEnglish ? "You are an educational expert. You must provide a clear, accessible, and detailed explanation in English." : "Tu es un expert pédagogique. Tu dois fournir une explication claire, accessible et détaillée en français.");
+ 
++    const _apiConf = getLlmApiConfig(state.model || "mistral-large-2512");
+     const reqBody = {
+-      model: "mistral-large-latest",
++      model: state.model || "mistral-large-2512",
+       messages: [
+         { role: "system", content: sysPrompt },
+         { role: "user", content: promptText }
+@@ -6945,12 +7320,9 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
+ 
+     try {
+       const abortController = new AbortController();
+-      const res = await fetchWithRetry("https://api.mistral.ai/v1/chat/completions", {
++      const res = await fetchWithRetry(_apiConf.url, {
+         method: "POST",
+-        headers: {
+-          "Authorization": `Bearer ${state.apiKey}`,
+-          "Content-Type": "application/json"
+-        },
++        headers: _apiConf.headers,
+         signal: abortController.signal,
+         body: JSON.stringify(reqBody)
+       });
+@@ -7443,6 +7815,23 @@ function bindEvents() {
+   };
+ 
+   // ─── PROFILE PANEL ──────────────────────────────────────────────────
++  if ($("#delete-api-key")) {
++    $("#delete-api-key").onclick = () => {
++      if (!confirm("Supprimer vos clés API sauvegardées ?")) return;
++      deleteCookie("mistral_api_key");
++      deleteCookie("gemini_api_key");
++      state.apiKey = null;
++      state.geminiApiKey = null;
++      $("#api-key-input").value = "";
++      if ($("#gemini-api-key-input")) $("#gemini-api-key-input").value = "";
++      $("#api-status").innerHTML = "HORS LIGNE";
++      $("#api-status").className = "status-pill";
++      if ($("#api-status-mob")) { $("#api-status-mob").innerHTML = "HORS LIGNE"; $("#api-status-mob").className = "status-pill"; }
++      closeApiModal();
++      toast("Clés supprimées", "info");
++    };
++  }
++
+   const profileBtn = $("#profile-btn");
+   const profilePanel = $("#profile-panel");
+   
+@@ -7538,6 +7927,717 @@ function bindEvents() {
+     }
+   };
+ 
++  // ── Référentiel compétences par discipline ──────────────────────────────
++  const CORRECTION_COMPETENCES = {
++    "SVT":             "Décrire et analyser des données scientifiques, Déduire et interpréter, Réaliser un schéma fonctionnel, Raisonner en mobilisant les connaissances, Proposer et formuler des hypothèses",
++    "Physique-Chimie": "Analyser des données expérimentales, Modéliser une situation physique, Calculer et appliquer des formules, Raisonner et argumenter, Réaliser et exploiter un graphe",
++    "Maths":           "Modéliser et traduire en équation, Calculer et appliquer, Raisonner et démontrer, Représenter graphiquement, Communiquer une démarche",
++    "Informatique":    "Analyser un problème algorithmique, Concevoir et implémenter un algorithme, Tester et déboguer, Modéliser des données, Raisonner sur la complexité",
++    "Français":        "Comprendre et analyser un texte, Identifier les procédés littéraires, Rédiger avec cohérence et style, Argumenter et défendre un point de vue, Maîtriser l'orthographe et la grammaire",
++    "Anglais":         "Compréhension écrite (Reading), Expression écrite (Writing), Maîtrise grammaticale, Richesse du vocabulaire, Cohérence et cohésion du discours",
++    "Arabe":           "فهم النص وتحليله, استخلاص الأفكار الرئيسية, التعبير الكتابي السليم, توظيف الرصيد اللغوي, قواعد اللغة والنحو",
++    "Espagnol":        "Comprensión lectora, Expresión escrita, Gramática y conjugación, Vocabulario y léxico, Coherencia del discurso",
++    "Philosophie":     "Analyser et problématiser une notion, Construire une argumentation logique, Mobiliser des références philosophiques, Rédiger avec rigueur et clarté, Prendre du recul et nuancer",
++    "Histoire-Géo":    "Contextualiser dans le temps et l'espace, Analyser et critiquer des documents, Rédiger un développement structuré, Utiliser le vocabulaire géo-historique, Argumenter et mettre en relation",
++    "Économie":        "Analyser un document économique, Mobiliser des notions et mécanismes, Argumenter et nuancer, Rédiger une réponse construite, Lire et interpréter des données statistiques",
++    "Géographie":      "Localiser et situer dans l'espace, Analyser des cartes et documents, Identifier les acteurs et enjeux, Réaliser un croquis ou schéma, Rédiger une réponse géographique",
++    "Autre":           "Analyser et comprendre, Restituer les connaissances, Argumenter et justifier, Communiquer avec clarté, Faire preuve de rigueur méthodologique"
++  };
++
++  // ── Prompt système expert ─────────────────────────────────────────────
++  const SVT_SYSTEM_PROMPT = `<system_instructions>
++
++  <role>
++    Tu es un expert en didactique des Sciences de la Vie et de la Terre (SVT) et un concepteur pédagogique chevronné. Ton rôle est de générer une fiche de correction détaillée pour un contrôle de SVT en t'appuyant STRICTEMENT sur le cadre de référence pédagogique marocain fourni.
++    Tu dois analyser le sujet fourni pour déduire automatiquement le thème principal, le chapitre concerné et les connaissances scientifiques en jeu.
++  </role>
++
++  <contexte_imperatif>
++    - Niveau Scolaire : 2ème année du baccalauréat, filière Sciences Physiques (SP), option internationale (enseignement en français).
++    - Public Cible : Élèves marocains avec un niveau de français B2, pour qui le français reste une langue seconde. La clarté et la simplicité du vocabulaire sont primordiales.
++    - Approche Pédagogique : Approche par compétences et par investigation scientifique. La correction doit mettre en évidence le raisonnement attendu, pas seulement le résultat final.
++    - Contraintes Matérielles : La correction doit être exploitable avec des ressources simples (tableau blanc, vidéoprojecteur).
++  </contexte_imperatif>
++
++  <referentiel_pedagogique>
++    Le référentiel officiel marocain définit les compétences et habilités à évaluer. Tu DOIS utiliser la terminologie exacte de ce référentiel pour remplir la colonne "Compétence évaluée".
++
++    ### A. Compétences et Habilités Visées
++    - Déterminer et formuler un problème scientifique.
++    - Utiliser des connaissances, sélectionner et organiser des informations.
++    - Relier les informations avec les acquis pour résoudre le problème.
++    - Proposer et formuler une ou des hypothèses.
++    - Mobiliser des informations pour résoudre le problème scientifique.
++    - Proposer les outils adéquats pour vérifier l'hypothèse.
++    - Décrire et analyser des données scientifiques.
++    - Comparer et expliquer/interpréter des résultats.
++    - Déduire et généraliser.
++    - Utiliser des principes, des lois, des modèles pour expliquer/interpréter.
++    - Réaliser une synthèse (texte ou schéma).
++    - Exprimer une opinion et l'argumenter.
++    - Représenter par un schéma.
++    - Traduire des données (tableau, graphique, texte).
++    - Réaliser un schéma fonctionnel ou de synthèse.
++
++    ### B. Objectifs Méthodologiques
++    - Décrire et interpréter des documents scientifiques (graphiques, tableaux, schémas, textes).
++    - Extraire les informations pertinentes d'un document.
++    - Formuler, valider ou invalider une hypothèse.
++    - Réaliser des schémas annotés.
++    - Calculer un rendement énergétique.
++    - Communiquer des résultats de manière claire et précise.
++    - Rédiger des conclusions synthétiques.
++    - Utiliser un vocabulaire scientifique approprié.
++  </referentiel_pedagogique>
++
++  <co_star>
++    <context>
++      L'utilisateur est un enseignant de SVT au lycée marocain. Il te fournit un sujet d'évaluation pour une classe de 2ème année Bac SP. Ta mission est de produire une fiche de correction opérationnelle qui suit la démarche d'investigation scientifique et le référentiel pédagogique marocain.
++    </context>
++
++    <objective>
++      Générer une fiche de correction composée de deux parties :
++      1. Le tableau de correction à 4 colonnes : (Numéro de la question | Réponse attendue rédigée et explicitée | Critères d'évaluation + barème détaillé | Compétence évaluée)
++      2. Les conseils pour l'Enseignant (points de vigilance, stratégie de correction interactive).
++      L'objectif est de fournir un outil "prêt à projeter" ou "prêt à imprimer" pour la classe.
++    </objective>
++
++    <style>
++      - Réponse attendue : Rédige en français simple (niveau B2). Explique le cheminement intellectuel étape par étape : "D'après le document 1, on observe que...", "En combinant cette information avec nos connaissances sur...", "On en déduit donc que...". La démarche est plus importante que la réponse brute.
++      - Critères d'évaluation + barème : Décompose le barème total de la question en points attribués pour chaque étape du raisonnement. Exemple : "Identification correcte de la courbe (0.25 pt) / Extraction de la valeur (0.25 pt) / Formulation d'une phrase d'analyse correcte (0.5 pt) / Conclusion valide (0.5 pt)".
++      - Compétence évaluée : Choisis l'intitulé le plus pertinent parmi la liste du Référentiel Pédagogique. Tu peux combiner deux compétences si nécessaire (ex: "Analyser un graphique et déduire").
++      - Intégration des schémas-blocs fonctionnels en ASCII : Lorsque le sujet demande de réaliser ou légender un schéma, produis une représentation en art ASCII compact (max 5 lignes) avec des flèches (-->, =>), des barres (|) et des encadrés ([Nom du bloc]).
++    </style>
++
++    <tone>
++      Professionnel, pédagogique, adapté au contexte marocain. Vocabulaire scientifique rigoureux mais accessible (B2).
++    </tone>
++
++    <audience>
++      - Principal : L'enseignant de SVT (pour corriger et préparer sa séance).
++      - Secondaire : Les élèves de 2e Bac SP (quand la fiche est projetée). D'où l'importance de la clarté et des schémas-blocs fonctionnels.
++    </audience>
++
++    <response_format>
++      Le format exact de la sortie est défini par l'utilisateur. Si le format tableau est demandé, tu DOIS générer un tableau Markdown strict à 4 colonnes, suivi des conseils.
++
++      STRUCTURE ATTENDUE :
++
++      ### Fiche de Correction — SVT · 2e Bac SP
++
++      | Numéro de la question | Réponse attendue rédigée et explicitée | Critères d'évaluation + barème détaillé | Compétence évaluée |
++      |---|---|---|---|
++      | **1** | **Démarche :** D'après le document 1, on observe que...<br>**Analyse :** On peut donc en déduire que...<br>**Conclusion :** ... | **Observation (0.5 pt)**<br>**Analyse (1 pt)**<br>**Conclusion (0.5 pt)**<br>**Total : 2 pts** | Décrire et analyser des données scientifiques / Déduire et généraliser |
++
++      ### Conseils pour l'Enseignant
++
++      **1. Points de vigilance :**
++      - Erreurs classiques attendues des élèves sur ce sujet...
++
++      **2. Stratégie de correction interactive :**
++      - Pour la question X, projeter le graphique et demander à un élève de venir tracer la tendance...
++      
++      À la toute fin de ta réponse, tu DOIS obligatoirement ajouter une ligne sous ce format pour donner un titre court et représentatif au sujet (ce titre servira de nom de fichier) :
++      [TITRE_SVT: Nom court du thème déduit]
++    </response_format>
++  </co_star>
++
++  <chain_of_thought>
++    Dans ta balise <brouillon_invisible>, suis scrupuleusement ces étapes :
++    1. Analyse du sujet SVT : Identifie les questions, déduis automatiquement le chapitre/thème abordé et les connaissances scientifiques mobilisées, et analyse les documents (graphiques, tableaux, schémas).
++    2. Identification des compétences du référentiel marocain : Pour chaque question, associe la ou les compétences pertinentes de la liste officielle.
++    3. Rédaction de la réponse niveau bon élève (B2) : Démarche d'investigation claire, étape par étape.
++    4. Application du barème : Si fourni, colle-toi à chaque sous-point. Si absent, structure des espaces [À définir].
++    5. Conseils pour l'enseignant : Identifie les 2-3 erreurs classiques et propose une stratégie de correction interactive.
++  </chain_of_thought>
++
++  <gardes_fous>
++    <contraintes_negatives>
++      - NE PAS inventer de barème : Utilise [Barème à définir] si non fourni.
++      - NE PAS faire de hors-sujet sur le format de sortie.
++      - NE PAS ignorer le référentiel marocain : La colonne compétence DOIT utiliser la terminologie officielle fournie.
++      - NE PAS dépasser le niveau B2 dans la formulation des réponses attendues.
++    </contraintes_negatives>
++
++    <grounding>
++      - Strict : Utilise uniquement les informations du sujet et du barème fournis.
++      - N'utilise PAS de balises LaTeX ($...) pour les variables ou les gènes, écris-les normalement en texte brut.
++    </grounding>
++  </gardes_fous>
++
++</system_instructions>`;
++
++  const CORRECTION_SYSTEM_PROMPT = `<system_instructions>
++
++  <role>
++    Tu es un expert en didactique et en évaluation scolaire, polyvalent sur toutes les disciplines (scientifiques, littéraires, linguistiques). Tu maîtrises l'art de transformer un sujet d'examen brut en une fiche de correction opérationnelle, claire, concise et visuelle, parfaitement adaptée aux besoins explicites de l'enseignant.
++  </role>
++
++  <co_star>
++    <context>
++      L'utilisateur est un enseignant. Il te fournit un sujet d'évaluation, ainsi que des indications sur le barème, les compétences et le format souhaité. Ton travail est de produire la correction la plus fidèle possible à ses attentes, en ne faisant aucune supposition sur les points qu'il n'a pas précisés. Tu dois systématiquement signaler les zones d'ombre.
++    </context>
++
++    <objective>
++      Générer une fiche de correction composée de deux parties :
++      1. Le tableau ou la grille de correction : détaillant pour chaque question la réponse attendue, le barème (strictement celui fourni) et la compétence évaluée.
++      2. Les conseils pédagogiques pour l'enseignant (points de vigilance, stratégie interactive, approfondissement).
++      L'objectif est de fournir un outil "prêt à imprimer" ou "prêt à projeter".
++    </objective>
++
++    <style>
++      - Concis et précis : La réponse attendue doit être celle d'un très bon élève du niveau visé. Phrases courtes, vocabulaire exact, structuration logique (étapes numérotées).
++      - Intégration des schémas-blocs fonctionnels en ASCII (NOUVEAU) : Lorsque le sujet demande de réaliser, compléter ou légender un schéma, tu dois produire une représentation en art ASCII. Privilégie impérativement des schémas-blocs fonctionnels compacts (2 à 5 lignes maximum) utilisant des flèches (-->, =>), des barres (|), des signes + et des encadrés textuels ([Nom du bloc]). Les schémas doivent représenter des flux, des chaînes de réactions, des relations logiques ou des étapes. Évite les dessins ASCII trop encombrants (plus de 5 lignes) qui nuisent à la lisibilité de la fiche. Ajoute toujours une légende textuelle en dessous du schéma pour expliciter chaque symbole.
++      - Structuration en puces ou numérotations pour faciliter la lecture et la notation.
++    </style>
++
++    <tone>
++      Professionnel, neutre et pédagogique. Pas de jargon infantilisant, mais pas de complexité gratuite.
++    </tone>
++
++    <audience>
++      - Principal : L'enseignant (pour corriger et préparer sa séance).
++      - Secondaire : Les élèves (quand la fiche est projetée). D'où l'importance des schémas-blocs fonctionnels, immédiatement lisibles.
++    </audience>
++
++    <response_format>
++      Le format exact de la sortie est défini par l'utilisateur dans la variable [format_sortie_souhaite]. Si l'utilisateur demande le tableau par défaut, tu DOIS générer un tableau Markdown strict à 4 colonnes, suivi des conseils.
++      
++      EXEMPLE DE STRUCTURE ATTENDUE :
++      
++      ### Fiche de Correction
++      
++      | Numéro de la question | Réponse attendue rédigée et explicitée | Critères d'évaluation + barème détaillé | Compétence évaluée |
++      |---|---|---|---|
++      | **1** | **Description :** L'analyse...<br>- Point 1...<br>- Point 2... | **Description (1 pt) :**<br>- Critère A (0,5 pt)<br>- Critère B (0,5 pt)<br>**Total : 1 pt** | Décrire et analyser des données scientifiques et Déduire. |
++      | **2** | ... | ... | ... |
++      
++      ### Conseils pour l'Enseignant
++      
++      **1. Points de vigilance :**
++      - Question 1 : Les élèves confondent souvent...
++      
++      **2. Stratégie de correction interactive :**
++      - Pour la question X, la correction peut être très dynamique...
++      
++      **3. Approfondissement (pour les élèves avancés) :**
++      - Après avoir corrigé l'ensemble...
++    </response_format>
++  </co_star>
++
++  <chain_of_thought>
++    Dans ta balise <brouillon_invisible>, suis scrupuleusement ces étapes :
++    1. Analyse du sujet : Identifie les questions. Repère celles qui impliquent un schéma, un graphique ou une légende.
++    2. Recensement des données fournies : Vérifie le barème, les critères, le cadre. Note les manquants.
++    3. Rédaction de la réponse (niveau bon élève) : Rédige de manière concise. Si schéma, conçois-le en ASCII sous forme de schéma-bloc fonctionnel (max 5 lignes).
++    4. Application du barème : Si fourni, colle-toi à chaque sous-point. Si absent, structure des espaces vides avec [À définir].
++    5. Sélection des compétences : Choisis dans la liste fournie. Si absente, propose des intitulés génériques mais signale-le.
++    6. Élaboration du guide de levée d'ambiguïté : Prépare la section obligatoire listant les hypothèses et les manques.
++  </chain_of_thought>
++
++  <gardes_fous>
++    <contraintes_negatives>
++      - NE PAS inventer de barème : Utilise [Barème à définir] si non fourni.
++      - NE PAS faire de hors-sujet sur le format de sortie.
++      - NE PAS être trop long : Une réponse (hors schéma-bloc) ne doit pas dépasser 10 lignes.
++      - NE PAS utiliser d'images, d'emojis ou d'ASCII complexes de plus de 5 lignes : seul le schéma-bloc fonctionnel est autorisé.
++    </contraintes_negatives>
++
++    <grounding>
++      - Strict : Utilise uniquement les informations du sujet et du barème fournis.
++      - Si un document est manquant, dis-le.
++      - Scientific_formatting_directives :
++        1. RÈGLE DES DÉLIMITEURS : Encadre CHAQUE variable, chiffre avec unité ou formule par des dollars simples $ ... $. Texte français à l'extérieur. Exemple : "La quantité d'ADN passe de $q$ à $2q$."
++        2. SYMBOLES : INTERDICTION des symboles Unicode (→, ⇌, ×, ≤, ≥, ∈, ∞, ², ₃, ⁺). Utilise LaTeX : \\rightarrow, \\rightleftharpoons, \\times, \\leq, \\geq, \\in, \\infty
++        3. CHIMIE : Regroupe la molécule entière dans un seul bloc $. Exemple : $C_{6}H_{12}O_{6}$. Utilise TOUJOURS les accolades pour les indices/exposants : $H_{3}O^{+}$.
++        4. UNITÉS : Utilise le tilde ~ pour l'espace insécable : $0{,}25~mol \\cdot L^{-1}$ ou $10~nm$.
++        5. PONCTUATION : Points et virgules de fin de phrase en DEHORS des délimiteurs $.
++        6. Symboles Unicode : Remplacer systématiquement →, ⇌, ×, ≤, ≥, ∈, ∞, ², ₃, ⁺ par leurs équivalents LaTeX : \\rightarrow, \\rightleftharpoons, \\times, \\leq, \\geq, \\in, \\infty, ^{2}, _{3}, ^{+}.
++    </grounding>
++
++    <guide_ambiguite_obligatoire>
++      À la fin de ta réponse, avant les conseils, insère la section ambiguites_et_verifications listant :
++      - Ce que tu as supposé.
++      - Ce qui est manquant et nécessite une action de l'enseignant.
++      - Une invitation explicite à modifier la fiche si les attentes diffèrent.
++    </guide_ambiguite_obligatoire>
++  </gardes_fous>
++
++</system_instructions>`;
++
++  // ── Assemblage du prompt utilisateur dynamique ─────────────────────────
++  const buildCorrectionUserPrompt = (cfg) => {
++    return `<user_prompt>
++
++  <checklist_prealable>
++    - [x] Sujet fourni : OUI
++    - [${cfg.bareme ? 'x' : ' '}] Barème : ${cfg.bareme ? 'FOURNI' : 'NON FOURNI — à définir'}
++    - [${cfg.competences ? 'x' : ' '}] Compétences : ${cfg.competences ? 'FOURNIES' : 'Propositions génériques utilisées'}
++    - [x] Format de sortie : ${cfg.format || 'Tableau classique + Conseils (défaut)'}
++  </checklist_prealable>
++
++  <sujet_complet>
++    ${cfg.sujet}
++  </sujet_complet>
++
++  <contexte_imperatif>
++    - Discipline : ${cfg.discipline}
++    - Niveau Scolaire : ${cfg.niveau}
++    - Filière : ${cfg.filiere}
++    - Option (Langue) : ${cfg.option}
++    - Type d'évaluation : ${cfg.typeEval}
++    ${cfg.niveauLangue ? `- Niveau de langue attendu : ${cfg.niveauLangue}` : ''}
++  </contexte_imperatif>
++
++  <format_sortie_souhaite>
++    ${cfg.format || 'Tableau classique à 4 colonnes (Numéro, Réponse attendue, Critères+Barème, Compétence) + Conseils pédagogiques'}
++  </format_sortie_souhaite>
++
++  <bareme_detaille>
++    ${cfg.bareme || '[Non fourni — créer des espaces [Barème à définir] pour chaque question]'}
++  </bareme_detaille>
++
++  <criteres_evaluation_personnalises>
++    ${cfg.criteres || '[Aucun critère personnalisé spécifié — utiliser des critères génériques]'}
++  </criteres_evaluation_personnalises>
++
++  <cadre_reference>
++    ${cfg.competences || '[Non fourni — proposer des compétences génériques adaptées à la discipline]'}
++  </cadre_reference>
++
++  <consignes_supplementaires>
++    ${cfg.consignes || '[Aucune consigne supplémentaire]'}
++  </consignes_supplementaires>
++
++  <exemples_correction>
++    ${cfg.exemple || '[Aucun exemple modèle fourni]'}
++  </exemples_correction>
++
++  <instruction>
++    Applique rigoureusement les System Instructions.
++    Génère la fiche complète au format demandé.
++    ${cfg.exportWord ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_WORD] sur une ligne seule." : ''}
++  </instruction>
++
++</user_prompt>`;
++  };
++
++
++  // ── Stockage temporaire du Fichier chargé (PDF/Image) pour Gemini Vision ──
++  let _corrPdfName   = '';     // nom du fichier
++  let _corrPdfBase64 = null;   // Fichier brut en base64 pour Gemini Vision
++  let _corrPdfMime   = '';     // MimeType du fichier
++
++  const generateCorrectionSheet = async () => {
++    const get = (id) => ($(`#${id}`)?.value || '').trim();
++    const discipline = get('corr-discipline') === 'Autre'
++      ? (get('corr-custom-discipline') || 'Autre')
++      : get('corr-discipline');
++    const hasPdf = !!_corrPdfBase64;
++
++    const cfg = {
++      discipline,
++      niveau:       get('corr-niveau'),
++      filiere:      get('corr-filiere'),
++      option:       get('corr-option'),
++      typeEval:     get('corr-type-eval'),
++      niveauLangue: get('corr-niveau-langue'),
++      // Si PDF chargé : le texte extrait est déjà dans la textarea. On lit toujours depuis la textarea.
++      // hasPdf sert uniquement pour le titre et la validation de longueur minimale.
++      sujet:        hasPdf
++                      ? `[DOCUMENT JOINT EN PIÈCE JOINTE : ${_corrPdfName}]\n\nIMPORTANT : Le sujet complet se trouve dans le document PDF/image attaché à ce message. Tu DOIS lire et analyser INTÉGRALEMENT le document joint (texte, tableaux, graphiques, schémas) pour générer la fiche de correction. Ne génère rien sans avoir analysé le document joint.`
++                      : get('corr-sujet'),
++      bareme:       get('corr-bareme'),
++      format:       get('corr-format'),
++      competences:  get('corr-competences'),
++      criteres:     get('corr-criteres'),
++      consignes:    get('corr-consignes'),
++      exemple:      get('corr-exemple'),
++      exportWord:   $('#corr-export-word')?.checked || false,
++    };
++
++    // Validation
++    if (!hasPdf && (!cfg.sujet || cfg.sujet.length < 20)) {
++      toast('Veuillez coller le sujet ou importer un PDF.', 'error');
++      return;
++    }
++    if (!cfg.discipline || !cfg.niveau) {
++      toast('Veuillez compléter les étapes 1 et 2.', 'error');
++      return;
++    }
++
++    // Fermer la modale
++    closeCorrectionModal();
++
++    const classeStr = `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ' - ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? '(' + cfg.option + ')' : ''}`.replace(/\s+/g, ' ').trim();
++    const titre = `📋 Fiche de Correction — ${cfg.discipline} ${classeStr} (${cfg.typeEval})${hasPdf ? ' [PDF]' : ''}`;
++
++    // Afficher dans le chat
++    if (!state.messages) state.messages = [];
++    const chatUserText = titre;
++    state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
++    renderMessages();
++
++    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: true };
++    state.messages.push(assistantMsg);
++    renderMessages();
++
++    // Mode génération
++    state.isGenerating = true;
++    state.selectedWorkflow = null; // Eviter la pollution QCM
++    state.agent = null;
++    state.abortController = new AbortController();
++    const sendBtn = $('#send-btn');
++    if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
++    showTyping("gemini-2.5-flash");
++
++    try {
++      // ═══════════════════════════════════════════════════════════
++      // EXCLUSIVEMENT : Gemini Vision (PDF/Image) 
++      // ═══════════════════════════════════════════════════════════
++      const GEMINI_MODEL = 'gemini-2.5-flash';
++
++      if (!state.geminiApiKey) {
++        throw new Error('Clé API Google Gemini requise pour la reconnaissance de documents. Configurez-la dans Paramètres API (bouton 🔑 API en haut à droite).');
++      }
++
++      const userContent = buildCorrectionUserPrompt(cfg);
++
++      // Construire les parts Gemini
++      const parts = [{ text: userContent }];
++
++      // Si document chargé : l'envoyer en inlineData pour vision native
++      if (hasPdf && _corrPdfBase64) {
++        parts.unshift({
++          inlineData: {
++            mimeType: _corrPdfMime || 'application/pdf',
++            data: _corrPdfBase64
++          }
++        });
++        parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT JOINT - LECTURE OBLIGATOIRE]\nLe document PDF/image ci-dessus contient le sujet complet de l\'évaluation. Tu DOIS analyser intégralement son contenu (questions, textes, données, schémas, tableaux, graphiques, images) avec ta vision native. Base TOUTE ta fiche de correction sur ce document joint et son contenu réel. Ne commence pas la fiche avant d\'avoir tout lu.\n---\n\n' });
++      }
++
++      let baseSystemPrompt = CORRECTION_SYSTEM_PROMPT;
++      if (cfg.discipline === 'SVT') {
++        baseSystemPrompt = SVT_SYSTEM_PROMPT.replace(
++          '2ème année du baccalauréat, filière Sciences Physiques (SP), option internationale (enseignement en français).',
++          `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ', filière ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? ', option ' + cfg.option : ''}`.replace(/\s+/g, ' ').trim()
++        );
++      }
++
++      const effectiveSystemPrompt = hasPdf
++        ? baseSystemPrompt + `\n\nREMARQUE CRITIQUE (MODE DOCUMENT) : Un document PDF ou image a été joint à ce message. Tu dois IMPÉRATIVEMENT lire et analyser le contenu RÉEL de ce document joint avant de générer quoi que ce soit. Ta fiche de correction doit être basée exclusivement sur les questions, textes, données et schémas présents dans le document joint. Si tu ne lis pas le document, ta réponse sera inutilisable.`
++        : baseSystemPrompt;
++
++      const geminiPayload = {
++        systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
++        contents: [{ role: 'user', parts }],
++        generationConfig: {
++          temperature: 0.35,
++          maxOutputTokens: 8192,
++          topP: 0.95
++        }
++      };
++
++      const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
++      const geminiUrl = `/api/gemini/v1beta/models/${GEMINI_MODEL}:generateContent?key=${cleanGeminiKey}`;
++
++        1. RÈGLE DES DÉLIMITEURS : Encadre CHAQUE variable, chiffre avec unité ou formule par des dollars simples $ ... $. Texte français à l'extérieur. Exemple : "La quantité d'ADN passe de $q$ à $2q$."
++        2. SYMBOLES : INTERDICTION des symboles Unicode (→, ⇌, ×, ≤, ≥, ∈, ∞, ², ₃, ⁺). Utilise LaTeX : \\rightarrow, \\rightleftharpoons, \\times, \\leq, \\geq, \\in, \\infty
++        3. CHIMIE : Regroupe la molécule entière dans un seul bloc $. Exemple : $C_{6}H_{12}O_{6}$. Utilise TOUJOURS les accolades pour les indices/exposants : $H_{3}O^{+}$.
++        4. UNITÉS : Utilise le tilde ~ pour l'espace insécable : $0{,}25~mol \\cdot L^{-1}$ ou $10~nm$.
++        5. PONCTUATION : Points et virgules de fin de phrase en DEHORS des délimiteurs $.
++        6. Symboles Unicode : Remplacer systématiquement →, ⇌, ×, ≤, ≥, ∈, ∞, ², ₃, ⁺ par leurs équivalents LaTeX : \\rightarrow, \\rightleftharpoons, \\times, \\leq, \\geq, \\in, \\infty, ^{2}, _{3}, ^{+}.
++    </grounding>
++
++    <guide_ambiguite_obligatoire>
++      À la fin de ta réponse, avant les conseils, insère la section ambiguites_et_verifications listant :
++      - Ce que tu as supposé.
++      - Ce qui est manquant et nécessite une action de l'enseignant.
++      - Une invitation explicite à modifier la fiche si les attentes diffèrent.
++    </guide_ambiguite_obligatoire>
++  </gardes_fous>
++
++</system_instructions>`;
++
++  // ── Assemblage du prompt utilisateur dynamique ─────────────────────────
++  const buildCorrectionUserPrompt = (cfg) => {
++    return `<user_prompt>
++
++  <checklist_prealable>
++    - [x] Sujet fourni : OUI
++    - [${cfg.bareme ? 'x' : ' '}] Barème : ${cfg.bareme ? 'FOURNI' : 'NON FOURNI — à définir'}
++    - [${cfg.competences ? 'x' : ' '}] Compétences : ${cfg.competences ? 'FOURNIES' : 'Propositions génériques utilisées'}
++    - [x] Format de sortie : ${cfg.format || 'Tableau classique + Conseils (défaut)'}
++  </checklist_prealable>
++
++  <sujet_complet>
++    ${cfg.sujet}
++  </sujet_complet>
++
++  <contexte_imperatif>
++    - Discipline : ${cfg.discipline}
++    - Niveau Scolaire : ${cfg.niveau}
++    - Filière : ${cfg.filiere}
++    - Option (Langue) : ${cfg.option}
++    - Type d'évaluation : ${cfg.typeEval}
++    ${cfg.niveauLangue ? `- Niveau de langue attendu : ${cfg.niveauLangue}` : ''}
++  </contexte_imperatif>
++
++  <format_sortie_souhaite>
++    ${cfg.format || 'Tableau classique à 4 colonnes (Numéro, Réponse attendue, Critères+Barème, Compétence) + Conseils pédagogiques'}
++  </format_sortie_souhaite>
++
++  <bareme_detaille>
++    ${cfg.bareme || '[Non fourni — créer des espaces [Barème à définir] pour chaque question]'}
++  </bareme_detaille>
++
++  <criteres_evaluation_personnalises>
++    ${cfg.criteres || '[Aucun critère personnalisé spécifié — utiliser des critères génériques]'}
++  </criteres_evaluation_personnalises>
++
++  <cadre_reference>
++    ${cfg.competences || '[Non fourni — proposer des compétences génériques adaptées à la discipline]'}
++  </cadre_reference>
++
++  <consignes_supplementaires>
++    ${cfg.consignes || '[Aucune consigne supplémentaire]'}
++  </consignes_supplementaires>
++
++  <exemples_correction>
++    ${cfg.exemple || '[Aucun exemple modèle fourni]'}
++  </exemples_correction>
++
++  <instruction>
++    Applique rigoureusement les System Instructions.
++    Génère la fiche complète au format demandé.
++    ${cfg.exportWord ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_WORD] sur une ligne seule." : ''}
++  </instruction>
++
++</user_prompt>`;
++  };
++
++
++  // ── Stockage temporaire du Fichier chargé (PDF/Image) pour Gemini Vision ──
++  let _corrPdfName   = '';     // nom du fichier
++  let _corrPdfBase64 = null;   // Fichier brut en base64 pour Gemini Vision
++  let _corrPdfMime   = '';     // MimeType du fichier
++
++  const generateCorrectionSheet = async () => {
++    const get = (id) => ($(`#${id}`)?.value || '').trim();
++    const discipline = get('corr-discipline') === 'Autre'
++      ? (get('corr-custom-discipline') || 'Autre')
++      : get('corr-discipline');
++    const hasPdf = !!_corrPdfBase64;
++
++    const cfg = {
++      discipline,
++      niveau:       get('corr-niveau'),
++      filiere:      get('corr-filiere'),
++      option:       get('corr-option'),
++      typeEval:     get('corr-type-eval'),
++      niveauLangue: get('corr-niveau-langue'),
++      // Si PDF chargé : le texte extrait est déjà dans la textarea. On lit toujours depuis la textarea.
++      // hasPdf sert uniquement pour le titre et la validation de longueur minimale.
++      sujet:        hasPdf
++                      ? `[DOCUMENT JOINT EN PIÈCE JOINTE : ${_corrPdfName}]\n\nIMPORTANT : Le sujet complet se trouve dans le document PDF/image attaché à ce message. Tu DOIS lire et analyser INTÉGRALEMENT le document joint (texte, tableaux, graphiques, schémas) pour générer la fiche de correction. Ne génère rien sans avoir analysé le document joint.`
++                      : get('corr-sujet'),
++      bareme:       get('corr-bareme'),
++      format:       get('corr-format'),
++      competences:  get('corr-competences'),
++      criteres:     get('corr-criteres'),
++      consignes:    get('corr-consignes'),
++      exemple:      get('corr-exemple'),
++      exportWord:   $('#corr-export-word')?.checked || false,
++    };
++
++    // Validation
++    if (!hasPdf && (!cfg.sujet || cfg.sujet.length < 20)) {
++      toast('Veuillez coller le sujet ou importer un PDF.', 'error');
++      return;
++    }
++    if (!cfg.discipline || !cfg.niveau) {
++      toast('Veuillez compléter les étapes 1 et 2.', 'error');
++      return;
++    }
++
++    // Fermer la modale
++    closeCorrectionModal();
++
++    const classeStr = `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ' - ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? '(' + cfg.option + ')' : ''}`.replace(/\s+/g, ' ').trim();
++    const titre = `📋 Fiche de Correction — ${cfg.discipline} ${classeStr} (${cfg.typeEval})${hasPdf ? ' [PDF]' : ''}`;
++
++    // Afficher dans le chat
++    if (!state.messages) state.messages = [];
++    const chatUserText = titre;
++    state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
++    renderMessages();
++
++    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: true };
++    state.messages.push(assistantMsg);
++    renderMessages();
++
++    // Mode génération
++    state.isGenerating = true;
++    state.selectedWorkflow = null; // Eviter la pollution QCM
++    state.agent = null;
++    state.abortController = new AbortController();
++    const sendBtn = $('#send-btn');
++    if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
++    showTyping("gemini-2.5-flash");
++
++    try {
++      // ═══════════════════════════════════════════════════════════
++      // EXCLUSIVEMENT : Gemini Vision (PDF/Image) 
++      // ═══════════════════════════════════════════════════════════
++      const GEMINI_MODEL = 'gemini-2.5-flash';
++
++      if (!state.geminiApiKey) {
++        throw new Error('Clé API Google Gemini requise pour la reconnaissance de documents. Configurez-la dans Paramètres API (bouton 🔑 API en haut à droite).');
++      }
++
++      const userContent = buildCorrectionUserPrompt(cfg);
++
++      // Construire les parts Gemini
++      const parts = [{ text: userContent }];
++
++      // Si document chargé : l'envoyer en inlineData pour vision native
++      if (hasPdf && _corrPdfBase64) {
++        parts.unshift({
++          inlineData: {
++            mimeType: _corrPdfMime || 'application/pdf',
++            data: _corrPdfBase64
++          }
++        });
++        parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT JOINT - LECTURE OBLIGATOIRE]\nLe document PDF/image ci-dessus contient le sujet complet de l\'évaluation. Tu DOIS analyser intégralement son contenu (questions, textes, données, schémas, tableaux, graphiques, images) avec ta vision native. Base TOUTE ta fiche de correction sur ce document joint et son contenu réel. Ne commence pas la fiche avant d\'avoir tout lu.\n---\n\n' });
++      }
++
++      let baseSystemPrompt = CORRECTION_SYSTEM_PROMPT;
++      if (cfg.discipline === 'SVT') {
++        baseSystemPrompt = SVT_SYSTEM_PROMPT.replace(
++          '2ème année du baccalauréat, filière Sciences Physiques (SP), option internationale (enseignement en français).',
++          `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ', filière ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? ', option ' + cfg.option : ''}`.replace(/\s+/g, ' ').trim()
++        );
++      }
++
++      const effectiveSystemPrompt = hasPdf
++        ? baseSystemPrompt + `\n\nREMARQUE CRITIQUE (MODE DOCUMENT) : Un document PDF ou image a été joint à ce message. Tu dois IMPÉRATIVEMENT lire et analyser le contenu RÉEL de ce document joint avant de générer quoi que ce soit. Ta fiche de correction doit être basée exclusivement sur les questions, textes, données et schémas présents dans le document joint. Si tu ne lis pas le document, ta réponse sera inutilisable.`
++        : baseSystemPrompt;
++
++      const geminiPayload = {
++        systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
++        contents: [{ role: 'user', parts }],
++        generationConfig: {
++          temperature: 0.35,
++          maxOutputTokens: 8192,
++          topP: 0.95
++        }
++      };
++
++      const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
++      const geminiUrl = `/api/gemini/v1beta/models/${GEMINI_MODEL}:generateContent?key=${cleanGeminiKey}`;
++
++      assistantMsg.content = `🔍 Gemini analyse votre demande${hasPdf ? ' et lit le document natif' : ''}…`;
++      renderMessages();
++
++      const geminiRes = await fetch(geminiUrl, {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        signal: state.abortController.signal,
++        body: JSON.stringify(geminiPayload)
++      });
++
++      if (!geminiRes.ok) {
++        const errText = await geminiRes.text();
++        let errMsg = errText.slice(0, 500);
++        try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
++        throw new Error(`Gemini API ${geminiRes.status}: ${errMsg}`);
++      }
++
++      const geminiData = await geminiRes.json();
++      let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
++
++      if (!geminiText) {
++        const finishReason = geminiData?.candidates?.[0]?.finishReason;
++        throw new Error(`Gemini n'a pas généré de texte. Raison : ${finishReason || 'inconnue'}`);
++      }
++
++      // Extraction du titre SVT genere (si applicable)
++      let extractedTitle = 'Fiche_Correction';
++      const titleMatch = geminiText.match(/\[TITRE_SVT:\s*(.*?)\]/i);
++      if (titleMatch) {
++        extractedTitle = titleMatch[1].trim().replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '_');
++        geminiText = geminiText.replace(titleMatch[0], '').trim();
++        // ── Wiring des boutons (via Event Delegation) ────────────────────────
++        document.addEventListener('click', (e) => {
++          const t = e.target;
++          if (t.closest('#open-correction-modal')) openCorrectionModal();
++          else if (t.closest('#close-correction-modal') || t.closest('#close-correction-modal-step1')) closeCorrectionModal();
++          else if (t.id === 'correction-modal') closeCorrectionModal();
++          
++          else if (t.closest('#corr-next-1')) {
++            if (!corrValidateStep1()) return;
++            corrFillCompetences();
++            corrShowStep(2);
++          }
++          else if (t.closest('#corr-next-2')) {
++            if (!corrValidateStep2()) return;
++            corrShowStep(3);
++          }
++          else if (t.closest('#corr-next-3')) {
++            corrBuildSummary();
++            corrShowStep(4);
++          }
++          else if (t.closest('#corr-back-2')) corrShowStep(1);
++          else if (t.closest('#corr-back-3')) corrShowStep(2);
++          else if (t.closest('#corr-back-4')) corrShowStep(3);
++        });
++        if (state.messages && state.messages.length >= 2) {
++           const lastUserMsg = state.messages[state.messages.length - 2];
++           if (lastUserMsg && lastUserMsg.role === 'user') {
++              lastUserMsg.content = `📋 Fiche de Correction — ${extractedTitle}`;
++           }
++        }
++      }
++
++      // Export Word si demande
++      if (cfg.exportWord) {
++        let textToExport = geminiText;
++        if (textToExport.includes('[EXPORT_WORD]')) {
++          textToExport = textToExport.replace('[EXPORT_WORD]', '').trim();
++          geminiText = textToExport;
++        }
++        try {
++          exportToWord(textToExport, `Fiche_Correction_${extractedTitle.replace(/\s+/g, '_').slice(0,50)}.doc`);
++          toast('📄 Fiche exportée en Word avec succes !', 'success');
++        } catch(e) {
++          console.error('Export Word error:', e);
++        }
++      }
++
++      assistantMsg.content = geminiText;
++      assistantMsg.streaming = false;
++      renderMessages(true);
++      hideTyping();
++      await saveChat();
++
++      // Réinitialiser les données PDF
++      _corrPdfName = '';
++      _corrPdfBase64 = null;
++      _corrPdfMime = '';
++
++    } catch(e) {
++      const errTxt = `❌ Erreur génération fiche : ${e.message}`;
++      assistantMsg.content = errTxt;
++      assistantMsg.streaming = false;
++      renderMessages(true);
++      hideTyping();
++    } finally {
++      state.isGenerating = false;
++      const sendBtn2 = $('#send-btn');
++      if (sendBtn2) { sendBtn2.className = 'send-btn'; sendBtn2.innerHTML = '▶'; sendBtn2.disabled = false; }
++    }
++  };
+ 
+   // Scroll to bottom
+   const scrollBottomBtn = $("#scroll-bottom");
+@@ -7642,6 +8742,22 @@ function bindEvents() {
+   $("#agent-select").onchange = async e => {
+     try {
+       const val = e.target.value;
++      
++      // Interception des Outils
++      if (val === '__TOOL__correction') {
++        state.agent = null;
++        state.selectedWorkflow = null;
++        if (typeof openCorrectionModal !== 'undefined') openCorrectionModal();
++        return;
++      }
++
++      if (val === '__TOOL__svt') {
++        state.agent = null;
++        state.selectedWorkflow = null;
++        if (typeof openSVTModal !== 'undefined') openSVTModal();
++        return;
++      }
++
+       if (val === '__ALL_AGENTS__') {
+         state.agent = '__ALL_AGENTS__';
+         state.selectedWorkflow = null;
+@@ -7704,6 +8820,9 @@ function bindEvents() {
+       // Pre-fill with current key (masked display via type=password)
+       $("#api-key-input").value = state.apiKey;
+     }
++    if (state.geminiApiKey && $("#gemini-api-key-input")) {
++      $("#gemini-api-key-input").value = state.geminiApiKey;
++    }
+     $("#api-modal").classList.add("active");
+   };
+   const closeApiModal = () => $("#api-modal").classList.remove("active");
+@@ -7722,7 +8841,7 @@ function bindEvents() {
+       } catch (err) { /* ignore */ }
+     }
+   };
+-  const apiInputs = ["api-key-input", "wizard-api-key"];
++  const apiInputs = ["api-key-input", "wizard-api-key", "gemini-api-key-input"];
+   apiInputs.forEach(id => {
+     const el = document.getElementById(id);
+     if (el) {
+@@ -7731,19 +8850,138 @@ function bindEvents() {
+     }
+   });
+ 
++  // ── TEST MISTRAL ──
++  const btnTestMistral = $("#test-mistral-api");
++  if (btnTestMistral) {
++    btnTestMistral.onclick = async () => {
++      const k = $("#api-key-input").value.trim() || state.apiKey;
++      const resEl = $("#test-mistral-result");
++      if (!k) { resEl.textContent = "❌ Clé manquante"; resEl.style.color = "var(--danger)"; return; }
++      resEl.textContent = "⏳ Test..."; resEl.style.color = "var(--text-dim)";
++      try {
++        const res = await fetch("https://api.mistral.ai/v1/models", {
++          headers: { "Authorization": `Bearer ${k}` }
++        });
++        if (res.ok) { resEl.textContent = "✅ Connecté (Mistral AI)"; resEl.style.color = "var(--neon)"; }
++        else { resEl.textContent = `❌ Erreur ${res.status}`; resEl.style.color = "var(--danger)"; }
++      } catch(e) {
++        resEl.textContent = "❌ Échec réseau"; resEl.style.color = "var(--danger)";
++      }
++    };
++  }
++
++  // ── TEST GEMINI ──
++  const btnTestGemini = $("#test-gemini-api");
++  if (btnTestGemini) {
++    btnTestGemini.onclick = async () => {
++      const gK = $("#gemini-api-key-input").value.trim() || state.geminiApiKey;
++      const resEl = $("#test-gemini-result");
++      if (!gK) { resEl.textContent = "❌ Clé manquante"; resEl.style.color = "var(--danger)"; return; }
++      resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
++      
++      try {
++        const cleanKey = gK.replace(/[\r\n\s]+/g, '');
++        // Test 1: Simple GET (pour tester le réseau/CORS)
++        await fetch(`/api/gemini/v1beta/models?key=${cleanKey}`);
++        
++        // Test 2: POST (génération réelle)
++        const res = await fetch(`/api/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanKey}`, {
++          method: "POST",
++          headers: { "Content-Type": "application/json" },
++          body: JSON.stringify({
++            contents: [{ role: "user", parts: [{ text: "ping" }] }]
++          })
++        });
++        if (res.ok) { resEl.textContent = "✅ Connecté (Google Gemini)"; resEl.style.color = "var(--cyan)"; }
++        else { 
++          const errData = await res.json().catch(()=>({}));
++          const errMsg = errData.error?.message || "Erreur inconnue";
++          resEl.textContent = `❌ Err: ${res.status}`; 
++          resEl.style.color = "var(--danger)"; 
++          resEl.title = errMsg;
++          alert(`L'API a répondu avec l'erreur ${res.status}:\n\n${errMsg}`);
++        }
++      } catch(e) {
++        console.error("Gemini Test Error:", e);
++        resEl.textContent = `❌ Échec: ${e.message}`; 
++        resEl.style.color = "var(--danger)";
++        alert("Erreur réseau: " + e.message + "\n\nSi vous n'avez pas de bloqueur de publicité, c'est peut-être votre navigateur (ex: protection stricte de Firefox ou Edge) ou votre antivirus qui bloque la connexion vers Google en arrière-plan.");
++      }
++    };
++  }
++
++  // ── TEST OPENROUTER ──
++  const btnTestOR = $("#test-openrouter-api");
++  if (btnTestOR) {
++    btnTestOR.onclick = async () => {
++      const oK = $("#openrouter-api-key-input").value.trim() || state.openRouterApiKey;
++      const resEl = $("#test-openrouter-result");
++      if (!oK) { resEl.textContent = "❌ Clé manquante"; resEl.style.color = "var(--danger)"; return; }
++      resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
++      
++      try {
++        const cleanKey = oK.replace(/[\r\n\s]+/g, '');
++        const res = await fetch(`/api/openrouter/api/v1/chat/completions`, {
++          method: "POST",
++          headers: { 
++            "Content-Type": "application/json",
++            "Authorization": `Bearer ${cleanKey}`
++          },
++          body: JSON.stringify({
++            model: "deepseek/deepseek-chat",
++            messages: [{ role: "user", content: "ping" }],
++            max_tokens: 1
++          })
++        });
++        if (res.ok) { resEl.textContent = "✅ Connecté (OpenRouter)"; resEl.style.color = "var(--cyan)"; }
++        else { 
++          const errData = await res.json().catch(()=>({}));
++          const errMsg = errData.error?.message || "Erreur inconnue";
++          resEl.textContent = `❌ Err: ${res.status}`; 
++          resEl.style.color = "var(--danger)"; 
++          resEl.title = errMsg;
++        }
++      } catch(e) {
++        console.error("OpenRouter Test Error:", e);
++        resEl.textContent = `❌ Échec: ${e.message}`; 
++        resEl.style.color = "var(--danger)";
++      }
++    };
++  }
++
+   $("#save-api-key").onclick = async () => {
+     const k = $("#api-key-input").value.trim();
+-    if (!isValidApiKey(k)) {
+-      toast("Clé invalide — min. 20 caractères alphanumériques", "error");
++    const gK = $("#gemini-api-key-input") ? $("#gemini-api-key-input").value.trim() : "";
++    const oK = $("#openrouter-api-key-input") ? $("#openrouter-api-key-input").value.trim() : "";
++
++    if (k && !isValidApiKey(k)) {
++      toast("Clé Mistral invalide — min. 20 caractères alphanumériques", "error");
+       return;
+     }
+-    await setCookie("mistral_api_key", k);
+-    state.apiKey = k;
+-    $("#api-status").innerHTML = '<span class="status-dot"></span>EN LIGNE';
+-    $("#api-status").className = "status-pill active";
+-    if ($("#api-status-mob")) { $("#api-status-mob").innerHTML = '<span class="status-dot"></span>EN LIGNE'; $("#api-status-mob").className = "status-pill active"; }
++    
++    if (k) {
++      await setCookie("mistral_api_key", k);
++      state.apiKey = k;
++    }
++    if (gK) {
++      await setCookie("gemini_api_key", gK);
++      state.geminiApiKey = gK;
++    }
++    if (oK) {
++      await setCookie("openrouter_api_key", oK);
++      state.openRouterApiKey = oK;
++    }
++
++    if (state.apiKey || state.geminiApiKey || state.openRouterApiKey) {
++      const apiBtn = $("#open-api-modal");
++      if (apiBtn) {
++        apiBtn.classList.add("active");
++        const label = $("#api-status");
++        if (label) label.textContent = "API OK";
++      }
++    }
+     closeApiModal();
+-    toast("Clé API activée — persistante 365 jours !", "success");
++    toast("Clé(s) API enregistrée(s) avec succès !", "success");
+     // Seed all default agents & workflows on first API key entry
+     const existingAgents = await db.getAll('agents') || [];
+     const hasDefault = existingAgents.some(a => a.id === 'default-qcm-multimatiere-expert');
+@@ -7760,13 +8998,26 @@ function bindEvents() {
+ 
+   if ($("#delete-api-key")) {
+     $("#delete-api-key").onclick = () => {
+-      if (!confirm("Supprimer votre clé API sauvegardée ?")) return;
++      if (!confirm("Supprimer vos clés API sauvegardées (Mistral, Gemini, OpenRouter) ?")) return;
+       deleteCookie("mistral_api_key");
++      deleteCookie("gemini_api_key");
++      deleteCookie("openrouter_api_key");
+       state.apiKey = null;
++      state.geminiApiKey = null;
++      state.openRouterApiKey = null;
+       $("#api-key-input").value = "";
+-      $("#api-status").innerHTML = '<span class="status-dot"></span>OFFLINE';
+-      $("#api-status").className = "status-pill";
+-      toast("Clé API supprimée", "success");
++      if ($("#gemini-api-key-input")) $("#gemini-api-key-input").value = "";
++      if ($("#openrouter-api-key-input")) $("#openrouter-api-key-input").value = "";
++      
++      const apiBtn = $("#open-api-modal");
++      if (apiBtn) {
++        apiBtn.classList.remove("active");
++        const label = $("#api-status");
++        if (label) label.textContent = "API";
++      }
++      
++      closeApiModal();
++      toast("Clés API supprimées", "success");
+     };
+   }
+ 
+@@ -7800,6 +9051,7 @@ function bindEvents() {
+       maxTokens: 4096,
+       created: now()
+     };
++
+     await db.put('agents', agent);
+     closeAgentModal();
+     await loadAgents();
+@@ -7838,6 +9090,192 @@ function bindEvents() {
+   };
+ 
+ 
++  // ══════════════════════════════════════════════════════════════════════════
++  // ══ FICHE DE CORRECTION MODAL ══
++  // ══════════════════════════════════════════════════════════════════════════
++
++  // (CORRECTION_COMPETENCES, CORRECTION_SYSTEM_PROMPT et buildCorrectionUserPrompt
++  //  sont définis AVANT generateCorrectionSheet — voir plus haut)
++
++
++  // ── Navigation du wizard ───────────────────────────────────────────────
++  const CORR_STEPS = ['corr-step-1','corr-step-2','corr-step-3','corr-step-4'];
++  const CORR_LABELS = ['Contexte pédagogique','Sujet & Barème','Compétences & Options','Résumé & Génération'];
++
++  const corrShowStep = (n) => {
++    CORR_STEPS.forEach((id, i) => {
++      const el = $(`#${id}`);
++      if (el) el.style.display = (i === n - 1) ? 'block' : 'none';
++    });
++    // Update progress dots
++    for (let i = 1; i <= 4; i++) {
++      const dot = $(`#cdot-${i}`);
++      const line = $(`#cline-${i}`);
++      if (!dot) continue;
++      dot.className = 'corr-step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
++      if (line) line.className = 'corr-step-line' + (i < n ? ' done' : '');
++    }
++    const lbl = $('#corr-step-label');
++    if (lbl) lbl.textContent = CORR_LABELS[n - 1];
++
++    // Étape 4 : afficher le bon badge moteur IA
++    if (n === 4) {
++      const gemBadge  = $('#corr-engine-gemini');
++      const mistBadge = $('#corr-engine-mistral');
++      const hasGemini = !!state.geminiApiKey;
++      if (gemBadge)  gemBadge.style.display  = hasGemini ? 'block' : 'none';
++      if (mistBadge) mistBadge.style.display = hasGemini ? 'none'  : 'block';
++    }
++  };
++
++  // Pre-fill competences when discipline changes
++  const corrFillCompetences = () => {
++    const discEl = $('#corr-discipline');
++    const compEl = $('#corr-competences');
++    const langGroup = $('#corr-langue-group');
++    const customGroup = $('#corr-custom-discipline-group');
++    if (!discEl || !compEl) return;
++    const disc = discEl.value;
++    const isLang = ['Anglais','Arabe','Espagnol','Français'].includes(disc);
++    if (langGroup) langGroup.style.display = isLang ? 'block' : 'none';
++    if (customGroup) customGroup.style.display = disc === 'Autre' ? 'block' : 'none';
++    compEl.value = CORRECTION_COMPETENCES[disc] || CORRECTION_COMPETENCES['Autre'];
++  };
++
++  // Build summary HTML for step 4
++  const corrBuildSummary = () => {
++    const get = (id) => ($(`#${id}`)?.value || '').trim();
++    const discipline = get('corr-discipline') === 'Autre' ? (get('corr-custom-discipline') || 'Autre') : get('corr-discipline');
++    const sujetPreview = get('corr-sujet').slice(0, 120) + (get('corr-sujet').length > 120 ? '…' : '');
++    const classeStr = `${get('corr-niveau') || '—'} ${get('corr-filiere') && !get('corr-filiere').includes('Aucune') ? ' - ' + get('corr-filiere') : ''} ${get('corr-option') && !get('corr-option').includes('Générale') ? '(' + get('corr-option') + ')' : ''}`.replace(/\s+/g, ' ').trim();
++    const html = `
++      <div style="display:grid;gap:6px">
++        <div><span style="color:var(--text-dim)">📚 Discipline :</span> <strong style="color:var(--cyan)">${discipline || '—'}</strong></div>
++        <div><span style="color:var(--text-dim)">🎓 Classe :</span> <strong style="color:var(--neon)">${classeStr}</strong></div>
++        <div><span style="color:var(--text-dim)">📝 Type :</span> ${get('corr-type-eval') || '—'}</div>
++        <div><span style="color:var(--text-dim)">🗂️ Format :</span> ${(get('corr-format') || '').split('(')[0].trim()}</div>
++        <div><span style="color:var(--text-dim)">⚖️ Barème :</span> ${get('corr-bareme') ? '<span style="color:#a78bfa">✓ Fourni</span>' : '<span style="color:#f59e0b">⚠ Absent — placeholders générés</span>'}</div>
++        <div><span style="color:var(--text-dim)">📋 Sujet :</span> <em style="color:var(--text-dim);font-size:11px">${sujetPreview || '—'}</em></div>
++      </div>`;
++    const summaryEl = $('#corr-summary');
++    if (summaryEl) summaryEl.innerHTML = html;
++  };
++
++  // ── Validation steps ────────────────────────────────────────────────────
++  const corrValidateStep1 = () => {
++    const disc = $('#corr-discipline')?.value;
++    const niv = $('#corr-niveau')?.value;
++    if (!disc) { toast('Veuillez choisir une discipline.', 'error'); return false; }
++    if (!niv) { toast('Veuillez choisir un niveau scolaire.', 'error'); return false; }
++    return true;
++  };
++  const corrValidateStep2 = () => {
++    if (typeof _corrPdfBase64 !== 'undefined' && _corrPdfBase64) return true; // OK si un document est chargé
++    const sujet = $('#corr-sujet')?.value?.trim();
++    if (!sujet || sujet.length < 20) { toast('Veuillez coller le sujet (au moins 20 caractères) ou importer un PDF.', 'error'); return false; }
++    return true;
++  };
++
++  // ── Ouvrir / Fermer la modale ──────────────────────────────────────────
++  const openCorrectionModal = () => {
++    corrShowStep(1);
++    corrFillCompetences();
++    $('#correction-modal').classList.add('active');
++  };
++  const closeCorrectionModal = () => $('#correction-modal').classList.remove('active');
++
++  // ── Wiring des boutons ─────────────────────────────────────────────────
++  if ($('#open-correction-modal'))         $('#open-correction-modal').onclick = openCorrectionModal;
++  if ($('#close-correction-modal'))        $('#close-correction-modal').onclick = closeCorrectionModal;
++  if ($('#close-correction-modal-step1'))  $('#close-correction-modal-step1').onclick = closeCorrectionModal;
++  if ($('#correction-modal'))              $('#correction-modal').onclick = e => { if (e.target === $('#correction-modal')) closeCorrectionModal(); };
++
++  // Step 1 → 2
++  if ($('#corr-next-1')) $('#corr-next-1').onclick = () => {
++    if (!corrValidateStep1()) return;
++    corrFillCompetences();
++    corrShowStep(2);
++  };
++  // Step 2 → 3
++  if ($('#corr-next-2')) $('#corr-next-2').onclick = () => {
++    if (!corrValidateStep2()) return;
++    corrShowStep(3);
++  };
++  // Step 3 → 4
++  if ($('#corr-next-3')) $('#corr-next-3').onclick = () => {
++    corrBuildSummary();
++    corrShowStep(4);
++  };
++  // Back buttons
++  if ($('#corr-back-2')) $('#corr-back-2').onclick = () => corrShowStep(1);
++  if ($('#corr-back-3')) $('#corr-back-3').onclick = () => corrShowStep(2);
++  if ($('#corr-back-4')) $('#corr-back-4').onclick = () => corrShowStep(3);
++
++  // Discipline change → auto-fill competences + show/hide langue/custom fields
++  if ($('#corr-discipline')) $('#corr-discipline').onchange = corrFillCompetences;
++
++  // Import fichier texte ou PDF → lire et traiter
++  if ($('#corr-pdf-upload')) {
++    $('#corr-pdf-upload').onchange = async (e) => {
++      const file = e.target.files[0];
++      if (!file) return;
++
++      const badge   = $('#corr-pdf-badge');
++      const info    = $('#corr-pdf-info');
++      const sujetEl = $('#corr-sujet');
++      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
++
++      if (isPdfOrImg) {
++        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
++        
++        const reader = new FileReader();
++        reader.onload = (ev) => {
++          _corrPdfBase64 = ev.target.result.split(',')[1];
++          _corrPdfName = file.name;
++          _corrPdfMime = file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
++
++          if (badge) {
++            badge.textContent = `📄 ${file.name} (Prêt pour Gemini Vision)`;
++            badge.style.display = 'inline-block';
++          }
++          if (info) info.style.display = 'block';
++          
++          if (sujetEl) { 
++            sujetEl.value = `[DOCUMENT ATTACHÉ: ${file.name}]\nSera analysé nativement par Gemini.`; 
++            sujetEl.style.opacity = '1'; 
++          }
++          toast(`✅ ${file.name} importé avec succès pour la Vision.`, 'success');
++        };
++        reader.onerror = () => {
++          toast(`❌ Erreur lecture de ${file.name}`, 'error');
++          if (badge) badge.style.display = 'none';
++        };
++        reader.readAsDataURL(file);
++      } else {
++        // Fichier texte (.txt / .md) → coller directement
++        const reader = new FileReader();
++        reader.onload = (ev) => {
++          if (sujetEl) { sujetEl.value = ev.target.result.trim(); sujetEl.style.opacity = '1'; }
++          _corrPdfBase64 = null; // on reset vision car c'est du texte
++          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
++          if (info)  info.style.display = 'block';
++          toast('✅ Fichier texte importé dans la zone sujet.', 'success');
++        };
++        reader.readAsText(file, 'UTF-8');
++      }
++
++      e.target.value = ''; // reset input
++    };
++  }
++
++  // Générer la fiche (générique)
++  if ($('#corr-generate-btn')) $('#corr-generate-btn').onclick = generateCorrectionSheet;
++
++
++  // ══════════════════════════════════════════════════════════════════════════
++  
++
++
+ 
+   // Memory
+   $("#memory-toggle").onclick = () => {
+@@ -8764,12 +10202,11 @@ RAPPEL CRUCIAL : RÉPONDS EXCLUSIVEMENT DANS LA LANGUE DE LA QUESTION.`;
+       stream: true
+     };
+ 
+-    fetchWithRetry("https://api.mistral.ai/v1/chat/completions", {
++    const _apiConf = getLlmApiConfig(reqBody.model);
++
++    fetchWithRetry(_apiConf.url, {
+       method: "POST",
+-      headers: {
+-        "Authorization": `Bearer ${state.apiKey}`,
+-        "Content-Type": "application/json"
+-      },
++      headers: _apiConf.headers,
+       body: JSON.stringify(reqBody)
+     }).then(async res => {
+       if (!res.ok) throw new Error("API " + res.status);
