@@ -175,6 +175,7 @@
               <span class="material-symbols-outlined" style="font-size:14px">assignment</span>
               📋 Fiche de Correction
             </button>
+
             <button id="open-data-modal" class="sb-btn">
               <span class="material-symbols-outlined" style="font-size:14px">database</span>
               {{ t('btn_data_export') }}

@@ -34,9 +34,18 @@
              ÉTAPE 1 — Contexte pédagogique
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="corr-step-1">
-          <div class="info-block" style="border-left-color:var(--neon);margin-bottom:16px">
-            <strong style="color:var(--neon)">🎯 Étape 1 / 4 — Contexte pédagogique</strong><br>
-            Renseignez la discipline, le niveau et le type d'évaluation.
+          <div class="info-block" style="border-left-color:var(--neon);margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <strong style="color:var(--neon)">🎯 Étape 1 / 4 — Contexte pédagogique</strong><br>
+              Renseignez la discipline, le niveau et le type d'évaluation.
+            </div>
+            <div class="corr-save-load-controls" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+              <select class="field-input field-select" id="corr-saved-list" style="width:auto; padding:6px; font-size:12px; background:rgba(0,0,0,0.2)">
+                <option value="">— Profils sauvegardés —</option>
+              </select>
+              <button class="btn-ghost" id="corr-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">📂 Charger</button>
+              <button class="btn-ghost" id="corr-delete-save-btn" @click="handleDeleteSave" style="border:1px dashed rgba(255,100,100,0.4); font-size:12px; padding:6px 12px; background:rgba(255,0,0,0.1); color:#ff6b6b">🗑️</button>
+            </div>
           </div>
 
           <!-- Discipline -->
@@ -77,32 +86,63 @@
               placeholder="Ex : Chimie Organique, Droit, Comptabilité…">
           </div>
 
-          <!-- Niveau scolaire -->
+          <!-- Paramètres de classe -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <!-- Niveau scolaire -->
             <div class="field-group">
               <label class="field-label">🎓 Niveau scolaire <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="corr-niveau">
                 <option value="">— Choisir —</option>
                 <optgroup label="Collège">
-                  <option value="6ème">6ème</option>
-                  <option value="5ème">5ème</option>
-                  <option value="4ème">4ème</option>
-                  <option value="3ème">3ème</option>
+                  <option value="1ère Année Collège (1AC)">1ère Année Collège (1AC)</option>
+                  <option value="2ème Année Collège (2AC)">2ème Année Collège (2AC)</option>
+                  <option value="3ème Année Collège (3AC)">3ème Année Collège (3AC)</option>
                 </optgroup>
                 <optgroup label="Lycée">
-                  <option value="2nde">Seconde</option>
-                  <option value="1ère">Première</option>
-                  <option value="Terminale">Terminale</option>
+                  <option value="Tronc Commun (TC)">Tronc Commun (TC)</option>
+                  <option value="1ère Année Bac (1BAC)">1ère Année Bac (1BAC)</option>
+                  <option value="2ème Année Bac (2BAC)">2ème Année Bac (2BAC)</option>
                 </optgroup>
-                <optgroup label="Supérieur">
-                  <option value="Licence 1">Licence 1 (L1)</option>
-                  <option value="Licence 2">Licence 2 (L2)</option>
-                  <option value="Licence 3">Licence 3 (L3)</option>
-                  <option value="Master">Master</option>
-                </optgroup>
-                <option value="Autre">Autre</option>
               </select>
             </div>
+
+            <!-- Filière -->
+            <div class="field-group">
+              <label class="field-label">📚 Filière</label>
+              <select class="field-input field-select" id="corr-filiere">
+                <option value="Aucune (Collège)">Aucune (Collège)</option>
+                <optgroup label="Tronc Commun">
+                  <option value="TC Sciences">TC Sciences</option>
+                  <option value="TC Lettres et Sciences Humaines">TC Lettres et Sciences Humaines</option>
+                  <option value="TC Technologie">TC Technologie</option>
+                  <option value="TC Enseignement Originel">TC Enseignement Originel</option>
+                </optgroup>
+                <optgroup label="1ère / 2ème Bac">
+                  <option value="Sciences Physiques (SP)">Sciences Physiques (SP)</option>
+                  <option value="Sciences Mathématiques (SM)">Sciences Mathématiques (SM)</option>
+                  <option value="Sciences de la Vie et de la Terre (SVT)">Sciences de la Vie et de la Terre (SVT)</option>
+                  <option value="Sciences Agronomiques">Sciences Agronomiques</option>
+                  <option value="Sciences Économiques">Sciences Économiques</option>
+                  <option value="Techniques de Gestion Comptable">Techniques de Gestion Comptable</option>
+                  <option value="Lettres">Lettres</option>
+                  <option value="Sciences Humaines">Sciences Humaines</option>
+                  <option value="Sciences et Technologies">Sciences et Technologies</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Option -->
+            <div class="field-group">
+              <label class="field-label">🌍 Option (Langue)</label>
+              <select class="field-input field-select" id="corr-option">
+                <option value="Générale (Arabe)">Générale (Arabe)</option>
+                <option value="Section Internationale - Français (BIOF)">Section Internationale - Français (BIOF)</option>
+                <option value="Section Internationale - Anglais">Section Internationale - Anglais</option>
+                <option value="Section Internationale - Espagnol">Section Internationale - Espagnol</option>
+              </select>
+            </div>
+
+            <!-- Type d'évaluation -->
             <div class="field-group">
               <label class="field-label">📝 Type d'évaluation <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="corr-type-eval">
@@ -110,8 +150,8 @@
                 <option value="Devoir surveillé">Devoir surveillé (DS)</option>
                 <option value="Devoir maison">Devoir maison (DM)</option>
                 <option value="Bac blanc">Bac blanc</option>
-                <option value="Examen officiel">Examen officiel</option>
-                <option value="Interrogation">Interrogation rapide</option>
+                <option value="Examen national">Examen national (Bac)</option>
+                <option value="Interrogation rapide">Interrogation rapide</option>
               </select>
             </div>
           </div>
@@ -132,8 +172,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="close-correction-modal-step1">Annuler</button>
-            <button class="btn-primary" id="corr-next-1">Suivant →</button>
+            <button class="btn-ghost" id="close-correction-modal-step1" @click="handleClose">Annuler</button>
+            <button class="btn-primary" id="corr-next-1" @click="handleNext1">Suivant →</button>
           </div>
         </div>
 
@@ -184,8 +224,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="corr-back-2">← Retour</button>
-            <button class="btn-primary" id="corr-next-2">Suivant →</button>
+            <button class="btn-ghost" id="corr-back-2" @click="handleBack(1)">← Retour</button>
+            <button class="btn-primary" id="corr-next-2" @click="handleNext2">Suivant →</button>
           </div>
         </div>
 
@@ -203,7 +243,15 @@
             <label class="field-label">🎯 Référentiel de compétences évaluées</label>
             <textarea class="field-textarea" id="corr-competences" rows="4"
               placeholder="Pré-remplies automatiquement selon la discipline choisie…"></textarea>
-            <div class="field-hint">Ces compétences alimenteront la 4ème colonne du tableau. Éditez-les librement.</div>
+            <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+              <label for="corr-ref-upload" class="corr-upload-btn">
+                <span style="font-size:13px">📎</span>
+                Importer un Cadre de Référence (PDF/TXT)
+              </label>
+              <input type="file" id="corr-ref-upload" accept=".pdf,.txt,.md" style="display:none">
+              <span id="corr-ref-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
+              <span style="color:var(--text-dim)">Ces compétences alimenteront la 4ème colonne du tableau.</span>
+            </div>
           </div>
 
           <!-- Critères personnalisés -->
@@ -229,8 +277,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="corr-back-3">← Retour</button>
-            <button class="btn-primary" id="corr-next-3">Vérifier →</button>
+            <button class="btn-ghost" id="corr-back-3" @click="handleBack(2)">← Retour</button>
+            <button class="btn-primary" id="corr-next-3" @click="handleNext3">Vérifier →</button>
           </div>
         </div>
 
@@ -266,9 +314,10 @@
             Pour utiliser Gemini Vision sur vos PDFs avec graphiques, ajoutez votre clé Google AI dans Paramètres API.
           </div>
 
-          <div class="btn-row">
-            <button class="btn-ghost" id="corr-back-4">← Retour</button>
-            <button class="btn-primary" id="corr-generate-btn" style="background:linear-gradient(135deg,var(--neon),var(--cyan));color:#000;font-weight:700;gap:8px">
+          <div class="btn-row" style="flex-wrap: wrap;">
+            <button class="btn-ghost" id="corr-back-4" @click="handleBack(3)">← Retour</button>
+            <button class="btn-ghost" id="corr-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">💾 Sauvegarder config</button>
+            <button class="btn-primary" id="corr-generate-btn" @click="handleGenerate" style="background:linear-gradient(135deg,var(--neon),var(--cyan));color:#000;font-weight:700;gap:8px">
               <span>🎯</span> GÉNÉRER LA FICHE
             </button>
           </div>
@@ -281,6 +330,40 @@
 
 <script setup>
 import { t } from '../../i18n.js';
+
+// Appel des fonctions globales exposées par legacy.js (via window)
+// Ces fonctions sont toujours disponibles au moment où les boutons sont cliqués
+const handleClose = () => window.closeCorrectionModal?.();
+const handleBack = (step) => window.corrShowStep?.(step);
+
+const handleNext1 = () => {
+  if (!window.corrValidateStep1?.()) return;
+  window.corrFillCompetences?.();
+  window.corrShowStep?.(2);
+};
+
+const handleNext2 = () => {
+  if (!window.corrValidateStep2?.()) return;
+  window.corrShowStep?.(3);
+};
+
+const handleNext3 = () => {
+  window.corrBuildSummary?.();
+  window.corrShowStep?.(4);
+};
+
+const handleGenerate = () => {
+  window.generateCorrectionSheet?.();
+};
+const handleSaveConfig = () => {
+  document.dispatchEvent(new CustomEvent('do-save-correction-config'));
+};
+const handleLoadConfig = () => {
+  document.dispatchEvent(new CustomEvent('do-load-correction-config'));
+};
+const handleDeleteSave = () => {
+  document.dispatchEvent(new CustomEvent('do-delete-correction-config'));
+};
 </script>
 
 <style scoped>

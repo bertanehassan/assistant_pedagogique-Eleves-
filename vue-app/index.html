@@ -5,6 +5,12 @@
     <script>
     (function(){
       'use strict';
+      window.addEventListener('error', function(e) {
+        alert('JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        alert('PROMISE ERROR: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+      });
       // 1. Désactiver le clic droit sauf dans les zones de saisie
       document.addEventListener('contextmenu', function(e){
         const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
@@ -20,25 +26,6 @@
         if (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) { e.preventDefault(); return false; }
         if (e.ctrlKey && ['U','u'].includes(e.key)) { e.preventDefault(); return false; }
       }, true);
-
-      // 3. Détection DevTools par timing (méthode la plus fiable)
-      let _devtoolsOpen = false;
-      const _threshold = 160;
-      function _detectDevTools() {
-        const start = performance.now();
-        // Le debugger statement est ignoré si DevTools est fermé, mais prend du temps si ouvert
-        // eslint-disable-next-line no-debugger
-        debugger;
-        const elapsed = performance.now() - start;
-        if (elapsed > _threshold && !_devtoolsOpen) {
-          _devtoolsOpen = true;
-          document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0b1326;color:#ff4040;font-family:monospace;font-size:1.2rem;flex-direction:column;gap:1rem;"><span style="font-size:3rem;">🔒</span><b>Accès non autorisé</b><span>Veuillez fermer les outils de développement.</span></div>';
-        }
-        if (!_devtoolsOpen) {
-          setTimeout(_detectDevTools, 500);
-        }
-      }
-      setTimeout(_detectDevTools, 1000);
 
       // 4. Désactiver la sélection de texte sur les éléments de code
       document.addEventListener('selectstart', function(e){

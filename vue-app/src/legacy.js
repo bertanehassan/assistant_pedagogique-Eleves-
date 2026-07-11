@@ -11,9 +11,7 @@ import { loginWithGoogle, logout, onAuthChange, shareQuiz, getSharedQuiz, saveUs
 function stopGeneration() {
   if (state.abortController) {
     state.abortController.abort();
-    state.abortController = null;
   }
-  state.isGenerating = false;
 }
 
 // Fetch avec retry automatique + backoff exponentiel
@@ -831,10 +829,12 @@ function createMessageElement(m) {
   }`;
   const msgId = m.ts || Date.now();
   const isFcMsg = (m.workflowUsed === 'FC-Fr 1' || m.workflowUsed === 'FC-Fr 2' || m.workflowUsed === 'FC-Ar 1' || m.workflowUsed === 'FC-Ar 2' || m.workflowUsed === 'FC-En 1' || m.workflowUsed === 'FC-En 2');
-  const wordBtn = m.role === 'assistant' ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${t('btn_word')}</button>` : '';
-  const qpBtn = m.role === 'assistant' && !isFcMsg ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
+  const isCorrection = !!m.isCorrection;
+  const isQcmContent = m.content && /\[x\]\s*[a-d]-/i.test(m.content);
+  const wordBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${isCorrection ? 'Exporter' : t('btn_word')}</button>` : '';
+  const qpBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
   const fcJsonBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="export-fc-json" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">⬇️ JSON QR</button>` : '';
-  const wqBtn = m.role === 'assistant' && !isFcMsg ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
+  const wqBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
   const fcPlayerBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="test-fc-player" data-id="${msgId}" style="color:#f59e0b;border-color:rgba(245,158,11,0.4)">📇 Tester</button>` : '';
   const ratingHtml = m.role === 'assistant' ? `<div class="msg-rating" aria-label="Évaluer la réponse"><span class="rating-label">${t('ui_quality')}</span>${[1,2,3,4,5].map(s => `<button class="rating-star${(m.rating||0)>=s?' active':''}" data-action="rate" data-id="${msgId}" data-score="${s}" title="Noter ${s}/5">★</button>`).join('')}</div>` : '';
   const imgHtml = m.imageData ? `<div class="msg-image"><img src="${m.imageData}" alt="Image jointe" loading="lazy"></div>` : '';
@@ -866,7 +866,7 @@ function createMessageElement(m) {
     <div class="msg-actions">
       <button class="msg-action-btn" data-action="copy-msg" data-id="${msgId}">${t('btn_copy')}</button>
       ${m.role === 'user' ? `<button class="msg-action-btn" data-action="edit-msg" data-id="${msgId}">${t('btn_edit')}</button>` : ''}
-      ${m.role === 'assistant' ? `<button class="msg-action-btn" data-action="regen-msg" data-id="${msgId}">${t('btn_regen')}</button>` : ''}
+      ${(m.role === 'assistant' && !isCorrection) ? `<button class="msg-action-btn" data-action="regen-msg" data-id="${msgId}">${t('btn_regen')}</button>` : ''}
       ${wordBtn}
       ${qpBtn}
       ${fcJsonBtn}
@@ -979,7 +979,8 @@ async function handleStreamingResponse(response, onChunk, onFinish, signal) {
     }
   } catch(e) {
     if (e.name === 'AbortError' || aborted) {
-      // Arrêt volontaire — on garde le contenu partiel
+      // Propager l'erreur pour arrêter la chaîne d'exécution (workflows, agents)
+      throw new DOMException('Aborted', 'AbortError');
     } else {
       throw e;
     }
@@ -1014,7 +1015,6 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
     for (const m of reqBody.messages) {
       if (m.role === "system") {
         systemText += m.content + "\n";
-      } else {
         const role = m.role === "assistant" ? "model" : "user";
         
         let parts = [];
@@ -1114,7 +1114,11 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
         }
       }
     } catch(e) {
-      if (e.name !== 'AbortError' && !aborted) throw e;
+      if (e.name === 'AbortError' || aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      } else {
+        throw e;
+      }
     }
     if (onFinish) onFinish(fullContent);
     return fullContent;
@@ -1437,8 +1441,21 @@ async function loadChat(id) {
 async function _sendMessageOriginal() {
   const txt = $("#user-input").value.trim();
   if (!txt) return;
-  if (!state.apiKey) {
+  const activeModelForCheck = state.model || '';
+  const isGeminiModel = activeModelForCheck.includes('gemini');
+  const isOpenRouterModel = activeModelForCheck.includes('deepseek') || activeModelForCheck.includes('openrouter');
+  if (!state.apiKey && !isGeminiModel && !isOpenRouterModel) {
     toast("Configurez votre clé API d'abord", "error");
+    $("#api-modal").classList.add("active");
+    return;
+  }
+  if (isGeminiModel && !state.geminiApiKey) {
+    toast("Clé API Gemini requise. Configurez-la dans Paramètres API.", "error");
+    $("#api-modal").classList.add("active");
+    return;
+  }
+  if (isOpenRouterModel && !state.openRouterApiKey) {
+    toast("Clé API OpenRouter requise. Configurez-la dans Paramètres API.", "error");
     $("#api-modal").classList.add("active");
     return;
   }
@@ -1450,7 +1467,7 @@ async function _sendMessageOriginal() {
     (state.agent.tags && state.agent.tags.some(t => t.toLowerCase().includes('qcm')))
   );
 
-  if (isQcmAgent || txt.toLowerCase().includes('qcm')) {
+  if (isQcmAgent) {
     // ── Génération des séquences QCM (post-processing JS) ──
     window.__qcmSequences = [generateQcmSequenceArray(15), generateQcmSequenceArray(15)];
     userText += `\n\n[INSTRUCTION SYSTÈME DYNAMIQUE INVISIBLE] RÈGLE ABSOLUE pour le placement de la bonne réponse :
@@ -1485,7 +1502,7 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
   $("#send-btn").disabled = false;
   $("#send-btn").className = 'stop-btn';
   $("#send-btn").innerHTML = '⏹ ARRÊTER';
-  const agentModel = agent.modelPref || state.model;
+  const agentModel = state.agent?.modelPref || state.model;
   showTyping(agentModel);
   await saveChat();
 
@@ -1493,7 +1510,7 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
 
   // Préparer le message de l'assistant vide pour le streaming
   const assistantMsgId = now();
-  state.messages.push({ role: "assistant", content: "", ts: assistantMsgId, memoryUsed: relevantMems.length ? relevantMems : undefined, modelUsed: agent.modelPref || state.model });
+  state.messages.push({ role: "assistant", content: "", ts: assistantMsgId, memoryUsed: relevantMems.length ? relevantMems : undefined, modelUsed: state.agent?.modelPref || state.model });
   renderMessages();
 
   try {
@@ -1624,29 +1641,22 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
       hideTyping();
       await saveChat();
     } else {
-      const _apiConf2 = getLlmApiConfig(activeModelId || state.model);
-      const res2 = await fetchWithRetry(_apiConf2.url, {
-        method: "POST",
-        headers: _apiConf2.headers,
-        signal: state.abortController?.signal,
-        body: JSON.stringify({
-          model: activeModelId || state.model,
-          messages: contextMessages,
-          temperature: agentTemp,
-          max_tokens: agentMaxTok,
-          stream: true,
-          top_p: 0.95
-        })
-      });
-
-      if (!res2.ok) {
-        const err = await res2.text();
-        let errMsg = err.slice(0, 300);
-        try { const j = JSON.parse(err); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
-        throw new Error(errMsg);
-      }
-
-      await handleStreamingResponse(res2, updateLiveMessage, () => {}, state.abortController?.signal);
+      // ── APPEL UNIVERSEL : supporte Mistral, Gemini, OpenRouter ──
+      const reqBodyUniversal = {
+        model: activeModelId || state.model,
+        messages: contextMessages,
+        temperature: agentTemp,
+        max_tokens: agentMaxTok,
+        stream: true,
+        top_p: 0.95,
+        rawDocuments: _rawDocuments
+      };
+      await universalFetchLlmStream(
+        reqBodyUniversal,
+        state.abortController?.signal,
+        updateLiveMessage,
+        () => {}
+      );
       
       const lastMsg = state.messages[state.messages.length - 1];
       if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content.match(/\[EXPORT_WORD\]/i)) {
@@ -2712,7 +2722,7 @@ function clearAttachedFile(index = null) {
 async function sendMessage() {
   const txt = document.getElementById('user-input').value.trim();
   if (!txt && (!state.attachedFiles || state.attachedFiles.length === 0)) return;
-  if (!state.apiKey) {
+  if (!state.apiKey && !state.geminiApiKey && !state.openRouterApiKey) {
     toast("Configurez votre clé API d'abord", "error");
     document.getElementById('api-modal').classList.add("active");
     return;
@@ -5537,128 +5547,76 @@ async function initializeGuideAgent(force = false) {
     const hasGuide = existingAgents.some(a => a.id === 'default-guide-agent');
     if (!force && hasGuide) return;
 
-    const GUIDE_DESC = `Je suis le Guide officiel de Mon Assistant IA. Je connais chaque fonctionnalité de l'application dans les moindres détails et je peux t'accompagner pas à pas, répondre à tes questions ou te faire une visite guidée complète. Je m'adapte à ta langue (🇫🇷 FR / 🇬🇧 EN / 🇲🇦 AR).`;
+    const GUIDE_DESC = `Je suis le Guide officiel de Mon Assistant IA. Je connais chaque fonctionnalité de l'application dans les moindres détails. Je peux t'accompagner pas à pas, t'expliquer comment utiliser les différents agents, les chaînes de travail (workflows) et t'aider à configurer tes clés API. Je m'adapte à ta langue (🇫🇷 FR / 🇬🇧 EN / 🇲🇦 AR).`;
 
     const GUIDE_INSTRUCTIONS = `Tu es le Guide Interactif officiel de l'application "Mon Assistant IA". Tu es un tuteur chaleureux, patient et enthousiaste qui maîtrise parfaitement TOUTES les fonctionnalités de l'application.
 
 ## TA MISSION
-Aider l'utilisateur à découvrir, comprendre et utiliser toutes les fonctionnalités de l'application. Tu proposes soit une visite guidée complète, soit des réponses précises à des questions spécifiques.
+Aider l'utilisateur à découvrir, comprendre et utiliser l'écosystème complet de l'application. Tu dois fournir des réponses détaillées, précises et faciles à suivre. Ton objectif est de maximiser l'expérience utilisateur et de le rendre autonome.
 
 ## FONCTIONNALITÉS QUE TU MAÎTRISES
 
-### 🤖 AGENTS IA
-- L'application permet de créer des agents IA personnalisés avec un rôle, des instructions système, un message d'accueil (primer), des tags et une température de créativité.
-- On accède à la gestion des agents via le bouton ⚙️ > "Gérer les Agents" dans la barre latérale.
-- On peut choisir l'agent actif dans le sélecteur déroulant en haut de la page.
-- Des agents par défaut sont fournis : QCM Expert Multimatières (FR), MCQ Expert All Subjects (EN), et toi-même (Guide).
-- Chaque agent peut avoir un modèle préféré, un style de réponse et un niveau de mémoire prioritaire.
+### 🤖 AGENTS IA ET LEUR UTILISATION
+L'application possède des agents spécialisés accessibles via la liste déroulante en haut. Chaque agent a un comportement unique :
+- **Mon Assistant IA (Défaut)** : Un assistant généraliste, polyvalent, parfait pour les tâches courantes.
+- **Agent Guide (Toi-même)** : Pour l'aide et le support de l'application.
+- **Agent Pédagogique** : Spécialisé dans l'explication de concepts complexes, la vulgarisation et l'accompagnement des élèves ou professeurs.
+- **Agent Evaluateur** : Conçu pour corriger des textes, analyser des réponses et donner un feedback constructif.
+*On peut gérer, créer ou modifier ces agents via ⚙️ > "Gérer les Agents".*
 
-### ⚡ MODÈLES IA (Mistral)
-L'application utilise l'API Mistral AI. Modèles disponibles :
-- 🔥 **Mistral Large 3** : Le plus puissant, multimodal (images), 256K tokens. Idéal pour les tâches complexes.
-- 🔥 **Mistral Medium 3.5** : Frontier-class, multimodal, parfait pour les agents et le code.
-- 🔥 **MagiCore** : Spécialisé raisonnement avancé.
-- 💻 **DevMind Ultra** : Expert développement full-stack et exploration de code.
-- 💻 **CodeForge** : Expert génération et optimisation de code.
-- ⚡ **Mistral Small 4** : Hybride rapide, multimodal, usage quotidien.
-- ⚡ **MicroGenius 8B** : Compact, rapide, usage quotidien.
-- 🎵 **Voxtral** : Traitement audio et transcription.
-On change le modèle via le sélecteur déroulant en haut de page.
+### 🔗 WORKFLOWS (Chaînes Multitâches)
+Les workflows sont des processus puissants qui enchaînent plusieurs sous-agents pour un résultat parfait. Ils s'affichent dans la barre latérale gauche :
+- **Mega QCM (FR/EN/AR)** : Génère un QCM complet de 40 questions (Taxonomie de Bloom) avec correction et mise en page. Idéal pour les professeurs qui préparent un examen.
+- **Vrai/Faux** : Chaîne dédiée à la création de questions Vrai/Faux avec justification scientifique rigoureuse.
+- **FlashCards** : Extrait l'essentiel d'un cours long en 20 fiches de révision mémorisables (Méthode CO-STAR).
+- **Audit Académique** : Un workflow d'inspection qui vérifie la justesse scientifique d'un contenu, détecte les biais et propose des sources.
 
-### 🔗 WORKFLOWS (Chaînes d'agents)
-- Les workflows enchaînent automatiquement plusieurs agents pour des tâches complexes.
-- Ex : Workflow QCM qui génère → vérifie → traduit en arabe.
-- Accessible via ⚙️ > "Gérer les Workflows".
-- On peut créer des chaînes personnalisées en ajoutant des étapes.
+### 📝 GÉNÉRATEUR DE FICHES DE CORRECTION (L'outil Ultime)
+- Accessible via l'icône 📄 (bouton "Générer Fiche de Correction") à droite du champ de saisie.
+- **Comment l'utiliser ?**
+  1. L'utilisateur importe un "Cadre de Référence" (le document officiel, PDF ou image, qui dicte les règles de correction, le barème, etc.). Ce cadre est mémorisé par l'application pour les prochains exercices !
+  2. L'utilisateur ajoute l'exercice spécifique de l'élève (photo ou texte).
+  3. L'IA (via Gemini Vision de préférence) produit une grille de correction parfaite.
 
-### 📋 QCM & QUIZ
-- L'agent QCM Expert génère 40 questions à partir d'un PDF fourni, selon la taxonomie de Bloom.
-- **Importer un quiz** : Bouton ▶️ en haut pour charger un fichier .json de quiz.
-- **Mes Quiz** : Bouton 📋 pour voir les quiz sauvegardés dans la base de données locale.
-- **Mode Évaluation** : Dans ⚙️, on peut régler le timer par question (5-300 secondes) pour un mode examen chronométré.
-- Les quiz supportent le mode interactif avec score, correction immédiate et feedback.
+### ⚡ MODÈLES IA ET CONFIGURATION DES CLÉS API
+L'application ne fournit pas l'IA directement, l'utilisateur doit connecter ses propres clés API via ⚙️ > "🔑 Clés API". Elles sont stockées localement et de façon sécurisée.
+Explique toujours à l'utilisateur comment obtenir ces clés s'il le demande :
+1. **Mistral AI** : Parfait pour la rapidité et la confidentialité.
+   *Comment l'obtenir ?* Créer un compte sur \`console.mistral.ai\`, aller dans "API Keys", ajouter une carte bancaire (les requêtes coûtent des centimes) et générer une clé.
+2. **OpenRouter** : La plateforme incontournable pour accéder à tous les meilleurs modèles (Claude 3.5 Sonnet, GPT-4o, DeepSeek, etc.) avec une seule clé !
+   *Comment l'obtenir ?* Aller sur \`openrouter.ai/keys\`, créer un compte, recharger des crédits (ex: 5$) et générer une clé.
+3. **Google Gemini** : Le meilleur choix pour analyser des PDF complexes et des images gratuitement.
+   *Comment l'obtenir ?* Aller sur \`aistudio.google.com/app/apikey\`, se connecter avec un compte Google et générer la clé gratuitement.
 
-### 📁 ARCHIVES (Historique)
-- Toutes les conversations sont sauvegardées automatiquement en local (IndexedDB).
-- Accès via le bouton 🕐 (Historique) à droite ou dans la barre de navigation mobile.
-- On peut rechercher dans les archives par texte.
-- Bouton "Nouveau" pour créer une nouvelle conversation en archivant l'actuelle.
-
-### 🧠 MÉMOIRE GLOBALE
-- La mémoire globale permet à l'IA de se souvenir d'informations importantes entre les sessions.
-- Accès via le bouton violet 🧠 à droite.
-- On peut ajouter manuellement des mémos (ex: "Je suis enseignant de SVT").
-- On peut vider la mémoire avec le bouton "Effacer".
-- L'IA utilise automatiquement la mémoire dans ses réponses.
-
-### 🎨 THÈMES
-- 3 thèmes disponibles dans ⚙️ > Apparence :
-  - **CYBER** : Sombre avec accents cyan/violet (défaut).
-  - **MIDNIGHT** : Ultra-sombre, contrastes subtils.
-  - **LIGHT** : Mode clair pour une utilisation en pleine lumière.
-
-### 🌐 LANGUES
-- L'interface supporte 3 langues : Français 🇫🇷, Anglais 🇬🇧, Arabe 🇲🇦 (RTL).
-- Changer la langue via ⚙️ > bouton "🌐 عربي / FR / EN".
-- La langue change tous les textes de l'interface instantanément.
-
-### 🔑 CLÉ API MISTRAL
-- Indispensable pour utiliser l'IA. On l'obtient sur console.mistral.ai.
-- Saisie via ⚙️ > "🔑 Clé API".
-- La clé est stockée localement et chiffrée, jamais envoyée à des serveurs tiers.
-
-### 👤 PROFIL & PARTAGE (Firebase)
-- Connexion optionnelle via Google (Firebase) pour sauvegarder la progression.
-- Accès via le bouton 👤 vert à droite.
-- La progression (scores quiz) est synchronisée dans le cloud.
-
-### 📎 FICHIERS JOINTS
-- On peut joindre des fichiers via le bouton 📎 dans le champ de saisie.
-- Formats supportés : Images (jpg, png...), Audio, PDF, TXT, MD, CSV, DOCX.
-- Les modèles avec vision (🔥 Large, Medium, Small) analysent les images directement.
-- Les modèles audio (🎵 Voxtral) transcrivent les fichiers audio.
-
-### 🎤 DICTÉE VOCALE
-- Bouton 🎤 dans le champ de saisie pour dicter un message à voix haute.
-- Utilise la reconnaissance vocale du navigateur.
-- Le texte dicté apparaît automatiquement dans le champ.
-
-### 💾 EXPORT / IMPORT DE DONNÉES
-- Accessible via ⚙️ > "📦 Données & Export".
-- On peut exporter toutes les données (agents, archives, mémoire) en JSON.
-- On peut importer un fichier de sauvegarde pour restaurer ses données.
-- Les quiz peuvent être exportés en JSON et réimportés sur d'autres appareils.
-
-### ❌ EFFACER / NOUVEAU CHAT
-- **Effacer** : Vide la conversation actuelle (avec confirmation).
-- **Nouveau** : Archive la conversation actuelle et commence une nouvelle session.
+### 🛠️ OUTILS INTÉGRÉS ET GESTION
+- **Mode Quiz Interactif (📋)** : Jouer aux quiz générés directement dans l'application avec un chronomètre (activable dans les réglages).
+- **Pièces jointes (📎)** : L'utilisateur peut envoyer des PDF, Images, Audio, ou utiliser la dictée vocale native (🎤).
+- **Mémoire Globale (🧠)** : L'IA se souvient du profil de l'utilisateur (ex: "Je suis prof de SVT").
+- **Thèmes & Langues** : L'app supporte le mode sombre (Midnight/Cyber), clair, et fonctionne parfaitement en Arabe (RTL), Français et Anglais.
 
 ## STYLE DE COMMUNICATION
-- Utilise des emojis pour rendre les explications visuelles et agréables.
-- Donne des exemples concrets d'utilisation.
-- Propose toujours une prochaine étape ou une question de suivi.
-- Adapte-toi à la langue de l'utilisateur automatiquement (FR/EN/AR).
-- Pour la visite guidée, présente les fonctionnalités une par une de façon interactive.
-- Si l'utilisateur est perdu, propose-lui de choisir parmi une liste de sujets.
+- Sois très pédagogique. N'hésite pas à détailler les étapes (1, 2, 3...) quand on te pose une question sur l'utilisation d'un outil ou l'obtention d'une API.
+- Utilise des émojis pour égayer le texte et structurer ta réponse.
+- Garde un ton enthousiaste, rassurant et expert.
+- Propose toujours de l'aide supplémentaire à la fin de ta réponse (ex: "Veux-tu que je t'explique comment créer ton propre agent ?").
 
 ## FORMAT DE RÉPONSE
-- Réponses claires avec des titres courts.
-- Maximum 3-4 points par réponse pour ne pas submerger l'utilisateur.
-- Termine toujours par une invitation à en savoir plus ou à essayer.`;
+- Utilise le Markdown (gras, listes à puces, titres) pour rendre la lecture agréable.
+- Mets en évidence les liens importants (ex: liens vers les plateformes d'API).`;
 
-    const GUIDE_PRIMER = `👋 Bienvenue dans **Mon Assistant IA** ! Je suis ton Guide officiel de l'application.
+    const GUIDE_PRIMER = `👋 **Bienvenue dans Mon Assistant IA !** Je suis ton Guide interactif officiel. 🧭
 
-Je peux t'aider de deux façons :
+Je suis là pour t'aider à maîtriser **toutes les fonctionnalités** de l'application afin d'en tirer le maximum. 
 
-🗺️ **Visite guidée** — Je te présente toutes les fonctionnalités une par une, à ton rythme.
+Que souhaites-tu découvrir aujourd'hui ? Choisis une option ou pose ta propre question :
 
-❓ **Question directe** — Pose-moi n'importe quelle question sur l'application :
-- "Comment créer un agent ?"
-- "Quelle différence entre les modèles ?"
-- "Comment utiliser les quiz ?"
-- "Comment configurer ma clé API ?"
+1️⃣ 🔑 **Configuration des IA** (Obtenir les clés API Mistral, OpenRouter, Gemini)
+2️⃣ 🤖 **Utilisation des Agents** (Comprendre les profils comme l'Assistant Pédagogique)
+3️⃣ 🔗 **Les Chaînes (Workflows)** (Découvrir la génération de QCM, FlashCards, Audit)
+4️⃣ 📄 **La Fiche de Correction** (Comment utiliser le Cadre de Référence et corriger des copies)
+5️⃣ 🗺️ **Visite guidée générale** (Tour d'horizon de l'interface)
 
-Comment puis-je t'aider ? 😊`;
+*Tape simplement le numéro, ou dis-moi ce que tu cherches !* 😊`;
 
     const GUIDE_FORBIDDEN = `- Ne jamais inventer des fonctionnalités qui n'existent pas dans l'application.\n- Ne jamais répondre à des questions hors du périmètre de l'application (code général, questions médicales, etc.) — redirige vers un autre agent.\n- Ne jamais être condescendant ou impatient.`;
 
@@ -6008,7 +5966,7 @@ async function seedDefaultData() {
     { label: '🔗 FR/AR/EN MCQ Chains…',                  fn: () => initializeQcmWorkflow(true) },
     { label: '✅ TRUE/FALSE Chain…',                      fn: () => initializeVraiFauxWorkflow() },
     { label: '🛡️ AUDIT Chain…',                          fn: () => initializeAuditWorkflow() },
-    { label: '🌐 MCQ Expert EN Agent…',                   fn: () => initializeDefaultAgentsEN() },
+    // MCQ Expert EN Agent supprimé (désactivé)
     { label: '✅ TRUE/FALSE EN Chain…',                   fn: () => initializeTrueFalseWorkflowEN() },
     { label: '🛡️ AUDIT-EN Chain…',                       fn: () => initializeAcademicAuditWorkflowEN() },
     { label: '🛡️ AUDIT-AR Chain…',                       fn: () => initializeAcademicAuditWorkflowAR() },
@@ -6482,6 +6440,13 @@ export const mountApp = async () => {
         }
       } catch (e) { console.error("Failed to patch V3 workflow names:", e); }
       await db.put('settings', { id: 'patched_wf_names_v4', value: true }).catch(()=>{});
+    }
+
+    // Patch v22: Update Guide Agent with all new features
+    const patchedGuideV22 = await db.get('settings', 'patched_guide_v22').catch(()=>null);
+    if (!patchedGuideV22) {
+      await initializeGuideAgent(true);
+      await db.put('settings', { id: 'patched_guide_v22', value: true }).catch(()=>{});
     }
   }
 
@@ -6958,10 +6923,28 @@ function exportMessageToWord(msgId) {
                    "</head><body>";
     const sourceHTML = header + htmlContent + "</body></html>";
     
-    let filename = isFc ? 'FC_Export.doc' : 'QCM_Export.doc';
+    const isQcm = msg && msg.content && /\[x\]\s*[a-d]-/i.test(msg.content);
+    let filename = isFc ? 'FC_Export.doc' : (isQcm ? 'QCM_Export.doc' : 'Doc_Export.doc');
+    if (msg && msg.isCorrection) filename = 'Fiche_Correction.doc';
+    
     if (msg && msg.content) {
-      const subject = extractSubjectFromContent(msg.content);
-      filename = isFc ? `FC-${subject.replace(/\s+/g,'_')}.doc` : `QCM-${subject.replace(/\s+/g,'_')}.doc`;
+      // Find associated user message for correction sheet titles
+      let subject = 'fiche';
+      if (msg.isCorrection) {
+        const idx = state.messages.findIndex(m => m.ts === msg.ts);
+        const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
+        if (userMsg && userMsg.content) {
+           const match = userMsg.content.match(/—\s*(.*)$/);
+           subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
+        } else {
+           subject = extractSubjectFromContent(msg.content);
+        }
+        filename = `Fiche_${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
+      } else {
+        subject = extractSubjectFromContent(msg.content);
+        const prefix = isFc ? 'FC-' : (isQcm ? 'QCM-' : 'Doc-');
+        filename = `${prefix}${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
+      }
     }
     
     const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
@@ -7919,10 +7902,134 @@ function bindEvents() {
     "Histoire-Géo":    "Contextualiser dans le temps et l'espace, Analyser et critiquer des documents, Rédiger un développement structuré, Utiliser le vocabulaire géo-historique, Argumenter et mettre en relation",
     "Économie":        "Analyser un document économique, Mobiliser des notions et mécanismes, Argumenter et nuancer, Rédiger une réponse construite, Lire et interpréter des données statistiques",
     "Géographie":      "Localiser et situer dans l'espace, Analyser des cartes et documents, Identifier les acteurs et enjeux, Réaliser un croquis ou schéma, Rédiger une réponse géographique",
+    "EPS":             "Réaliser et maîtriser des actions motrices, Méthode et organisation de l'effort, Observer et analyser une performance, Respecter les règles et l'éthique sportive, Gérer sa sécurité et celle d'autrui",
+    "Arts":            "Observer et analyser une œuvre artistique, Pratiquer des techniques plastiques ou musicales, Développer sa sensibilité et son regard critique, Situer l'œuvre dans son contexte historique et culturel, Communiquer et justifier ses choix créatifs",
     "Autre":           "Analyser et comprendre, Restituer les connaissances, Argumenter et justifier, Communiquer avec clarté, Faire preuve de rigueur méthodologique"
   };
 
   // ── Prompt système expert ─────────────────────────────────────────────
+  const SVT_SYSTEM_PROMPT = `<system_instructions>
+
+  <role>
+    Tu es un expert en didactique des Sciences de la Vie et de la Terre (SVT) et un concepteur pédagogique chevronné. Ton rôle est de générer une fiche de correction détaillée pour un contrôle de SVT en t'appuyant STRICTEMENT sur le cadre de référence pédagogique marocain fourni.
+    Tu dois analyser le sujet fourni pour déduire automatiquement le thème principal, le chapitre concerné et les connaissances scientifiques en jeu.
+  </role>
+
+  <contexte_imperatif>
+    - Niveau Scolaire : 2ème année du baccalauréat, filière Sciences Physiques (SP), option internationale (enseignement en français).
+    - Public Cible : Élèves marocains avec un niveau de français B2, pour qui le français reste une langue seconde. La clarté et la simplicité du vocabulaire sont primordiales.
+    - Approche Pédagogique : Approche par compétences et par investigation scientifique. La correction doit mettre en évidence le raisonnement attendu, pas seulement le résultat final.
+    - Contraintes Matérielles : La correction doit être exploitable avec des ressources simples (tableau blanc, vidéoprojecteur).
+  </contexte_imperatif>
+
+  <referentiel_pedagogique>
+    Le référentiel officiel marocain définit les compétences et habilités à évaluer. Tu DOIS utiliser la terminologie exacte de ce référentiel pour remplir la colonne "Compétence évaluée".
+
+    ### A. Compétences et Habilités Visées
+    - Déterminer et formuler un problème scientifique.
+    - Utiliser des connaissances, sélectionner et organiser des informations.
+    - Relier les informations avec les acquis pour résoudre le problème.
+    - Proposer et formuler une ou des hypothèses.
+    - Mobiliser des informations pour résoudre le problème scientifique.
+    - Proposer les outils adéquats pour vérifier l'hypothèse.
+    - Décrire et analyser des données scientifiques.
+    - Comparer et expliquer/interpréter des résultats.
+    - Déduire et généraliser.
+    - Utiliser des principes, des lois, des modèles pour expliquer/interpréter.
+    - Réaliser une synthèse (texte ou schéma).
+    - Exprimer une opinion et l'argumenter.
+    - Représenter par un schéma.
+    - Traduire des données (tableau, graphique, texte).
+    - Réaliser un schéma fonctionnel ou de synthèse.
+
+    ### B. Objectifs Méthodologiques
+    - Décrire et interpréter des documents scientifiques (graphiques, tableaux, schémas, textes).
+    - Extraire les informations pertinentes d'un document.
+    - Formuler, valider ou invalider une hypothèse.
+    - Réaliser des schémas annotés.
+    - Calculer un rendement énergétique.
+    - Communiquer des résultats de manière claire et précise.
+    - Rédiger des conclusions synthétiques.
+    - Utiliser un vocabulaire scientifique approprié.
+  </referentiel_pedagogique>
+
+  <co_star>
+    <context>
+      L'utilisateur est un enseignant de SVT au lycée marocain. Il te fournit un sujet d'évaluation pour une classe de 2ème année Bac SP. Ta mission est de produire une fiche de correction opérationnelle qui suit la démarche d'investigation scientifique et le référentiel pédagogique marocain.
+    </context>
+
+    <objective>
+      Générer une fiche de correction composée de deux parties :
+      1. Le tableau de correction à 4 colonnes : (Numéro de la question | Réponse attendue rédigée et explicitée | Critères d'évaluation + barème détaillé | Compétence évaluée)
+      2. Les conseils pour l'Enseignant (points de vigilance, stratégie de correction interactive).
+      L'objectif est de fournir un outil "prêt à projeter" ou "prêt à imprimer" pour la classe.
+    </objective>
+
+    <style>
+      - Réponse attendue : Rédige en français simple (niveau B2). Explique le cheminement intellectuel étape par étape : "D'après le document 1, on observe que...", "En combinant cette information avec nos connaissances sur...", "On en déduit donc que...". La démarche est plus importante que la réponse brute.
+      - Critères d'évaluation + barème : Décompose le barème total de la question en points attribués pour chaque étape du raisonnement. Exemple : "Identification correcte de la courbe (0.25 pt) / Extraction de la valeur (0.25 pt) / Formulation d'une phrase d'analyse correcte (0.5 pt) / Conclusion valide (0.5 pt)".
+      - Compétence évaluée : Choisis l'intitulé le plus pertinent parmi la liste du Référentiel Pédagogique. Tu peux combiner deux compétences si nécessaire (ex: "Analyser un graphique et déduire").
+      - Intégration des schémas-blocs fonctionnels en ASCII : Lorsque le sujet demande de réaliser ou légender un schéma, produis une représentation en art ASCII compact (max 5 lignes) avec des flèches (-->, =>), des barres (|) et des encadrés ([Nom du bloc]).
+    </style>
+
+    <tone>
+      Professionnel, pédagogique, adapté au contexte marocain. Vocabulaire scientifique rigoureux mais accessible (B2).
+    </tone>
+
+    <audience>
+      - Principal : L'enseignant de SVT (pour corriger et préparer sa séance).
+      - Secondaire : Les élèves de 2e Bac SP (quand la fiche est projetée). D'où l'importance de la clarté et des schémas-blocs fonctionnels.
+    </audience>
+
+    <response_format>
+      Le format exact de la sortie est défini par l'utilisateur. Si le format tableau est demandé, tu DOIS générer un tableau Markdown strict à 4 colonnes, suivi des conseils.
+
+      STRUCTURE ATTENDUE :
+
+      ### Fiche de Correction — SVT · 2e Bac SP
+
+      | Numéro de la question | Réponse attendue rédigée et explicitée | Critères d'évaluation + barème détaillé | Compétence évaluée |
+      |---|---|---|---|
+      | **1** | **Démarche :** D'après le document 1, on observe que...<br>**Analyse :** On peut donc en déduire que...<br>**Conclusion :** ... | **Observation (0.5 pt)**<br>**Analyse (1 pt)**<br>**Conclusion (0.5 pt)**<br>**Total : 2 pts** | Décrire et analyser des données scientifiques / Déduire et généraliser |
+
+      ### Conseils pour l'Enseignant
+
+      **1. Points de vigilance :**
+      - Erreurs classiques attendues des élèves sur ce sujet...
+
+      **2. Stratégie de correction interactive :**
+      - Pour la question X, projeter le graphique et demander à un élève de venir tracer la tendance...
+      
+      À la toute fin de ta réponse, tu DOIS obligatoirement ajouter une ligne sous ce format pour donner un titre court et représentatif au sujet (ce titre servira de nom de fichier) :
+      [TITRE_SVT: Nom court du thème déduit]
+    </response_format>
+  </co_star>
+
+  <chain_of_thought>
+    Dans ta balise <brouillon_invisible>, suis scrupuleusement ces étapes :
+    1. Analyse du sujet SVT : Identifie les questions, déduis automatiquement le chapitre/thème abordé et les connaissances scientifiques mobilisées, et analyse les documents (graphiques, tableaux, schémas).
+    2. Identification des compétences du référentiel marocain : Pour chaque question, associe la ou les compétences pertinentes de la liste officielle.
+    3. Rédaction de la réponse niveau bon élève (B2) : Démarche d'investigation claire, étape par étape.
+    4. Application du barème : Si fourni, colle-toi à chaque sous-point. Si absent, structure des espaces [À définir].
+    5. Conseils pour l'enseignant : Identifie les 2-3 erreurs classiques et propose une stratégie de correction interactive.
+  </chain_of_thought>
+
+  <gardes_fous>
+    <contraintes_negatives>
+      - NE PAS inventer de barème : Utilise [Barème à définir] si non fourni.
+      - NE PAS faire de hors-sujet sur le format de sortie.
+      - NE PAS ignorer le référentiel marocain : La colonne compétence DOIT utiliser la terminologie officielle fournie.
+      - NE PAS dépasser le niveau B2 dans la formulation des réponses attendues.
+    </contraintes_negatives>
+
+    <grounding>
+      - Strict : Utilise uniquement les informations du sujet et du barème fournis.
+      - N'utilise PAS de balises LaTeX ($...) pour les variables ou les gènes, écris-les normalement en texte brut.
+    </grounding>
+  </gardes_fous>
+
+</system_instructions>`;
+
   const CORRECTION_SYSTEM_PROMPT = `<system_instructions>
 
   <role>
@@ -8036,12 +8143,14 @@ function bindEvents() {
     ${cfg.sujet}
   </sujet_complet>
 
-  <infos_generales>
+  <contexte_imperatif>
     - Discipline : ${cfg.discipline}
-    - Niveau scolaire : ${cfg.niveau}
+    - Niveau Scolaire : ${cfg.niveau}
+    - Filière : ${cfg.filiere}
+    - Option (Langue) : ${cfg.option}
     - Type d'évaluation : ${cfg.typeEval}
-    ${cfg.niveauLangue ? '- Niveau de langue : ' + cfg.niveauLangue : ''}
-  </infos_generales>
+    ${cfg.niveauLangue ? `- Niveau de langue attendu : ${cfg.niveauLangue}` : ''}
+  </contexte_imperatif>
 
   <format_sortie_souhaite>
     ${cfg.format || 'Tableau classique à 4 colonnes (Numéro, Réponse attendue, Critères+Barème, Compétence) + Conseils pédagogiques'}
@@ -8082,6 +8191,171 @@ function bindEvents() {
   let _corrPdfBase64 = null;   // Fichier brut en base64 pour Gemini Vision
   let _corrPdfMime   = '';     // MimeType du fichier
 
+  // ── Stockage temporaire du Cadre de Référence importé ──
+  let _corrRefName   = '';     // nom du fichier cadre de référence
+  let _corrRefText   = '';     // texte extrait du cadre de référence (TXT/MD)
+  let _corrRefBase64 = null;   // base64 du PDF cadre de référence pour Gemini Vision
+  let _corrRefMime   = '';     // MimeType du cadre de référence PDF
+
+  const saveCorrectionConfigData = async () => {
+    const name = prompt("Entrez un nom pour cette sauvegarde (ex: 1Bac SVT - Respiration) :");
+    if (!name || !name.trim()) return;
+    try {
+      const get = (id) => ($(`#${id}`)?.value || '');
+      const configToSave = {
+        name: name.trim(),
+        discipline: get('corr-discipline'),
+        customDiscipline: get('corr-custom-discipline'),
+        niveau: get('corr-niveau'),
+        filiere: get('corr-filiere'),
+        option: get('corr-option'),
+        typeEval: get('corr-type-eval'),
+        niveauLangue: get('corr-niveau-langue'),
+        sujet: get('corr-sujet'),
+        format: get('corr-format'),
+        competences: get('corr-competences'),
+        bareme: get('corr-bareme'),
+        criteres: get('corr-criteres'),
+        consignes: get('corr-consignes'),
+        exemple: get('corr-exemple'),
+        exportWord: $('#corr-export-word')?.checked || false,
+        _corrPdfName,
+        _corrPdfBase64,
+        _corrPdfMime,
+        _corrRefName,
+        _corrRefText,
+        _corrRefBase64,
+        _corrRefMime
+      };
+      const saveId = 'corrSave_' + Date.now();
+      await db.put('settings', { id: saveId, data: configToSave });
+      await refreshCorrectionSavedList();
+      toast(`Sauvegarde "${name}" réussie !`, 'success');
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde :', err);
+      toast('Erreur lors de la sauvegarde.', 'error');
+    }
+  };
+
+  const loadCorrectionConfigData = async () => {
+    try {
+      const id = $('#corr-saved-list')?.value;
+      if (!id) {
+        toast('Veuillez sélectionner un profil sauvegardé.', 'info');
+        return;
+      }
+      const record = await db.get('settings', id);
+      if (!record || !record.data) {
+        toast('Erreur : profil introuvable.', 'error');
+        return;
+      }
+      const data = record.data;
+      const set = (id, val) => { if ($(`#${id}`)) $(`#${id}`).value = val || ''; };
+      set('corr-discipline', data.discipline);
+      set('corr-custom-discipline', data.customDiscipline);
+      set('corr-niveau', data.niveau);
+      set('corr-filiere', data.filiere);
+      set('corr-option', data.option);
+      set('corr-type-eval', data.typeEval);
+      set('corr-niveau-langue', data.niveauLangue);
+      set('corr-sujet', data.sujet);
+      set('corr-format', data.format);
+      
+      // Update UI state based on loaded discipline BEFORE setting competences
+      corrFillCompetences();
+      
+      set('corr-competences', data.competences);
+      set('corr-bareme', data.bareme);
+      set('corr-criteres', data.criteres);
+      set('corr-consignes', data.consignes);
+      set('corr-exemple', data.exemple);
+      if ($('#corr-export-word')) $('#corr-export-word').checked = data.exportWord;
+      
+      _corrPdfName = data._corrPdfName || '';
+      _corrPdfBase64 = data._corrPdfBase64 || null;
+      _corrPdfMime = data._corrPdfMime || '';
+      _corrRefName = data._corrRefName || '';
+      _corrRefText = data._corrRefText || '';
+      _corrRefBase64 = data._corrRefBase64 || null;
+      _corrRefMime = data._corrRefMime || '';
+
+      if (_corrPdfBase64 && $('#corr-pdf-badge')) {
+        $('#corr-pdf-badge').textContent = `📎 ${_corrPdfName} (Mémoire)`;
+        $('#corr-pdf-badge').style.display = 'inline-block';
+        if ($('#corr-pdf-info')) {
+          $('#corr-pdf-info').innerHTML = `✅ Fichier PDF chargé depuis la mémoire : <strong>${_corrPdfName}</strong>`;
+          $('#corr-pdf-info').style.display = 'block';
+        }
+      } else {
+        if ($('#corr-pdf-badge')) $('#corr-pdf-badge').style.display = 'none';
+        if ($('#corr-pdf-info')) $('#corr-pdf-info').style.display = 'none';
+      }
+
+      if (_corrRefBase64 && $('#corr-ref-badge')) {
+        $('#corr-ref-badge').textContent = `📝 ${_corrRefName} (Mémoire)`;
+        $('#corr-ref-badge').style.display = 'inline-block';
+      } else {
+        if ($('#corr-ref-badge')) $('#corr-ref-badge').style.display = 'none';
+      }
+      
+      toast(`Profil "${data.name}" chargé avec succès !`, 'success');
+    } catch (err) {
+      console.error('Erreur de chargement :', err);
+      toast('Erreur lors du chargement.', 'error');
+    }
+  };
+
+  const deleteCorrectionConfigData = async () => {
+    try {
+      const id = $('#corr-saved-list')?.value;
+      if (!id) return toast('Veuillez sélectionner un profil à supprimer.', 'info');
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce profil ?')) return;
+      await db.delete('settings', id);
+      await refreshCorrectionSavedList();
+      toast('Profil supprimé.', 'info');
+    } catch (err) {
+      console.error('Erreur lors de la suppression :', err);
+      toast('Erreur lors de la suppression.', 'error');
+    }
+  };
+
+  const refreshCorrectionSavedList = async () => {
+    try {
+      const allSettings = await db.getAll('settings');
+      const saves = allSettings.filter(s => s.id && s.id.startsWith('corrSave_'));
+      const select = $('#corr-saved-list');
+      if (!select) return;
+      
+      // Preserve currently selected option if possible
+      const currentVal = select.value;
+      
+      select.innerHTML = '<option value="">— Profils sauvegardés —</option>';
+      saves.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.data.name || 'Sauvegarde sans nom';
+        select.appendChild(opt);
+      });
+      
+      if (saves.some(s => s.id === currentVal)) {
+        select.value = currentVal;
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement de la liste :', err);
+    }
+  };
+
+  // Retirer les anciens listeners puis ajouter les nouveaux (robuste au HMR)
+  document.removeEventListener('do-save-correction-config',   window._corrSaveHandler);
+  document.removeEventListener('do-load-correction-config',   window._corrLoadHandler);
+  document.removeEventListener('do-delete-correction-config', window._corrDeleteHandler);
+  window._corrSaveHandler   = saveCorrectionConfigData;
+  window._corrLoadHandler   = loadCorrectionConfigData;
+  window._corrDeleteHandler = deleteCorrectionConfigData;
+  document.addEventListener('do-save-correction-config',   window._corrSaveHandler);
+  document.addEventListener('do-load-correction-config',   window._corrLoadHandler);
+  document.addEventListener('do-delete-correction-config', window._corrDeleteHandler);
+
   const generateCorrectionSheet = async () => {
     const get = (id) => ($(`#${id}`)?.value || '').trim();
     const discipline = get('corr-discipline') === 'Autre'
@@ -8092,13 +8366,12 @@ function bindEvents() {
     const cfg = {
       discipline,
       niveau:       get('corr-niveau'),
+      filiere:      get('corr-filiere'),
+      option:       get('corr-option'),
       typeEval:     get('corr-type-eval'),
       niveauLangue: get('corr-niveau-langue'),
-      // Si PDF chargé : le texte extrait est déjà dans la textarea. On lit toujours depuis la textarea.
-      // hasPdf sert uniquement pour le titre et la validation de longueur minimale.
-      sujet:        hasPdf
-                      ? `[DOCUMENT JOINT EN PIÈCE JOINTE : ${_corrPdfName}]\n\nIMPORTANT : Le sujet complet se trouve dans le document PDF/image attaché à ce message. Tu DOIS lire et analyser INTÉGRALEMENT le document joint (texte, tableaux, graphiques, schémas) pour générer la fiche de correction. Ne génère rien sans avoir analysé le document joint.`
-                      : get('corr-sujet'),
+      // Si PDF chargé : on conserve le texte de la zone (qui inclut déjà la mention du PDF lors de l'import, plus les éventuels ajouts manuels)
+      sujet:        get('corr-sujet') || (hasPdf ? `[DOCUMENT JOINT EN PIÈCE JOINTE : ${_corrPdfName}]\n\nIMPORTANT : Le sujet complet se trouve dans le document PDF/image attaché à ce message.` : ''),
       bareme:       get('corr-bareme'),
       format:       get('corr-format'),
       competences:  get('corr-competences'),
@@ -8118,10 +8391,29 @@ function bindEvents() {
       return;
     }
 
+    // Sauvegarder la configuration de la classe pour la prochaine fois
+    try {
+      const configToSave = {
+        discipline: get('corr-discipline'),
+        customDiscipline: get('corr-custom-discipline'),
+        niveau: get('corr-niveau'),
+        filiere: get('corr-filiere'),
+        option: get('corr-option'),
+        typeEval: get('corr-type-eval'),
+        niveauLangue: get('corr-niveau-langue'),
+        format: get('corr-format'),
+        criteres: get('corr-criteres'),
+        consignes: get('corr-consignes'),
+        exportWord: $('#corr-export-word')?.checked || false
+      };
+      localStorage.setItem('corrSavedConfig', JSON.stringify(configToSave));
+    } catch (e) { console.error("Could not save config", e); }
+
     // Fermer la modale
     closeCorrectionModal();
 
-    const titre = `📋 Fiche de Correction — ${cfg.discipline} ${cfg.niveau} (${cfg.typeEval})${hasPdf ? ' [PDF]' : ''}`;
+    const classeStr = `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ' - ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? '(' + cfg.option + ')' : ''}`.replace(/\s+/g, ' ').trim();
+    const titre = `📋 Fiche de Correction — ${cfg.discipline} ${classeStr} (${cfg.typeEval})${hasPdf ? ' [PDF]' : ''}`;
 
     // Afficher dans le chat
     if (!state.messages) state.messages = [];
@@ -8129,14 +8421,15 @@ function bindEvents() {
     state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
     renderMessages();
 
-    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash' };
+    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: true };
     state.messages.push(assistantMsg);
     renderMessages();
 
     // Mode génération
+    const _savedAgent = state.agent; // Sauvegarder l'agent courant
     state.isGenerating = true;
     state.selectedWorkflow = null; // Eviter la pollution QCM
-    state.agent = null;
+    state.agent = null; // Temporairement null pendant la génération
     state.abortController = new AbortController();
     const sendBtn = $('#send-btn');
     if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
@@ -8157,7 +8450,7 @@ function bindEvents() {
       // Construire les parts Gemini
       const parts = [{ text: userContent }];
 
-      // Si document chargé : l'envoyer en inlineData pour vision native
+      // Si document sujet chargé : l'envoyer en inlineData pour vision native
       if (hasPdf && _corrPdfBase64) {
         parts.unshift({
           inlineData: {
@@ -8165,12 +8458,46 @@ function bindEvents() {
             data: _corrPdfBase64
           }
         });
-        parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT JOINT - LECTURE OBLIGATOIRE]\nLe document PDF/image ci-dessus contient le sujet complet de l\'évaluation. Tu DOIS analyser intégralement son contenu (questions, textes, données, schémas, tableaux, graphiques, images) avec ta vision native. Base TOUTE ta fiche de correction sur ce document joint et son contenu réel. Ne commence pas la fiche avant d\'avoir tout lu.\n---\n\n' });
+        parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT SUJET - LECTURE OBLIGATOIRE]\nLe document PDF/image ci-dessus contient le sujet complet de l\'évaluation. Tu DOIS analyser intégralement son contenu (questions, textes, données, schémas, tableaux, graphiques, images) avec ta vision native. Base TOUTE ta fiche de correction sur ce document joint et son contenu réel. Ne commence pas la fiche avant d\'avoir tout lu.\n---\n\n' });
       }
 
-      const effectiveSystemPrompt = hasPdf
-        ? CORRECTION_SYSTEM_PROMPT + `\n\nREMARQUE CRITIQUE (MODE DOCUMENT) : Un document PDF ou image a été joint à ce message. Tu dois IMPÉRATIVEMENT lire et analyser le contenu RÉEL de ce document joint avant de générer quoi que ce soit. Ta fiche de correction doit être basée exclusivement sur les questions, textes, données et schémas présents dans le document joint. Si tu ne lis pas le document, ta réponse sera inutilisable.`
-        : CORRECTION_SYSTEM_PROMPT;
+      // Si cadre de référence PDF importé : l'envoyer aussi en inlineData pour vision native
+      if (_corrRefBase64) {
+        parts.push({
+          inlineData: {
+            mimeType: _corrRefMime || 'application/pdf',
+            data: _corrRefBase64
+          }
+        });
+        parts.push({ text: `\n\n---\n[CADRE DE RÉFÉRENCE - DOCUMENT JOINT : ${_corrRefName}]\nLe document ci-dessus est le cadre de référence pédagogique officiel fourni par l'enseignant. Tu DOIS lire ce document et utiliser EXCLUSIVEMENT les compétences, habilités et terminologie qu'il contient pour remplir la colonne "Compétence évaluée". Ce cadre remplace ou complète les compétences génériques proposées dans le prompt.\n---\n\n` });
+      }
+
+      let baseSystemPrompt = CORRECTION_SYSTEM_PROMPT;
+      if (cfg.discipline === 'SVT') {
+        baseSystemPrompt = SVT_SYSTEM_PROMPT.replace(
+          '2ème année du baccalauréat, filière Sciences Physiques (SP), option internationale (enseignement en français).',
+          `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ', filière ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? ', option ' + cfg.option : ''}`.replace(/\s+/g, ' ').trim()
+        );
+        // Si un cadre de référence a été importé (texte), il enrichit/remplace le référentiel SVT codé en dur
+        if (_corrRefText && !_corrRefBase64) {
+          baseSystemPrompt = baseSystemPrompt.replace(
+            '</referentiel_pedagogique>',
+            `\n    ### C. Cadre de Référence Importé par l'Enseignant (PRIORITAIRE)\n    L'enseignant a fourni le cadre de référence officiel suivant. Il PRIME sur les compétences génériques ci-dessus. Utilise OBLIGATOIREMENT la terminologie exacte de ce cadre importé :\n    ${_corrRefText}\n  </referentiel_pedagogique>`
+          );
+        }
+      }
+
+      // Si cadre de référence texte importé (toutes disciplines) : l'injecter dans le system prompt
+      if (_corrRefText && !_corrRefBase64 && cfg.discipline !== 'SVT') {
+        baseSystemPrompt = baseSystemPrompt.replace(
+          '</system_instructions>',
+          `\n  <cadre_reference_importe>\n    L'enseignant a fourni le cadre de référence pédagogique officiel suivant. Utilise OBLIGATOIREMENT la terminologie et les compétences exactes de ce document pour remplir la colonne "Compétence évaluée". Ce cadre est prioritaire sur toute proposition générique :\n    ${_corrRefText}\n  </cadre_reference_importe>\n\n</system_instructions>`
+        );
+      }
+
+      const effectiveSystemPrompt = hasPdf || _corrRefBase64
+        ? baseSystemPrompt + `\n\nREMARQUE CRITIQUE (MODE DOCUMENT) : Un ou plusieurs documents ont été joints à ce message. Tu dois IMPÉRATIVEMENT lire et analyser le contenu RÉEL de chaque document joint avant de générer quoi que ce soit. Si tu ne lis pas les documents, ta réponse sera inutilisable.`
+        : baseSystemPrompt;
 
       const geminiPayload = {
         systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
@@ -8203,11 +8530,65 @@ function bindEvents() {
       }
 
       const geminiData = await geminiRes.json();
-      const geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
       if (!geminiText) {
         const finishReason = geminiData?.candidates?.[0]?.finishReason;
         throw new Error(`Gemini n'a pas généré de texte. Raison : ${finishReason || 'inconnue'}`);
+      }
+
+      // Extraction du titre SVT genere (si applicable)
+      let extractedTitle = 'Fiche_Correction';
+      const titleMatch = geminiText.match(/\[TITRE_SVT:\s*(.*?)\]/i);
+      if (titleMatch) {
+        extractedTitle = titleMatch[1].trim().replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '_');
+        geminiText = geminiText.replace(titleMatch[0], '').trim();
+        // ── Wiring des boutons (via Event Delegation) ────────────────────────
+        document.addEventListener('click', (e) => {
+          const t = e.target;
+          if (t.closest('#open-correction-modal')) openCorrectionModal();
+          else if (t.closest('#close-correction-modal') || t.closest('#close-correction-modal-step1')) closeCorrectionModal();
+          else if (t.id === 'correction-modal') closeCorrectionModal();
+          
+          else if (t.closest('#corr-next-1')) {
+            if (!corrValidateStep1()) return;
+            corrFillCompetences();
+            corrShowStep(2);
+          }
+          else if (t.closest('#corr-next-2')) {
+            if (!corrValidateStep2()) return;
+            corrShowStep(3);
+          }
+          else if (t.closest('#corr-next-3')) {
+            corrBuildSummary();
+            corrShowStep(4);
+          }
+          else if (t.closest('#corr-back-2')) corrShowStep(1);
+          else if (t.closest('#corr-back-3')) corrShowStep(2);
+          else if (t.closest('#corr-back-4')) corrShowStep(3);
+          // corr-save-btn and corr-load-btn are handled by Vue @click + CustomEvents
+        });
+        if (state.messages && state.messages.length >= 2) {
+           const lastUserMsg = state.messages[state.messages.length - 2];
+           if (lastUserMsg && lastUserMsg.role === 'user') {
+              lastUserMsg.content = `📋 Fiche de Correction — ${extractedTitle}`;
+           }
+        }
+      }
+
+      // Export Word si demande
+      if (cfg.exportWord) {
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_WORD]')) {
+          textToExport = textToExport.replace('[EXPORT_WORD]', '').trim();
+          geminiText = textToExport;
+        }
+        try {
+          exportToWord(textToExport, `Fiche_Correction_${extractedTitle.replace(/\s+/g, '_').slice(0,50)}.doc`);
+          toast('📄 Fiche exportée en Word avec succes !', 'success');
+        } catch(e) {
+          console.error('Export Word error:', e);
+        }
       }
 
       assistantMsg.content = geminiText;
@@ -8216,19 +8597,22 @@ function bindEvents() {
       hideTyping();
       await saveChat();
 
-      // Réinitialiser les données PDF
-      _corrPdfName = '';
-      _corrPdfBase64 = null;
-      _corrPdfMime = '';
+      // Les données PDF et cadre de référence sont conservées en mémoire
+      // pour permettre une sauvegarde ultérieure du profil ou une regénération.
 
     } catch(e) {
-      const errTxt = `❌ Erreur génération fiche : ${e.message}`;
-      assistantMsg.content = errTxt;
+      if (e.name === 'AbortError' || (e.message && e.message.includes('Aborted'))) {
+        assistantMsg.content = `*— Génération de la fiche interrompue —*`;
+      } else {
+        assistantMsg.content = `❌ Erreur génération fiche : ${e.message}`;
+      }
       assistantMsg.streaming = false;
       renderMessages(true);
       hideTyping();
     } finally {
       state.isGenerating = false;
+      state.agent = _savedAgent; // Restaurer l'agent après la génération
+      state.abortController = null;
       const sendBtn2 = $('#send-btn');
       if (sendBtn2) { sendBtn2.className = 'send-btn'; sendBtn2.innerHTML = '▶'; sendBtn2.disabled = false; }
     }
@@ -8346,6 +8730,8 @@ function bindEvents() {
         return;
       }
 
+      // Fiche SVT — 2e Bac SP Maroc supprimée
+
       if (val === '__ALL_AGENTS__') {
         state.agent = '__ALL_AGENTS__';
         state.selectedWorkflow = null;
@@ -8404,12 +8790,14 @@ function bindEvents() {
 
   // API Modal
   $("#open-api-modal").onclick = () => {
-    if (state.apiKey) {
-      // Pre-fill with current key (masked display via type=password)
+    if (state.apiKey && $("#api-key-input")) {
       $("#api-key-input").value = state.apiKey;
     }
     if (state.geminiApiKey && $("#gemini-api-key-input")) {
       $("#gemini-api-key-input").value = state.geminiApiKey;
+    }
+    if (state.openRouterApiKey && $("#openrouter-api-key-input")) {
+      $("#openrouter-api-key-input").value = state.openRouterApiKey;
     }
     $("#api-modal").classList.add("active");
   };
@@ -8429,7 +8817,7 @@ function bindEvents() {
       } catch (err) { /* ignore */ }
     }
   };
-  const apiInputs = ["api-key-input", "wizard-api-key", "gemini-api-key-input"];
+  const apiInputs = ["api-key-input", "wizard-api-key", "gemini-api-key-input", "openrouter-api-key-input"];
   apiInputs.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -8639,6 +9027,7 @@ function bindEvents() {
       maxTokens: 4096,
       created: now()
     };
+
     await db.put('agents', agent);
     closeAgentModal();
     await loadAgents();
@@ -8734,10 +9123,11 @@ function bindEvents() {
     const get = (id) => ($(`#${id}`)?.value || '').trim();
     const discipline = get('corr-discipline') === 'Autre' ? (get('corr-custom-discipline') || 'Autre') : get('corr-discipline');
     const sujetPreview = get('corr-sujet').slice(0, 120) + (get('corr-sujet').length > 120 ? '…' : '');
+    const classeStr = `${get('corr-niveau') || '—'} ${get('corr-filiere') && !get('corr-filiere').includes('Aucune') ? ' - ' + get('corr-filiere') : ''} ${get('corr-option') && !get('corr-option').includes('Générale') ? '(' + get('corr-option') + ')' : ''}`.replace(/\s+/g, ' ').trim();
     const html = `
       <div style="display:grid;gap:6px">
         <div><span style="color:var(--text-dim)">📚 Discipline :</span> <strong style="color:var(--cyan)">${discipline || '—'}</strong></div>
-        <div><span style="color:var(--text-dim)">🎓 Niveau :</span> <strong style="color:var(--neon)">${get('corr-niveau') || '—'}</strong></div>
+        <div><span style="color:var(--text-dim)">🎓 Classe :</span> <strong style="color:var(--neon)">${classeStr}</strong></div>
         <div><span style="color:var(--text-dim)">📝 Type :</span> ${get('corr-type-eval') || '—'}</div>
         <div><span style="color:var(--text-dim)">🗂️ Format :</span> ${(get('corr-format') || '').split('(')[0].trim()}</div>
         <div><span style="color:var(--text-dim)">⚖️ Barème :</span> ${get('corr-bareme') ? '<span style="color:#a78bfa">✓ Fourni</span>' : '<span style="color:#f59e0b">⚠ Absent — placeholders générés</span>'}</div>
@@ -8763,7 +9153,44 @@ function bindEvents() {
   };
 
   // ── Ouvrir / Fermer la modale ──────────────────────────────────────────
-  const openCorrectionModal = () => {
+  const openCorrectionModal = async () => {
+    // Refresh multi-save list
+    await refreshCorrectionSavedList();
+    
+    // Restaurer la configuration par défaut (dernier auto-save local)
+    try {
+      const saved = localStorage.getItem('corrSavedConfig');
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (s.discipline) $('#corr-discipline').value = s.discipline;
+        if (s.customDiscipline) $('#corr-custom-discipline').value = s.customDiscipline;
+        if (s.niveau) $('#corr-niveau').value = s.niveau;
+        if (s.filiere) $('#corr-filiere').value = s.filiere;
+        if (s.option) $('#corr-option').value = s.option;
+        if (s.typeEval) $('#corr-type-eval').value = s.typeEval;
+        if (s.niveauLangue) $('#corr-niveau-langue').value = s.niveauLangue;
+        if (s.format) $('#corr-format').value = s.format;
+        if (s.criteres) $('#corr-criteres').value = s.criteres;
+        if (s.consignes) $('#corr-consignes').value = s.consignes;
+        if ($('#corr-export-word')) $('#corr-export-word').checked = !!s.exportWord;
+      }
+    } catch(e) { console.error("Could not load config", e); }
+
+    // Update PDF badge UI if a document is still in memory
+    if (typeof _corrPdfBase64 !== 'undefined' && _corrPdfBase64) {
+      if ($('#corr-pdf-badge')) {
+        $('#corr-pdf-badge').textContent = `📎 ${_corrPdfName} (Mémoire)`;
+        $('#corr-pdf-badge').style.display = 'inline-block';
+      }
+      if ($('#corr-pdf-info')) {
+        $('#corr-pdf-info').innerHTML = `✅ Fichier PDF chargé depuis la mémoire : <strong>${_corrPdfName}</strong>`;
+        $('#corr-pdf-info').style.display = 'block';
+      }
+    } else {
+      if ($('#corr-pdf-badge')) $('#corr-pdf-badge').style.display = 'none';
+      if ($('#corr-pdf-info')) $('#corr-pdf-info').style.display = 'none';
+    }
+
     corrShowStep(1);
     corrFillCompetences();
     $('#correction-modal').classList.add('active');
@@ -8854,8 +9281,77 @@ function bindEvents() {
     };
   }
 
-  // Générer la fiche
+  // Import Cadre de Référence (PDF/TXT) → extraire le texte et l'injecter dans la zone compétences
+  if ($('#corr-ref-upload')) {
+    $('#corr-ref-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const badge    = $('#corr-ref-badge');
+      const competEl = $('#corr-competences');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
+
+      if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
+
+      if (isPdfOrImg) {
+        // Pour les PDF/images : stocker en base64 et envoyer à Gemini Vision comme inlineData
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _corrRefName = file.name;
+          _corrRefMime = file.type || 'application/pdf';
+          // Extraire uniquement la partie base64 (après la virgule du data URL)
+          const dataUrl = ev.target.result;
+          _corrRefBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          _corrRefText = ''; // pas de texte brut pour un PDF — Gemini lira directement
+          if (competEl) {
+            const existing = competEl.value.trim();
+            competEl.value = existing
+              ? existing + `\n\n--- Cadre de référence importé (PDF) : ${file.name} ---\n📄 Gemini lira ce document en vision native pour extraire les compétences officielles.`
+              : `📄 Cadre de référence importé (PDF) : ${file.name}\nGemini extraira les compétences officielles directement depuis ce document.`;
+          }
+          if (badge) { badge.textContent = `📄 ${file.name} (cadre de réf. — vision native)`; badge.style.display = 'inline-block'; }
+          toast(`✅ Cadre de référence "${file.name}" importé — Gemini lira le PDF natif.`, 'success');
+        };
+        reader.onerror = () => {
+          toast(`❌ Erreur lecture de ${file.name}`, 'error');
+          if (badge) badge.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // Fichier texte (.txt / .md) → coller directement dans la zone compétences
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _corrRefName = file.name;
+          _corrRefText = ev.target.result.trim();
+          if (competEl) {
+            const existing = competEl.value.trim();
+            competEl.value = existing
+              ? existing + '\n\n--- Cadre de référence importé ---\n' + _corrRefText
+              : _corrRefText;
+          }
+          if (badge) { badge.textContent = `📝 ${file.name} (cadre de réf.)`; badge.style.display = 'inline-block'; }
+          toast(`✅ Cadre de référence "${file.name}" importé dans la zone compétences.`, 'success');
+        };
+        reader.onerror = () => {
+          toast(`❌ Erreur lecture de ${file.name}`, 'error');
+          if (badge) badge.style.display = 'none';
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+
+      e.target.value = ''; // reset input
+    };
+  }
+
+  // Générer la fiche (générique)
   if ($('#corr-generate-btn')) $('#corr-generate-btn').onclick = generateCorrectionSheet;
+  // corr-save-btn and corr-load-btn are handled by Vue @click + CustomEvents — no direct binding needed
+
+
+  // ══════════════════════════════════════════════════════════════════════════
+  
+
+
 
   // Memory
   $("#memory-toggle").onclick = () => {
@@ -10154,6 +10650,8 @@ window.addEventListener('offline', () => {
 window.addEventListener('online', () => {
   toast("Connexion rétablie. L'IA est de nouveau disponible.", 'success');
 });
+
+// Save/load buttons are handled by Vue @click + CustomEvents — no global delegation needed
 
 
 
