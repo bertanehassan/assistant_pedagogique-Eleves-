@@ -3,7 +3,12 @@
   <div class="modal-overlay" id="web-quiz-player-modal">
     <div class="web-quiz-container">
       <div class="wq-header">
-        <button class="wq-close-btn" onclick="document.getElementById('web-quiz-player-modal').classList.remove('active')">✕ {{ t('btn_close') }}</button>
+        <div class="wq-header-actions" style="align-self: flex-end; display: flex; gap: 8px;">
+          <button class="wq-close-btn" onclick="toggleWebQuizFullscreen()" title="Plein écran">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          </button>
+          <button class="wq-close-btn" onclick="if(document.fullscreenElement) document.exitFullscreen(); document.getElementById('web-quiz-player-modal').classList.remove('active')">✕ {{ t('btn_close') }}</button>
+        </div>
         <div class="wq-metadata" id="wq-metadata" style="text-align:center; color:#a0a0a0; font-size:12px; margin-bottom:12px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
         <div class="wq-progress-container">
           <div class="wq-progress-bar" id="wq-progress-bar"></div>
