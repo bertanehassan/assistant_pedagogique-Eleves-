@@ -9347,6 +9347,16 @@ function bindEvents() {
   if ($('#corr-generate-btn')) $('#corr-generate-btn').onclick = generateCorrectionSheet;
   // corr-save-btn and corr-load-btn are handled by Vue @click + CustomEvents — no direct binding needed
 
+  // Expose correction functions to window for Vue components
+  window.corrValidateStep1 = corrValidateStep1;
+  window.corrValidateStep2 = corrValidateStep2;
+  window.corrShowStep = corrShowStep;
+  window.corrFillCompetences = corrFillCompetences;
+  window.corrBuildSummary = corrBuildSummary;
+  window.generateCorrectionSheet = generateCorrectionSheet;
+  window.closeCorrectionModal = closeCorrectionModal;
+  window.openCorrectionModal = openCorrectionModal;
+
 
   // ══════════════════════════════════════════════════════════════════════════
   
