@@ -17,4 +17,24 @@ yarn-error.log*
 *.sw?
 .vercel
 
-.vercel
+# Backup git
+.git.bak/
+
+# Scripts utilitaires (non destinés à la prod)
+add_tool_to_dropdown.cjs
+apply_bindings.cjs
+apply_quiz_mode.cjs
+clean_legacy.cjs
+fix_mess.cjs
+fix_mess_2.cjs
+inject_correction.cjs
+inject_handler.cjs
+inject_ref.cjs
+inject_ref_2.cjs
+master_fix.cjs
+patch_onchange.cjs
+undo_mess.js
+check_console.py
+debug_state.py
+diff.patch
+diff_utf8.patch

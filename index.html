@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="fr" class="dark">
+  <head>
+    <!-- ════════ PROTECTION DU CODE SOURCE ════════ -->
+    <script>
+    (function(){
+      'use strict';
+      window.addEventListener('error', function(e) {
+        alert('JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        alert('PROMISE ERROR: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+      });
+      // 1. Désactiver le clic droit sauf dans les zones de saisie
+      document.addEventListener('contextmenu', function(e){
+        const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+        e.preventDefault(); 
+      }, true);
+
+      // 2. Désactiver les raccourcis clavier d'inspection
+      document.addEventListener('keydown', function(e){
+        // F12
+        if (e.key === 'F12') { e.preventDefault(); e.stopPropagation(); return false; }
+        // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C / Ctrl+U
+        if (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) { e.preventDefault(); return false; }
+        if (e.ctrlKey && ['U','u'].includes(e.key)) { e.preventDefault(); return false; }
+      }, true);
+
+      // 4. Désactiver la sélection de texte sur les éléments de code
+      document.addEventListener('selectstart', function(e){
+        if(e.target.tagName === 'CODE' || e.target.tagName === 'PRE') e.preventDefault();
+      });
+
+      // 5. Avertissement dans la console (comme Facebook)
+      const _w = [
+        '%c⛔ STOP !',
+        'color:#ff4040;font-size:3rem;font-weight:bold;',
+        '\n%cCette interface est protégée. Toute tentative de copie ou d\'inspection du code est interdite.\n© Mon Assistant IA 2026 — Tous droits réservés.',
+        'color:#aaa;font-size:1rem;'
+      ];
+      console.log(..._w);
+    })();
+    </script>
+    <!-- ════════ FIN PROTECTION ════════ -->
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Updated CSP to allow tailwind CDN -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' ws: wss: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://api.mistral.ai https://cdn.tailwindcss.com;">
+    <title>Mon Assistant IA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;500;600&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Luminous AI Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Inter:wght@400;500&family=Geist:wght@400;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <!-- Markdown & Sécurité -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <!-- Tailwind CSS CDN and config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+          darkMode: "class",
+          theme: {
+              extend: {
+                  "colors": {
+                      "background": "var(--void, #0b1326)",
+                      "on-surface-variant": "var(--text-dim, #c7c4d7)",
+                      "on-secondary": "var(--void, #490080)",
+                      "primary": "var(--cyan, #c0c1ff)",
+                      "outline-variant": "var(--wire, #464554)",
+                      "on-background": "var(--text, #dae2fd)",
+                      "tertiary": "var(--neon, #4cd7f6)",
+                      "surface-bright": "var(--hull, #31394d)",
+                      "on-surface": "var(--text-bright, #dae2fd)",
+                      "on-tertiary": "var(--void, #003640)",
+                      "outline": "var(--wire, #908fa0)",
+                      "secondary-fixed-dim": "var(--violet, #ddb7ff)",
+                      "on-secondary-fixed-variant": "var(--void, #6900b3)",
+                      "on-error-container": "var(--void, #ffdad6)",
+                      "on-error": "var(--void, #690005)",
+                      "primary-fixed-dim": "var(--cyan, #c0c1ff)",
+                      "surface": "var(--deep, #0b1326)",
+                      "surface-container-highest": "var(--hull, #2d3449)",
+                      "inverse-on-surface": "var(--void, #283044)",
+                      "surface-dim": "var(--deep, #0b1326)",
+                      "surface-container-high": "var(--hull, #222a3d)",
+                      "tertiary-fixed-dim": "var(--neon, #4cd7f6)",
+                      "surface-container-lowest": "var(--deep, #060e20)",
+                      "inverse-surface": "var(--text, #dae2fd)",
+                      "on-tertiary-container": "var(--void, #002f38)",
+                      "on-primary-container": "var(--void, #0d0096)",
+                      "on-primary-fixed-variant": "var(--void, #2f2ebe)",
+                      "on-tertiary-fixed-variant": "var(--void, #004e5c)",
+                      "secondary-fixed": "var(--violet, #f0dbff)",
+                      "inverse-primary": "var(--cyan, #494bd6)",
+                      "secondary-container": "var(--violet, #6f00be)",
+                      "primary-container": "var(--cyan, #8083ff)",
+                      "on-secondary-container": "var(--void, #d6a9ff)",
+                      "on-tertiary-fixed": "var(--void, #001f26)",
+                      "surface-container": "var(--hull, #171f33)",
+                      "primary-fixed": "var(--cyan, #e1e0ff)",
+                      "surface-variant": "var(--hull, #2d3449)",
+                      "error-container": "var(--danger, #93000a)",
+                      "on-secondary-fixed": "var(--void, #2c0051)",
+                      "on-primary": "var(--void, #1000a9)",
+                      "on-primary-fixed": "var(--void, #07006c)",
+                      "surface-tint": "var(--cyan, #c0c1ff)",
+                      "surface-container-low": "var(--deep, #131b2e)",
+                      "secondary": "var(--violet, #ddb7ff)",
+                      "tertiary-container": "var(--neon, #009eb9)",
+                      "error": "var(--danger, #ffb4ab)",
+                      "tertiary-fixed": "var(--neon, #acedff)"
+                  },
+                  "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+                  },
+                  "spacing": {
+                      "margin-desktop": "48px",
+                      "max-width": "1200px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "unit": "4px"
+                  },
+                  "fontFamily": {
+                      "body-md": ["Inter"],
+                      "label-caps": ["Geist"],
+                      "headline-xl": ["Plus Jakarta Sans"],
+                      "code-snippet": ["Geist"],
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "body-sm": ["Inter"]
+                  },
+                  "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "code-snippet": ["14px", {"lineHeight": "22px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                  }
+              },
+          },
+      }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: var(--hull, rgba(255, 255, 255, 0.06));
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: var(--border, 1px solid rgba(255, 255, 255, 0.15));
+        }
+        .ai-bubble-gradient {
+            background: linear-gradient(135deg, var(--hull, rgba(255, 255, 255, 0.08)) 0%, var(--deep, rgba(255, 255, 255, 0.03)) 100%);
+        }
+        .primary-gradient {
+            background: linear-gradient(135deg, var(--cyan, #c0c1ff) 0%, var(--violet, #8083ff) 100%);
+        }
+        .aether-glow {
+            filter: drop-shadow(0 0 15px var(--cyan-glow, rgba(192, 193, 255, 0.3)));
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Modifying App CSS container */
+        #app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Fix Tailwind CSS reset breaking MathJax inline math rendering */
+        mjx-container svg {
+            display: inline !important;
+        }
+
+        /* ── Zoom 90% uniquement sur desktop (≥ 1024px) ── */
+        @media (min-width: 1024px) {
+            html {
+                zoom: 0.9;
+            }
+        }
+
+        /* ── Safe area pour iPhone notch/home bar ── */
+        body {
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* ── Cibles tactiles minimum 44px (recommandation Apple/Google) ── */
+        button, [role="button"], select, input[type="submit"] {
+            min-height: 44px;
+        }
+
+        /* ── Éviter le zoom automatique sur les inputs iOS (min font-size 16px) ── */
+        @media (max-width: 767px) {
+            input, textarea, select {
+                font-size: 16px !important;
+            }
+        }
+
+        /* ── Meilleure lisibilité du texte sur petit écran ── */
+        @media (max-width: 767px) {
+            .text-xs { font-size: 13px !important; }
+            .text-sm { font-size: 14px !important; }
+        }
+    </style>
+    <!-- MathJax for LaTeX rendering -->
+    <script>
+      MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']],
+          processEscapes: true,
+          processEnvironments: true
+        },
+        options: {
+          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+        },
+        svg: {
+          fontCache: 'global'
+        }
+      };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+      onload="if(typeof window.renderWebQuizPlayer === 'function') window.renderWebQuizPlayer()">
+    </script>
+  </head>
+  <body class="bg-background text-on-surface font-body-md overflow-hidden h-[100dvh] flex flex-col">
+    <div id="app" class="h-full w-full flex flex-col"></div>
+    <script src="/libs/pdf.min.js"></script>
+    <script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='/libs/pdf.worker.min.js';</script>
+    <script type="module" src="./src/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

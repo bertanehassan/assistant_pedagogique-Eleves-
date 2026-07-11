@@ -9200,30 +9200,9 @@ function bindEvents() {
   // ── Wiring des boutons ─────────────────────────────────────────────────
   if ($('#open-correction-modal'))         $('#open-correction-modal').onclick = openCorrectionModal;
   if ($('#close-correction-modal'))        $('#close-correction-modal').onclick = closeCorrectionModal;
-  if ($('#close-correction-modal-step1'))  $('#close-correction-modal-step1').onclick = closeCorrectionModal;
   if ($('#correction-modal'))              $('#correction-modal').onclick = e => { if (e.target === $('#correction-modal')) closeCorrectionModal(); };
 
-  // Step 1 → 2
-  if ($('#corr-next-1')) $('#corr-next-1').onclick = () => {
-    if (!corrValidateStep1()) return;
-    corrFillCompetences();
-    corrShowStep(2);
-  };
-  // Step 2 → 3
-  if ($('#corr-next-2')) $('#corr-next-2').onclick = () => {
-    if (!corrValidateStep2()) return;
-    corrShowStep(3);
-  };
-  // Step 3 → 4
-  if ($('#corr-next-3')) $('#corr-next-3').onclick = () => {
-    corrBuildSummary();
-    corrShowStep(4);
-  };
-  // Back buttons
-  if ($('#corr-back-2')) $('#corr-back-2').onclick = () => corrShowStep(1);
-  if ($('#corr-back-3')) $('#corr-back-3').onclick = () => corrShowStep(2);
-  if ($('#corr-back-4')) $('#corr-back-4').onclick = () => corrShowStep(3);
-
+  // Boutons gérés par Vue (@click) dans CorrectionModal.vue
   // Discipline change → auto-fill competences + show/hide langue/custom fields
   if ($('#corr-discipline')) $('#corr-discipline').onchange = corrFillCompetences;
 
@@ -9344,7 +9323,7 @@ function bindEvents() {
   }
 
   // Générer la fiche (générique)
-  if ($('#corr-generate-btn')) $('#corr-generate-btn').onclick = generateCorrectionSheet;
+  // corr-generate-btn is handled by Vue @click
   // corr-save-btn and corr-load-btn are handled by Vue @click + CustomEvents — no direct binding needed
 
   // Expose correction functions to window for Vue components
@@ -9760,6 +9739,27 @@ function askQuizMode(callback) {
   document.getElementById('qmd-cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 }
+
+window.toggleWebQuizFullscreen = function() {
+  const container = document.getElementById('web-quiz-player-modal');
+  if (!document.fullscreenElement) {
+    if (container.requestFullscreen) {
+      container.requestFullscreen();
+    } else if (container.webkitRequestFullscreen) {
+      container.webkitRequestFullscreen();
+    } else if (container.msRequestFullscreen) {
+      container.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+};
 
 // ════════════════════════════════════════
 // WEB QUIZ PLAYER
