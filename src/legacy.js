@@ -9133,6 +9133,19 @@ function bindEvents() {
 
   // ── Ouvrir / Fermer la modale ──────────────────────────────────────────
   const openCorrectionModal = async () => {
+    // Forcer le modèle Gemini car la fiche de correction l'exige
+    const geminiId = "gemini-2.5-flash";
+    if (state.model !== geminiId) {
+      state.model = geminiId;
+      if ($('#model-select')) $('#model-select').value = geminiId;
+      if (typeof db !== 'undefined' && db.put) {
+        db.put('settings', { id: 'model', value: state.model }).catch(() => {});
+      }
+      if (typeof toast !== 'undefined') {
+        toast('Le modèle Gemini a été sélectionné (requis pour cet outil).', 'info');
+      }
+    }
+
     // Refresh multi-save list
     await refreshCorrectionSavedList();
     
