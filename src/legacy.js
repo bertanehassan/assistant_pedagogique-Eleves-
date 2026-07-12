@@ -8723,7 +8723,9 @@ function bindEvents() {
           state.agent = null;
           toast(`Chaîne "${wf.name}" sélectionnée (${wf.steps.length} étapes)`, "success");
 
-          if (wf.name.toLowerCase().includes('qcm') || wf.name.toLowerCase().includes('quiz')) {
+          const wfNameLower = wf.name.toLowerCase();
+          const isMistralWorkflow = ['qcm','quiz','fc','audit','mcq','vrai/faux','true/false'].some(kw => wfNameLower.includes(kw));
+          if (isMistralWorkflow) {
             const mistralId = "mistral-large-2512";
             if (state.model !== mistralId) {
               state.model = mistralId;
@@ -9620,7 +9622,9 @@ function bindEvents() {
               state.agent = null;
               toast(`Chaîne "${wf.name}" sélectionnée (${wf.steps.length} étapes)`, "success");
 
-              if (wf.name.toLowerCase().includes('qcm') || wf.name.toLowerCase().includes('quiz')) {
+              const wfNameLower = wf.name.toLowerCase();
+              const isMistralWorkflow = ['qcm','quiz','fc','audit','mcq','vrai/faux','true/false'].some(kw => wfNameLower.includes(kw));
+              if (isMistralWorkflow) {
                 const mistralId = "mistral-large-2512";
                 if (state.model !== mistralId) {
                   state.model = mistralId;
