@@ -8722,6 +8722,20 @@ function bindEvents() {
           state.selectedWorkflow = wf;
           state.agent = null;
           toast(`Chaîne "${wf.name}" sélectionnée (${wf.steps.length} étapes)`, "success");
+
+          if (wf.name.toLowerCase().includes('qcm') || wf.name.toLowerCase().includes('quiz')) {
+            const mistralId = "mistral-large-2512";
+            if (state.model !== mistralId) {
+              state.model = mistralId;
+              if ($('#model-select')) $('#model-select').value = mistralId;
+              if (typeof db !== 'undefined' && db.put) {
+                db.put('settings', { id: 'model', value: state.model }).catch(() => {});
+              }
+              if (typeof toast !== 'undefined') {
+                toast('Le modèle Mistral Large 3 a été sélectionné (recommandé pour ce générateur).', 'info');
+              }
+            }
+          }
         }
       } else if (val) {
         state.agent = await db.get('agents', val);
@@ -9605,6 +9619,20 @@ function bindEvents() {
               state.selectedWorkflow = wf;
               state.agent = null;
               toast(`Chaîne "${wf.name}" sélectionnée (${wf.steps.length} étapes)`, "success");
+
+              if (wf.name.toLowerCase().includes('qcm') || wf.name.toLowerCase().includes('quiz')) {
+                const mistralId = "mistral-large-2512";
+                if (state.model !== mistralId) {
+                  state.model = mistralId;
+                  if ($('#model-select')) $('#model-select').value = mistralId;
+                  if (typeof db !== 'undefined' && db.put) {
+                    db.put('settings', { id: 'model', value: state.model }).catch(() => {});
+                  }
+                  if (typeof toast !== 'undefined') {
+                    toast('Le modèle Mistral Large 3 a été sélectionné (recommandé pour ce générateur).', 'info');
+                  }
+                }
+              }
             }
           } else if (val) {
             state.agent = await db.get('agents', val);
