@@ -6,6 +6,5 @@ echo.
 echo Ouverture de http://localhost:5174 dans votre navigateur par defaut...
 start http://localhost:5174
 
-cd vue-app
 npm run dev
 pause
