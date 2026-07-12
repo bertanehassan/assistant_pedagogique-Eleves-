@@ -66,7 +66,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Ouvrir **http://localhost:5173** dans votre navigateur.
+Ouvrir **http://localhost:5174** dans votre navigateur.
 
 ---
 
