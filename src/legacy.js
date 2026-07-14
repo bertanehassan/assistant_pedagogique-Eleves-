@@ -830,8 +830,9 @@ function createMessageElement(m) {
   const msgId = m.ts || Date.now();
   const isFcMsg = (m.workflowUsed === 'FC-Fr 1' || m.workflowUsed === 'FC-Fr 2' || m.workflowUsed === 'FC-Ar 1' || m.workflowUsed === 'FC-Ar 2' || m.workflowUsed === 'FC-En 1' || m.workflowUsed === 'FC-En 2');
   const isCorrection = !!m.isCorrection;
+  const isMethodeMsg = !!m.isMethode;
   const isQcmContent = m.content && /\[x\]\s*[a-d]-/i.test(m.content);
-  const wordBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${isCorrection ? 'Exporter' : t('btn_word')}</button>` : '';
+  const wordBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${(isCorrection || isMethodeMsg) ? 'Exporter' : t('btn_word')}</button>` : '';
   const qpBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
   const fcJsonBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="export-fc-json" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">⬇️ JSON QR</button>` : '';
   const wqBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
@@ -843,7 +844,8 @@ function createMessageElement(m) {
   
   let displayContent = m.content || '';
   if (m.role === 'assistant') {
-    displayContent = displayContent.replace(/<brouillon>[\s\S]*?(?:<\/brouillon>|$)/gi, '').trim();
+    const re = new RegExp('<brouillon(?:_invisible)?>[\\\\s\\\\S]*?(?:<\\\\/brouillon(?:_invisible)?>|$)', 'gi');
+    displayContent = displayContent.replace(re, '').trim();
   }
   let finalContent = escapeHtml(displayContent).replace(/\n/g, '<br>');
   if (typeof marked !== 'undefined') {
@@ -2108,6 +2110,12 @@ async function loadAgents() {
     didacOpt.textContent = "👨‍🏫 Fiche Didactique (Générateur)";
     didacOpt.title = "Générer une fiche didactique de leçon/séquence avec grille d'évaluation formative";
     toolsGroup.appendChild(didacOpt);
+
+    const methodeOpt = document.createElement("option");
+    methodeOpt.value = "__TOOL__methode";
+    methodeOpt.textContent = "🧠 Fiche Méthode (Générateur)";
+    methodeOpt.title = "Générer une fiche méthode étape par étape à partir d'un exercice";
+    toolsGroup.appendChild(methodeOpt);
 
     sel.appendChild(toolsGroup);
 
@@ -6938,9 +6946,10 @@ function exportMessageToWord(msgId) {
     const isQcm = msg && msg.content && /\[x\]\s*[a-d]-/i.test(msg.content);
     let filename = isFc ? 'FC_Export.doc' : (isQcm ? 'QCM_Export.doc' : 'Doc_Export.doc');
     if (msg && msg.isCorrection) filename = 'Fiche_Correction.doc';
+    else if (msg && msg.isMethode) filename = 'Fiche_Methode.doc';
     
     if (msg && msg.content) {
-      // Find associated user message for correction sheet titles
+      // Find associated user message for correction / methode sheet titles
       let subject = 'fiche';
       if (msg.isCorrection) {
         const idx = state.messages.findIndex(m => m.ts === msg.ts);
@@ -6952,6 +6961,17 @@ function exportMessageToWord(msgId) {
            subject = extractSubjectFromContent(msg.content);
         }
         filename = `Fiche_${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
+      } else if (msg.isMethode) {
+        const idx = state.messages.findIndex(m => m.ts === msg.ts);
+        const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
+        if (userMsg && userMsg.content) {
+           // Le titre utilisateur a le format "🧠 Fiche Méthode — Maths 2BAC"
+           const match = userMsg.content.match(/—\s*(.*)$/);
+           subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
+        } else {
+           subject = extractSubjectFromContent(msg.content);
+        }
+        filename = `Fiche_Methode_${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
       } else {
         subject = extractSubjectFromContent(msg.content);
         const prefix = isFc ? 'FC-' : (isQcm ? 'QCM-' : 'Doc-');
@@ -8764,6 +8784,12 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
         if (typeof openDidactiqueModal !== 'undefined') openDidactiqueModal();
         return;
       }
+      if (val === '__TOOL__methode') {
+        state.agent = null;
+        state.selectedWorkflow = null;
+        if (typeof openMethodeModal !== 'undefined') openMethodeModal();
+        return;
+      }
 
       // Fiche SVT — 2e Bac SP Maroc supprimée
 
@@ -10263,6 +10289,797 @@ window.didactiqueBuildSummary = didactiqueBuildSummary;
 window.openDidactiqueModal = openDidactiqueModal;
 window.closeDidactiqueModal = closeDidactiqueModal;
 window.generateDidactiqueSheet = generateDidactiqueSheet;
+
+
+// ==============================================================================
+// === FICHE MÉTHODE ============================================================
+// ==============================================================================
+
+const METHODE_SYSTEM_PROMPT = `<system_instructions>
+
+# RÔLE ET CONTEXTE
+
+Tu es un « Tuteur Pédagogique et Évaluateur par Compétences ». Tu es un expert en pédagogie et en didactique, capable de t'adapter à n'importe quelle discipline et à n'importe quel public. Ton comportement, ton langage et tes références sont entièrement pilotés par la matière scolaire précisée et les instructions que l'utilisateur te fournit dans le prompt.
+
+# OBJECTIF
+
+Tu dois fournir une aide structurée en 3 étapes pour chaque tâche d'un exercice. L'objectif ultime est d'enseigner une méthode de travail rigoureuse qui aligne la résolution de la tâche avec les compétences officielles du cadre de référence fourni par l'utilisateur.
+
+# FORMAT DE SORTIE (MARKDOWN STRICT)
+
+Pour chaque tâche demandée, produis ta réponse en suivant impérativement la structure et les contraintes ci-dessous. Tu dois utiliser ce modèle exact (titres, puces, numéros) :
+
+---
+### Tâche [Numéro] : [Intitulé de la tâche]
+
+#### 1. Travail sur Brouillon
+• **Reformulation et simplification de la question** : [Texte simple et adapté au niveau]
+• **Verbes d'action Clés** : Quels sont les verbes qui disent ce qu'il faut faire ? (Ex: Comparer, Calculer, Décrire...).
+• **Documents à Utiliser** : Liste les numéros des documents ou graphiques utiles.
+• **Infos Clés à Extraire** : Liste à puces, style télégraphique (mots-clés, chiffres, ↑, ↓, Cause -> Effet). PAS de phrases.
+• **Mini-plan** : Structure logique très simple pour la réponse à cette tâche (3 à 5 étapes).
+
+#### 2. Du Brouillon au Propre (Le Guide Méthodologique)
+• **Comment Construire tes Phrases** : Montre, avec un exemple simple tiré du brouillon, comment transformer une note en une phrase rédigée correcte.
+• **Compétence Scientifique Travaillée (Objectif Méthodologique)** :
+  1. Identifie la compétence principale mobilisée par la tâche, en te basant sur le <référentiel_compétences>.
+  2. Annonce clairement à l'élève la compétence qu'il travaille. Exemple : "Pour cette question, tu vas travailler la compétence : '[Nom de la compétence]'."
+  3. Donne UN seul conseil méthodologique crucial et simple pour réussir cette compétence spécifique.
+• **L'Erreur à Ne Pas Faire** : Identifie UNE seule erreur très fréquente et pertinente pour cette tâche, et explique simplement comment l'éviter.
+
+#### 3. Réponse Modèle
+[Rédige ici la réponse finale parfaite pour la tâche en appliquant ces règles :]
+• **Clarté et Simplicité** : Respecte le niveau de langue cible (phrases courtes, un ou deux connecteurs logiques maximum par phrase).
+• **Rigueur Scientifique** : Vocabulaire précis et réponse structurée.
+• **Justification Systématique** : Chaque information doit être justifiée par sa source ("Le document 1 montre que...", "(Graphique 2)").
+• **Pertinence** : Réponds uniquement à la tâche demandée.
+---
+
+# PROCESSUS DE RÉFLEXION OBLIGATOIRE (CHAÎNE DE RAISONNEMENT)
+
+Avant de générer la réponse finale détaillée selon le modèle ci-dessus, tu dois effectuer une réflexion interne exhaustive dans une balise <brouillon_invisible>. Cette réflexion doit suivre scrupuleusement ces étapes :
+1. **Décodage de la tâche** : Analyser la question. Quel est le sujet ? Quel est le verbe d'action principal ? À quel domaine du référentiel se rattache-t-elle ?
+2. **Analyse des ressources** : Examiner les documents, graphiques ou données fournis. Quelles informations sont pertinentes ?
+3. **Planification de la structure** : Déterminer l'ordre logique de la réponse.
+4. **Identification des compétences** : Mettre en correspondance la tâche avec le référentiel.
+5. **Brouillon mental** : Identifier le conseil méthodologique et l'erreur à éviter.
+
+# CONTRAINTES NÉGATIVES ET GARDE-FOUS (NON-NÉGOCIABLES)
+
+- **Interdiction d'hallucination** : Ne JAMAIS inventer d'informations. Base-toi UNIQUEMENT sur les ressources fournies.
+- **Interdiction de jargon non défini** : Adapte ton vocabulaire au niveau de la cible défini.
+- **Interdiction de divagation** : Ne donne pas d'informations hors-sujet. Ta réponse doit être strictement limitée à la tâche.
+</system_instructions>`;
+
+const buildMethodeUserPrompt = (cfg) => {
+  let p = `<user_prompt>
+
+# CRÉATION DE VOTRE TUTEUR PÉDAGOGIQUE PERSONNALISÉ
+
+## 1. CONTEXTE GÉNÉRAL
+- **Matière / Discipline** : ${cfg.discipline}
+- **Niveau du public** : ${cfg.niveau}
+- **Niveau de langue de l'élève** : ${cfg.niveauLangue}
+
+## 2. RÔLE ET EXPERTISE DE L'IA
+${cfg.role}
+
+## 3. RÉFÉRENTIEL DE COMPÉTENCES (Officiel)
+${cfg.competences || '[Non fourni — proposer des compétences adaptées à la discipline]'}
+
+## 4. DONNÉES D'ENTRÉE (L'EXERCICE)
+- **Tâches / Questions de l'élève** :
+${cfg.exercice}
+
+- **Ressources fournies** :
+${cfg.hasPdf ? '[PDF/Image joint en pièce jointe]' : 'Aucune ressource documentaire supplémentaire'}
+
+## 5. STYLE ET TON
+${cfg.directives || 'Style d\'écriture clair, pédagogique et structuré. Ton encourageant et patient.'}
+
+## 6. EXEMPLES (FEW-SHOT) - MODÈLES DE RÉFÉRENCE
+`;
+
+  if (cfg.exemple) {
+    p += `Voici l'exemple de fiche de référence fourni par l'utilisateur :\n${cfg.exemple}\n\n`;
+  } else {
+    p += `
+---
+
+**EXEMPLE 1 : Sciences de la Vie et de la Terre (Électrophorèse)**
+- **Tâche** : "Le document 1 présente les résultats d'une électrophorèse de trois molécules d'ADN (A, B et C). Comparez les vitesses de migration de ces molécules. Expliquez la différence de vitesse observée en justifiant votre réponse."
+- **Ressources** : Document 1 : Image d'un gel d'électrophorèse.
+- **Réponse du tuteur** :
+
+<brouillon_invisible>
+- Tâche: Comparer vitesse, Expliquer différence avec justification.
+- Docs: Document 1 (gel).
+- Plan: 1. Décrire bandes, 2. Loi migration (charge/taille), 3. Conclusion.
+- Compétence: Analyser des résultats.
+</brouillon_invisible>
+
+---
+### Tâche 1 : Comparaison et explication des vitesses de migration (Électrophorèse)
+
+#### 1. Travail sur Brouillon
+• **Reformulation et simplification de la question** : Il faut regarder le gel, comparer où se trouvent les bandes d'ADN (A, B et C) et expliquer pourquoi elles sont à des endroits différents.
+• **Verbes d'action Clés** : Comparer, Expliquer, Justifier.
+• **Documents à Utiliser** : Document 1.
+• **Infos Clés à Extraire** :
+  - Bande A : en haut (près du puits).
+  - Bande B : au milieu.
+  - Bande C : en bas (loin du puits).
+  - L'ADN migre vers le + (pôle positif).
+  - Relation : Plus l'ADN est court/léger, plus il migre vite et loin.
+• **Mini-plan** :
+  1. Décrire la position des bandes (ordre).
+  2. Expliquer le principe : l'ADN chargé négativement migre vers le +.
+  3. Conclure : C migre le plus vite car il est le plus court.
+
+#### 2. Du Brouillon au Propre (Le Guide Méthodologique)
+• **Comment Construire tes Phrases** : 
+  - Note du brouillon : "Bande C en bas"
+  - Phrase rédigée : "La bande C est située en bas du gel, c'est-à-dire la plus éloignée du point de dépôt."
+• **Compétence Scientifique Travaillée (Objectif Méthodologique)** :
+  1. Compétence : Raisonnement scientifique et communication écrite.
+  2. Pour cette question, tu vas travailler la compétence : 'Analyser et interpréter des résultats expérimentaux'.
+  3. **Conseil** : Ne te contente pas de décrire. Il faut absolument lier la position de la bande à une propriété de l'ADN (sa taille) et au principe physique (migration vers le +).
+• **L'Erreur à Ne Pas Faire** : Confondre la vitesse et la position. Beaucoup d'élèves disent "C est en bas, donc il est plus lent". N'oublie pas : plus la bande est loin du point de départ, plus la molécule a migré rapidement. L'ordre de migration est : C > B > A.
+
+#### 3. Réponse Modèle
+Les résultats de l'électrophorèse (Document 1) montrent que les trois molécules d'ADN A, B et C ont des vitesses de migration différentes. La molécule C a migré le plus loin (elle est en bas), la molécule B a une migration intermédiaire, et la molécule A est restée près du point de dépôt (elle est en haut).
+
+Cette différence de vitesse s'explique par la taille des molécules. L'ADN est chargé négativement, il migre donc vers le pôle positif (+) du gel. Cependant, le gel agit comme un tamis : les petites molécules (courtes) passent plus facilement à travers les mailles du gel et migrent donc plus vite et plus loin que les grandes molécules (longues). Par conséquent, la molécule C est la plus courte, la molécule B est de taille intermédiaire et la molécule A est la plus longue.
+---
+
+**EXEMPLE 2 : Mathématiques (Résolution d'équation du second degré)**
+- **Tâche** : "Résoudre dans R l'équation suivante : 2x² - 5x + 2 = 0."
+- **Réponse du tuteur** :
+
+<brouillon_invisible>
+- Tâche: Trouver x.
+- Outil: Discriminant.
+- Étapes: a, b, c -> Δ -> racines.
+</brouillon_invisible>
+
+---
+### Tâche 1 : Résolution de l'équation du second degré
+
+#### 1. Travail sur Brouillon
+• **Reformulation et simplification de la question** : Il faut trouver les valeurs de x qui rendent l'équation vraie.
+• **Verbes d'action Clés** : Résoudre, Calculer.
+• **Documents à Utiliser** : Aucun document fourni. Connaissances sur le discriminant.
+• **Infos Clés à Extraire** :
+  - Forme : ax² + bx + c = 0, avec a=2, b=-5, c=2.
+  - Calcul du discriminant : Δ = (-5)² - 4*2*2 = 25 - 16 = 9.
+  - Δ > 0, donc 2 solutions.
+  - Formules : x₁ = (-b - √Δ) / 2a, x₂ = (-b + √Δ) / 2a.
+• **Mini-plan** :
+  1. Identifier a, b et c.
+  2. Calculer le discriminant Δ.
+  3. Appliquer les formules pour trouver x₁ et x₂.
+
+#### 2. Du Brouillon au Propre (Le Guide Méthodologique)
+• **Comment Construire tes Phrases** : 
+  - Note du brouillon : "Δ = 9, Δ > 0, 2 solutions."
+  - Phrase rédigée : "Le discriminant est égal à 9. Comme il est positif, l'équation admet deux solutions réelles distinctes."
+• **Compétence Scientifique Travaillée (Objectif Méthodologique)** :
+  1. Compétence : Résoudre des équations et inéquations.
+  2. Pour cette question, tu vas travailler la compétence : 'Appliquer une méthode de résolution structurée'.
+  3. **Conseil** : Applique toujours la méthode en 3 étapes : 1) Identifier a, b, c, 2) Calculer Δ, 3) Appliquer la formule. Ne saute pas d'étape.
+• **L'Erreur à Ne Pas Faire** : Oublier de calculer le discriminant et passer directement à la factorisation au hasard. Calcule toujours Δ en premier.
+
+#### 3. Réponse Modèle
+L'équation 2x² - 5x + 2 = 0 est une équation du second degré de la forme ax² + bx + c = 0.
+On identifie : a = 2, b = -5, c = 2.
+On calcule le discriminant Δ = b² - 4ac = (-5)² - 4*2*2 = 25 - 16 = 9.
+Comme Δ > 0, l'équation admet deux solutions réelles distinctes :
+x₁ = (-b - √Δ) / (2a) = (5 - 3) / 4 = 2/4 = 1/2.
+x₂ = (-b + √Δ) / (2a) = (5 + 3) / 4 = 8/4 = 2.
+L'ensemble des solutions est S = {1/2 ; 2}.
+---
+`;
+  }
+
+  p += `\n</user_prompt>`;
+  return p;
+};
+
+let _methodePdfBase64 = null;
+let _methodePdfName = '';
+let _methodePdfMime = '';
+
+let _methodeRefName   = '';
+let _methodeRefText   = '';
+let _methodeRefBase64 = null;
+let _methodeRefMime   = '';
+
+let _methodeExempleName   = '';
+let _methodeExempleBase64 = null;
+let _methodeExempleMime   = '';
+let _methodeExempleText   = '';
+
+const methodeValidateStep1 = () => {
+  const disc = $('#methode-discipline')?.value;
+  const niv = $('#methode-niveau')?.value;
+  const role = $('#methode-role')?.value?.trim();
+  if (!disc) { toast('Veuillez choisir une discipline.', 'error'); return false; }
+  if (!niv) { toast('Veuillez choisir un niveau scolaire.', 'error'); return false; }
+  if (!role || role.length < 5) { toast('Veuillez renseigner le rôle de l\'IA.', 'error'); return false; }
+  return true;
+};
+
+const methodeValidateStep2 = () => {
+  if (_methodePdfBase64) return true;
+  const exo = $('#methode-exercice')?.value?.trim();
+  if (!exo || exo.length < 10) { toast('Veuillez saisir l\'exercice ou importer un fichier.', 'error'); return false; }
+  return true;
+};
+
+const methodeShowStep = (step) => {
+  document.querySelectorAll('#methode-modal .corr-step').forEach(el => el.style.display = 'none');
+  const target = document.getElementById('methode-step-' + step);
+  if (target) target.style.display = 'block';
+
+  const labels = ['Contexte général', 'L\'Exercice / Problème', 'Référentiel & Modèles', 'Résumé & Génération'];
+  if ($('#methode-step-label')) $('#methode-step-label').textContent = labels[step-1];
+
+  for (let i = 1; i <= 4; i++) {
+    const dot = $('#mdot-'+i);
+    const line = $('#mline-'+(i-1));
+    if (!dot) continue;
+    dot.classList.remove('active', 'done');
+    if (line) line.classList.remove('done');
+    
+    if (i < step) { dot.classList.add('done'); if(line) line.classList.add('done'); }
+    else if (i === step) { dot.classList.add('active'); if(line) line.classList.add('done'); }
+  }
+};
+
+const methodeBuildSummary = () => {
+  const get = (id) => ($(`#${id}`)?.value || '').trim();
+  const discipline = get('methode-discipline') === 'Autre' ? (get('methode-custom-discipline') || 'Autre') : get('methode-discipline');
+  const exoPreview = get('methode-exercice').slice(0, 120) + (get('methode-exercice').length > 120 ? '…' : '');
+  const classeStr = `${get('methode-niveau') || '—'} ${get('methode-filiere') && !get('methode-filiere').includes('Aucune') ? ' - ' + get('methode-filiere') : ''} ${get('methode-option') && !get('methode-option').includes('Générale') ? '(' + get('methode-option') + ')' : ''}`.replace(/\s+/g, ' ').trim();
+  const html = `
+    <div style="display:grid;gap:6px">
+      <div><span style="color:var(--text-dim)">📚 Discipline :</span> <strong style="color:var(--cyan)">${discipline || '—'}</strong></div>
+      <div><span style="color:var(--text-dim)">🎓 Classe :</span> <strong style="color:var(--neon)">${classeStr}</strong></div>
+      <div><span style="color:var(--text-dim)">✍️ Exercice (Extrait) :</span> <em style="color:var(--text-dim);font-size:11px">${exoPreview || '—'}</em></div>
+      <div><span style="color:var(--text-dim)">🎯 Compétences définies :</span> ${get('methode-competences') ? '<span style="color:#34d399">✓ Oui</span>' : '<span style="color:#f59e0b">⚠ Non (l\'IA en déduira)</span>'}</div>
+      <div><span style="color:var(--text-dim)">📎 Exemple modèle :</span> ${(get('methode-exemple') || _methodeExempleBase64) ? '<span style="color:#f59e0b">✓ Fourni</span>' : '<span style="color:var(--text-dim)">⚠ Aucun (exemples par défaut)</span>'}</div>
+    </div>`;
+  const summaryEl = $('#methode-summary');
+  if (summaryEl) summaryEl.innerHTML = html;
+};
+
+const openMethodeModal = async () => {
+  const geminiId = "gemini-2.5-flash";
+  if (state.model !== geminiId) {
+    state.model = geminiId;
+    if ($('#model-select')) $('#model-select').value = geminiId;
+    if (typeof db !== 'undefined' && db.put) {
+      db.put('settings', { id: 'model', value: state.model }).catch(() => {});
+    }
+  }
+
+  // Restaurer la config
+  try {
+    const saved = localStorage.getItem('methodeSavedConfig');
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.discipline) $('#methode-discipline').value = s.discipline;
+      if (s.customDiscipline) $('#methode-custom-discipline').value = s.customDiscipline;
+      if (s.niveau) $('#methode-niveau').value = s.niveau;
+      if (s.niveauLangue) $('#methode-niveau-langue').value = s.niveauLangue;
+      if (s.role) $('#methode-role').value = s.role;
+      if (s.competences) $('#methode-competences').value = s.competences;
+      if (s.directives) $('#methode-directives').value = s.directives;
+      if (s.exemple) $('#methode-exemple').value = s.exemple;
+      if ($('#methode-export-word')) $('#methode-export-word').checked = !!s.exportWord;
+    }
+  } catch(e) {}
+
+  if (_methodePdfBase64) {
+    if ($('#methode-pdf-badge')) {
+      $('#methode-pdf-badge').textContent = `📎 ${_methodePdfName} (Mémoire)`;
+      $('#methode-pdf-badge').style.display = 'inline-block';
+    }
+  } else {
+    if ($('#methode-pdf-badge')) $('#methode-pdf-badge').style.display = 'none';
+  }
+
+  if (_methodeExempleBase64 && $('#methode-exemple-badge')) {
+    $('#methode-exemple-badge').textContent = `📄 ${_methodeExempleName} (Mémoire)`;
+    $('#methode-exemple-badge').style.display = 'inline-block';
+  } else {
+    if ($('#methode-exemple-badge')) $('#methode-exemple-badge').style.display = 'none';
+  }
+
+  methodeShowStep(1);
+  $('#methode-modal').classList.add('active');
+};
+
+const closeMethodeModal = () => $('#methode-modal').classList.remove('active');
+
+const generateMethodeSheet = async () => {
+  if (state.isGenerating) {
+    console.warn("Génération déjà en cours.");
+    return;
+  }
+  const get = (id) => ($(`#${id}`)?.value || '').trim();
+  const discipline = get('methode-discipline') === 'Autre'
+    ? (get('methode-custom-discipline') || 'Autre')
+    : get('methode-discipline');
+  const hasPdf = !!_methodePdfBase64;
+
+  const cfg = {
+    discipline,
+    niveau:       get('methode-niveau'),
+    niveauLangue: get('methode-niveau-langue'),
+    role:         get('methode-role'),
+    exercice:     get('methode-exercice') || (hasPdf ? `[EXERCICE EN PIÈCE JOINTE : ${_methodePdfName}]\n\nIMPORTANT : Le sujet complet se trouve dans le document PDF/image attaché à ce message.` : ''),
+    competences:  get('methode-competences'),
+    directives:   get('methode-directives'),
+    exemple:      get('methode-exemple'),
+    exportWord:   $('#methode-export-word')?.checked || false,
+    hasPdf
+  };
+
+  if (!hasPdf && (!cfg.exercice || cfg.exercice.length < 10)) {
+    toast('Veuillez coller l\'exercice ou importer un PDF.', 'error');
+    return;
+  }
+
+  try {
+    localStorage.setItem('methodeSavedConfig', JSON.stringify(cfg));
+  } catch (e) {}
+
+  closeMethodeModal();
+
+  const titre = `🧠 Fiche Méthode — ${cfg.discipline} ${cfg.niveau}${hasPdf ? ' [PDF]' : ''}`;
+
+  if (!state.messages) state.messages = [];
+  state.messages.push({ role: 'user', content: titre, ts: Date.now() });
+  renderMessages();
+
+  const assistantMsg = { role: 'assistant', content: '⏳ Génération de la fiche méthode en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: false, isMethode: true };
+  state.messages.push(assistantMsg);
+  renderMessages();
+
+  const _savedAgent = state.agent;
+  state.isGenerating = true;
+  state.selectedWorkflow = null;
+  state.agent = null;
+  state.abortController = new AbortController();
+  const sendBtn = $('#send-btn');
+  if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
+  showTyping("gemini-2.5-flash");
+
+  try {
+    if (!state.geminiApiKey) {
+      throw new Error('Clé API Google Gemini requise. Configurez-la dans Paramètres API.');
+    }
+
+    const userContent = buildMethodeUserPrompt(cfg);
+    const parts = [{ text: userContent }];
+
+    if (hasPdf && _methodePdfBase64) {
+      parts.unshift({
+        inlineData: { mimeType: _methodePdfMime || 'application/pdf', data: _methodePdfBase64 }
+      });
+      parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT EXERCICE — RÔLE : SUJET SOURCE]\nLe document ci-dessus contient l\'exercice. Analyse son contenu pour construire la fiche méthode.\n---\n\n' });
+    }
+
+    if (_methodeRefBase64) {
+      parts.push({ text: `\n\n---\n[CADRE DE RÉFÉRENCE — RÔLE : RÉFÉRENTIEL DES COMPÉTENCES]\nLe document ci-dessous est le cadre de référence pédagogique officiel. Utilise ses compétences pour remplir les balises <competence>.\n---\n\n` });
+      parts.push({
+        inlineData: { mimeType: _methodeRefMime || 'application/pdf', data: _methodeRefBase64 }
+      });
+    }
+
+    if (_methodeExempleBase64) {
+      parts.push({ text: `\n\n---\n[FICHE MODÈLE — DOCUMENT JOINT : ${_methodeExempleName}]\n⚠️ Le document ci-dessous est une fiche méthode d'exemple. Imite sa structure, son style et son niveau de détail.\n---\n\n` });
+      parts.push({
+        inlineData: { mimeType: _methodeExempleMime || 'application/pdf', data: _methodeExempleBase64 }
+      });
+    }
+
+    let sysPrompt = METHODE_SYSTEM_PROMPT;
+
+    if (_methodeRefText && !_methodeRefBase64) {
+      sysPrompt += `\n\n<cadre_reference_importe>\n${_methodeRefText}\n</cadre_reference_importe>`;
+    }
+
+    const geminiPayload = {
+      systemInstruction: { parts: [{ text: sysPrompt }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 65536, topP: 0.85 }
+    };
+
+    const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
+    const geminiUrl = `/api/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanGeminiKey}`;
+
+    assistantMsg.content = `🔍 L'IA analyse votre exercice pour élaborer la fiche méthode...`;
+    renderMessages();
+
+    const geminiRes = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: state.abortController.signal,
+      body: JSON.stringify(geminiPayload)
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      throw new Error(`Gemini API ${geminiRes.status}: ${errText.slice(0, 500)}`);
+    }
+
+    const geminiData = await geminiRes.json();
+    let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let finishReason = geminiData?.candidates?.[0]?.finishReason || 'STOP';
+
+    // Continuation
+    let continuationCount = 0;
+    const MAX_CONTINUATIONS = 3;
+    while (finishReason === 'MAX_TOKENS' && continuationCount < MAX_CONTINUATIONS && !state.abortController?.signal?.aborted) {
+      continuationCount++;
+      assistantMsg.content = geminiText + `\n\n*⏳ Continuation automatique (${continuationCount}/${MAX_CONTINUATIONS})…*`;
+      renderMessages(true);
+
+      const lightContents = geminiPayload.contents.map(turn => ({
+        role: turn.role,
+        parts: turn.parts.filter(p => p.text !== undefined)
+      })).filter(turn => turn.parts.length > 0);
+
+      const contPayload = {
+        systemInstruction: geminiPayload.systemInstruction,
+        contents: [
+          ...lightContents,
+          { role: 'model', parts: [{ text: geminiText }] },
+          { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté. Ne recommence pas depuis le début. Ne répète pas ce qui a déjà été écrit. Poursuis directement la fiche en XML.' }] }
+        ],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 65536, topP: 0.85 }
+      };
+
+      try {
+        const contRes = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: state.abortController?.signal,
+          body: JSON.stringify(contPayload)
+        });
+        if (!contRes.ok) break;
+        const contData = await contRes.json();
+        const contText = contData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
+        if (!contText) break;
+        geminiText += contText;
+      } catch(contErr) {
+        console.warn('Continuation failed:', contErr);
+        break;
+      }
+    }
+
+    // Extraction XML et formatage en bloc de code
+    const matchExercice = geminiText.match(/<exercice>([\s\S]*?)<\/exercice>/i);
+    if (matchExercice) {
+      const xmlContent = `<exercice>\n${matchExercice[1].trim()}\n</exercice>`;
+      geminiText = "```xml\n" + xmlContent + "\n```";
+    } else {
+      if (geminiText.includes('<exercice>')) {
+        geminiText = "```xml\n" + geminiText.trim() + "\n```";
+      }
+    }
+
+    if (cfg.exportWord) {
+      try {
+        exportToWord(geminiText, `Fiche_Methode_${cfg.discipline}.doc`);
+        toast('📄 Fiche méthode exportée en Word avec succès !', 'success');
+      } catch(e) {
+        console.error('Export Word error:', e);
+      }
+    }
+
+    assistantMsg.content = geminiText;
+    assistantMsg.streaming = false;
+    renderMessages(true);
+    hideTyping();
+    await saveChat();
+
+  } catch(e) {
+    if (e.name === 'AbortError' || (e.message && e.message.includes('Aborted'))) {
+      assistantMsg.content = `*— Génération de la fiche interrompue —*`;
+    } else {
+      assistantMsg.content = `❌ Erreur génération fiche : ${e.message}`;
+    }
+    assistantMsg.streaming = false;
+    renderMessages(true);
+    hideTyping();
+  } finally {
+    state.isGenerating = false;
+    state.agent = _savedAgent;
+    state.abortController = null;
+    const sendBtn2 = $('#send-btn');
+    if (sendBtn2) { sendBtn2.className = 'send-btn'; sendBtn2.innerHTML = '▶'; sendBtn2.disabled = false; }
+  }
+};
+
+const refreshMethodeSavedList = async () => {
+  try {
+    const allSettings = await db.getAll('settings');
+    const saves = allSettings.filter(s => s.id && s.id.startsWith('methodeSave_'));
+    const select = $('#methode-saved-list');
+    if (!select) return;
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">— Profils sauvegardés —</option>';
+    saves.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.data.name || 'Sauvegarde sans nom';
+      select.appendChild(opt);
+    });
+    if (saves.some(s => s.id === currentVal)) select.value = currentVal;
+  } catch (err) { console.error('Erreur refreshMethodeSavedList:', err); }
+};
+
+const saveMethodeConfigData = async () => {
+  const name = prompt('Entrez un nom pour cette sauvegarde de fiche méthode (ex: Terminale PC - Électricité) :');
+  if (!name || !name.trim()) return;
+  try {
+    const get = (id) => ($(`#${id}`)?.value || '');
+    const configToSave = {
+      name: name.trim(),
+      discipline: get('methode-discipline'),
+      customDiscipline: get('methode-custom-discipline'),
+      niveau: get('methode-niveau'),
+      niveauLangue: get('methode-niveau-langue'),
+      role: get('methode-role'),
+      exercice: get('methode-exercice'),
+      competences: get('methode-competences'),
+      exemple: get('methode-exemple'),
+      directives: get('methode-directives'),
+      exportWord: $('#methode-export-word')?.checked || false,
+      _methodePdfName,
+      _methodePdfBase64,
+      _methodePdfMime,
+      _methodeRefName,
+      _methodeRefText,
+      _methodeRefBase64,
+      _methodeRefMime,
+      _methodeExempleName,
+      _methodeExempleBase64,
+      _methodeExempleMime
+    };
+    const saveId = 'methodeSave_' + Date.now();
+    await db.put('settings', { id: saveId, data: configToSave });
+    await refreshMethodeSavedList();
+    toast(`Sauvegarde "${name}" réussie !`, 'success');
+  } catch (err) {
+    console.error('Erreur sauvegarde méthode:', err);
+    toast('Erreur lors de la sauvegarde.', 'error');
+  }
+};
+
+const loadMethodeConfigData = async () => {
+  try {
+    const id = $('#methode-saved-list')?.value;
+    if (!id) { toast('Veuillez sélectionner un profil sauvegardé.', 'info'); return; }
+    const record = await db.get('settings', id);
+    if (!record || !record.data) { toast('Erreur : profil introuvable.', 'error'); return; }
+    const data = record.data;
+    const set = (id, val) => { if ($(`#${id}`)) $(`#${id}`).value = val || ''; };
+    set('methode-discipline', data.discipline);
+    set('methode-custom-discipline', data.customDiscipline);
+    if (data.discipline === 'Autre') {
+      const grp = $('#methode-custom-discipline-group');
+      if (grp) grp.style.display = 'block';
+    }
+    set('methode-niveau', data.niveau);
+    set('methode-niveau-langue', data.niveauLangue);
+    set('methode-role', data.role);
+    set('methode-exercice', data.exercice);
+    set('methode-competences', data.competences);
+    set('methode-exemple', data.exemple);
+    set('methode-directives', data.directives);
+    if ($('#methode-export-word')) $('#methode-export-word').checked = data.exportWord || false;
+    _methodePdfName   = data._methodePdfName   || '';
+    _methodePdfBase64 = data._methodePdfBase64 || null;
+    _methodePdfMime   = data._methodePdfMime   || '';
+    _methodeRefName   = data._methodeRefName   || '';
+    _methodeRefText   = data._methodeRefText   || '';
+    _methodeRefBase64 = data._methodeRefBase64 || null;
+    _methodeRefMime   = data._methodeRefMime   || '';
+    _methodeExempleName   = data._methodeExempleName   || '';
+    _methodeExempleBase64 = data._methodeExempleBase64 || null;
+    _methodeExempleMime   = data._methodeExempleMime   || '';
+
+    if (_methodePdfBase64 && $('#methode-pdf-badge')) {
+      $('#methode-pdf-badge').textContent = `📎 ${_methodePdfName} (Mémoire)`;
+      $('#methode-pdf-badge').style.display = 'inline-block';
+    } else {
+      if ($('#methode-pdf-badge')) $('#methode-pdf-badge').style.display = 'none';
+    }
+    if (_methodeRefBase64 && $('#methode-ref-badge')) {
+      $('#methode-ref-badge').textContent = `📝 ${_methodeRefName} (Mémoire)`;
+      $('#methode-ref-badge').style.display = 'inline-block';
+    } else {
+      if ($('#methode-ref-badge')) $('#methode-ref-badge').style.display = 'none';
+    }
+    if (_methodeExempleBase64 && $('#methode-exemple-badge')) {
+      $('#methode-exemple-badge').textContent = `📄 ${_methodeExempleName} (Mémoire)`;
+      $('#methode-exemple-badge').style.display = 'inline-block';
+    } else {
+      if ($('#methode-exemple-badge')) $('#methode-exemple-badge').style.display = 'none';
+    }
+    toast(`Profil "${data.name}" chargé avec succès !`, 'success');
+  } catch (err) {
+    console.error('Erreur chargement méthode:', err);
+    toast('Erreur lors du chargement.', 'error');
+  }
+};
+
+const deleteMethodeConfigData = async () => {
+  try {
+    const id = $('#methode-saved-list')?.value;
+    if (!id) { toast('Veuillez sélectionner un profil à supprimer.', 'info'); return; }
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce profil ?')) return;
+    await db.delete('settings', id);
+    await refreshMethodeSavedList();
+    toast('Profil supprimé.', 'info');
+  } catch (err) {
+    console.error('Erreur suppression méthode:', err);
+    toast('Erreur lors de la suppression.', 'error');
+  }
+};
+
+const methodeHandleDisciplineChange = () => {
+  const discEl = $('#methode-discipline');
+  const customGroup = $('#methode-custom-discipline-group');
+  if (!discEl) return;
+  const disc = discEl.value;
+  if (customGroup) customGroup.style.display = disc === 'Autre' ? 'block' : 'none';
+};
+
+document.removeEventListener('do-save-methode-config',   window._methodeSaveHandler);
+document.removeEventListener('do-load-methode-config',   window._methodeLoadHandler);
+document.removeEventListener('do-delete-methode-config', window._methodeDeleteHandler);
+window._methodeSaveHandler   = saveMethodeConfigData;
+window._methodeLoadHandler   = loadMethodeConfigData;
+window._methodeDeleteHandler = deleteMethodeConfigData;
+document.addEventListener('do-save-methode-config',   window._methodeSaveHandler);
+document.addEventListener('do-load-methode-config',   window._methodeLoadHandler);
+document.addEventListener('do-delete-methode-config', window._methodeDeleteHandler);
+
+window.methodeValidateStep1 = methodeValidateStep1;
+window.methodeValidateStep2 = methodeValidateStep2;
+window.methodeShowStep = methodeShowStep;
+window.methodeBuildSummary = methodeBuildSummary;
+window.openMethodeModal = openMethodeModal;
+window.closeMethodeModal = closeMethodeModal;
+window.generateMethodeSheet = generateMethodeSheet;
+
+setTimeout(() => refreshMethodeSavedList(), 500);
+
+(() => {
+  if ($('#open-methode-modal'))  $('#open-methode-modal').onclick = openMethodeModal;
+  if ($('#close-methode-modal')) $('#close-methode-modal').onclick = closeMethodeModal;
+  if ($('#methode-modal'))       $('#methode-modal').onclick = e => { if (e.target === $('#methode-modal')) closeMethodeModal(); };
+  if ($('#methode-discipline'))  $('#methode-discipline').onchange = methodeHandleDisciplineChange;
+
+  if ($('#methode-pdf-upload')) {
+    $('#methode-pdf-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const badge   = $('#methode-pdf-badge');
+      const info    = $('#methode-pdf-info');
+      const exoEl   = $('#methode-exercice');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
+      if (isPdfOrImg) {
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _methodePdfBase64 = ev.target.result.split(',')[1];
+          _methodePdfName = file.name;
+          _methodePdfMime = file.type || 'application/pdf';
+          if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (info) info.style.display = 'block';
+          if (exoEl) { exoEl.value = `[EXERCICE PDF: ${file.name}]\nSera analysé nativement par Gemini.`; exoEl.style.opacity = '1'; }
+          toast(`✅ ${file.name} importé avec succès.`, 'success');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (exoEl) { exoEl.value = ev.target.result.trim(); exoEl.style.opacity = '1'; }
+          _methodePdfBase64 = null;
+          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          if (info) info.style.display = 'block';
+          toast('✅ Fichier texte importé.', 'success');
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
+
+  if ($('#methode-ref-upload')) {
+    $('#methode-ref-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const badge    = $('#methode-ref-badge');
+      const competEl = $('#methode-competences');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
+      if (isPdfOrImg) {
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _methodeRefName = file.name;
+          _methodeRefMime = file.type || 'application/pdf';
+          const dataUrl = ev.target.result;
+          _methodeRefBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          _methodeRefText = '';
+          if (competEl) competEl.value += `\n\n[CADRE PDF: ${file.name}]`;
+          if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          toast(`✅ Référentiel ${file.name} importé.`, 'success');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _methodeRefName = file.name;
+          _methodeRefText = ev.target.result.trim();
+          if (competEl) competEl.value += '\n\n' + _methodeRefText;
+          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          toast(`✅ Référentiel texte importé.`, 'success');
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
+
+  if ($('#methode-exemple-upload')) {
+    $('#methode-exemple-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const badge   = $('#methode-exemple-badge');
+      const infoEl  = $('#methode-exemple-info');
+      const exemplEl = $('#methode-exemple');
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      if (isPdf) {
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _methodeExempleName   = file.name;
+          _methodeExempleMime   = file.type || 'application/pdf';
+          const dataUrl = ev.target.result;
+          _methodeExempleBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          if (exemplEl) { exemplEl.value = `[FICHE EXEMPLE PDF : ${file.name}]\nSera analysée nativement par Gemini comme modèle de style.`; }
+          if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (infoEl) infoEl.style.display = 'block';
+          toast(`✅ Fiche exemple "${file.name}" importée. L'IA l'utilisera comme modèle.`, 'success');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _methodeExempleName   = file.name;
+          _methodeExempleBase64 = null;
+          _methodeExempleMime   = '';
+          const txt = ev.target.result.trim();
+          if (exemplEl) exemplEl.value = txt;
+          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          if (infoEl) infoEl.style.display = 'block';
+          toast(`✅ Fiche exemple texte importée.`, 'success');
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
+})();
 
 
 

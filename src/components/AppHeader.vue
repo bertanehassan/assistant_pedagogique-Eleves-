@@ -179,6 +179,11 @@
               <span class="material-symbols-outlined" style="font-size:14px">school</span>
               👨‍🏫 Fiche Didactique
             </button>
+            <button id="open-methode-modal" class="sb-btn" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)">
+              <span class="material-symbols-outlined" style="font-size:14px">psychology</span>
+              🧠 Fiche Méthode
+            </button>
+
 
             <button id="open-data-modal" class="sb-btn">
               <span class="material-symbols-outlined" style="font-size:14px">database</span>
