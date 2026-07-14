@@ -175,6 +175,10 @@
               <span class="material-symbols-outlined" style="font-size:14px">assignment</span>
               📋 Fiche de Correction
             </button>
+            <button id="open-didactique-modal" class="sb-btn" style="color:#60a5fa;border-color:rgba(96,165,250,0.35)">
+              <span class="material-symbols-outlined" style="font-size:14px">school</span>
+              👨‍🏫 Fiche Didactique
+            </button>
 
             <button id="open-data-modal" class="sb-btn">
               <span class="material-symbols-outlined" style="font-size:14px">database</span>

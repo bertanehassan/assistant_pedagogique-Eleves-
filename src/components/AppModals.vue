@@ -10,6 +10,7 @@
   <QuizPlayerExportModal />
   <WebQuizPlayerModal />
   <CorrectionModal />
+  <DidactiqueModal />
 </template>
 
 <script setup>
@@ -24,4 +25,5 @@ import EditAgentModal from './modals/EditAgentModal.vue';
 import QuizPlayerExportModal from './modals/QuizPlayerExportModal.vue';
 import WebQuizPlayerModal from './modals/WebQuizPlayerModal.vue';
 import CorrectionModal from './modals/CorrectionModal.vue';
+import DidactiqueModal from './modals/DidactiqueModal.vue';
 </script>

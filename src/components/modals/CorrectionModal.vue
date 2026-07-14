@@ -270,10 +270,20 @@
 
           <!-- Exemple modèle (optionnel) -->
           <div class="field-group">
-            <label class="field-label">📎 Exemple de correction modèle <span style="font-weight:normal;color:var(--text-dim)">(optionnel)</span></label>
+            <label class="field-label">📎 Exemple de correction modèle <span style="font-weight:normal;color:var(--text-dim)">(Few-Shot, Optionnel)</span></label>
             <textarea class="field-textarea" id="corr-exemple" rows="3"
-              placeholder="Collez une ancienne fiche de correction pour guider le style et le niveau de détail… (optionnel)"></textarea>
-            <div class="field-hint">Si fourni, l'IA calquera son style sur cet exemple.</div>
+              placeholder="Collez une ancienne fiche de correction pour guider le style et le niveau de détail, ou importez-en une depuis un fichier."></textarea>
+            <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+              <label for="corr-exemple-upload" class="corr-upload-btn" style="border-color:rgba(245,158,11,0.5);color:#f59e0b;background:rgba(245,158,11,0.07)">
+                <span style="font-size:13px">📄</span>
+                Importer une fiche modèle (PDF / Word / TXT)
+              </label>
+              <input type="file" id="corr-exemple-upload" accept=".pdf,.txt,.md,.doc,.docx" style="display:none">
+              <span id="corr-exemple-badge" style="display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
+            </div>
+            <div id="corr-exemple-info" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:6px;font-size:11px;color:#f59e0b">
+              ✅ Fiche modèle importée — l'IA l'utilisera comme référence absolue pour la mise en forme.
+            </div>
           </div>
 
           <div class="btn-row">

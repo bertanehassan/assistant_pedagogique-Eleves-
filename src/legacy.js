@@ -2076,7 +2076,10 @@ async function loadAgents() {
     });
 
     // ── Agents optgroup ──
-    const mainAgents = agents.filter(a => !workflowAgentIds.has(a.id));
+    const mainAgents = agents.filter(a =>
+      !workflowAgentIds.has(a.id) &&
+      !a.name?.startsWith('🎲') // Exclure les agents internes dynamiques (Agent 3, etc.)
+    );
     
     if (mainAgents.length) {
       const agGroup = document.createElement("optgroup");
@@ -2091,10 +2094,27 @@ async function loadAgents() {
       sel.appendChild(agGroup);
     }
 
+    // ── Outils (Générateurs) ──
+    const toolsGroup = document.createElement("optgroup");
+    toolsGroup.label = "🛠️ OUTILS & GÉNÉRATEURS";
+    const corrOpt = document.createElement("option");
+    corrOpt.value = "__TOOL__correction";
+    corrOpt.textContent = "📋 Fiche de Correction (Générateur)";
+    corrOpt.title = "Générer une fiche de correction détaillée à partir d'un sujet d'évaluation";
+    toolsGroup.appendChild(corrOpt);
+
+    const didacOpt = document.createElement("option");
+    didacOpt.value = "__TOOL__didactique";
+    didacOpt.textContent = "👨‍🏫 Fiche Didactique (Générateur)";
+    didacOpt.title = "Générer une fiche didactique de leçon/séquence avec grille d'évaluation formative";
+    toolsGroup.appendChild(didacOpt);
+
+    sel.appendChild(toolsGroup);
+
     // ── Workflows optgroup ──
     if (workflows.length) {
       const wfGroup = document.createElement("optgroup");
-      wfGroup.label = "🔗 WORKFLOWS (CHAÎNES)";
+      wfGroup.label = "🔗 Générateurs de Quiz";
       workflows.forEach(w => {
         const opt = document.createElement("option");
         opt.value = `__WF__${w.id}`;
@@ -2105,15 +2125,7 @@ async function loadAgents() {
       sel.appendChild(wfGroup);
     }
 
-    // ── Outils (Générateurs) ──
-    const toolsGroup = document.createElement("optgroup");
-    toolsGroup.label = "🛠️ OUTILS & GÉNÉRATEURS";
-    const corrOpt = document.createElement("option");
-    corrOpt.value = "__TOOL__correction";
-    corrOpt.textContent = "📋 Fiche de Correction (Générateur)";
-    corrOpt.title = "Générer une fiche de correction détaillée à partir d'un sujet d'évaluation";
-    toolsGroup.appendChild(corrOpt);
-    sel.appendChild(toolsGroup);
+
 
     // Existing agents in modal (hide workflow-internal agents)
     const list = $("#agent-existing-list");
@@ -8197,6 +8209,12 @@ function bindEvents() {
   let _corrRefBase64 = null;   // base64 du PDF cadre de référence pour Gemini Vision
   let _corrRefMime   = '';     // MimeType du cadre de référence PDF
 
+  // ── Stockage temporaire de l'Exemple Modèle ──
+  let _corrExempleName   = '';
+  let _corrExempleText   = '';
+  let _corrExempleBase64 = null;
+  let _corrExempleMime   = '';
+
   const saveCorrectionConfigData = async () => {
     const name = prompt("Entrez un nom pour cette sauvegarde (ex: 1Bac SVT - Respiration) :");
     if (!name || !name.trim()) return;
@@ -8278,6 +8296,20 @@ function bindEvents() {
       _corrRefText = data._corrRefText || '';
       _corrRefBase64 = data._corrRefBase64 || null;
       _corrRefMime = data._corrRefMime || '';
+      _corrExempleName = data._corrExempleName || '';
+      _corrExempleText = data._corrExempleText || '';
+      _corrExempleBase64 = data._corrExempleBase64 || null;
+      _corrExempleMime = data._corrExempleMime || '';
+
+      if (_corrExempleBase64 && $('#corr-exemple-badge')) {
+        $('#corr-exemple-badge').textContent = `📄 ${_corrExempleName} (Mémoire)`;
+        $('#corr-exemple-badge').style.display = 'inline-block';
+        if ($('#corr-exemple-info')) $('#corr-exemple-info').style.display = 'block';
+      } else {
+        if ($('#corr-exemple-badge')) $('#corr-exemple-badge').style.display = 'none';
+        if ($('#corr-exemple-info')) $('#corr-exemple-info').style.display = 'none';
+      }
+
 
       if (_corrPdfBase64 && $('#corr-pdf-badge')) {
         $('#corr-pdf-badge').textContent = `📎 ${_corrPdfName} (Mémoire)`;
@@ -8466,7 +8498,18 @@ function bindEvents() {
       }
 
       // Si cadre de référence PDF importé : l'envoyer aussi en inlineData pour vision native
-      if (_corrRefBase64) {
+      
+      // Si exemple de correction importé (PDF)
+      if (_corrExempleBase64) {
+        parts.push({
+          inlineData: {
+            mimeType: _corrExempleMime || 'application/pdf',
+            data: _corrExempleBase64
+          }
+        });
+        parts.push({ text: `\n\n---\n[FICHE MODÈLE - DOCUMENT JOINT : ${_corrExempleName}]\nLe document ci-dessus est la fiche de correction d'EXEMPLE que l'enseignant te donne pour le style.\n---\n\n` });
+      }
+if (_corrRefBase64) {
         parts.push({
           inlineData: {
             mimeType: _corrRefMime || 'application/pdf',
@@ -8499,7 +8542,14 @@ function bindEvents() {
         );
       }
 
-      const effectiveSystemPrompt = hasPdf || _corrRefBase64
+      
+      // Inject CLONING rule if example is present (Text or Base64)
+      if (_corrExempleBase64 || cfg.exemple.length > 20) {
+        const cloningRule = `\n\n## ⚠️ RÈGLE ABSOLUE — CLONAGE STRICT DE LA FICHE EXEMPLE (PRIORITÉ MAXIMALE)\n\nSi une fiche exemple de correction est fournie (en PDF ou en texte collé), cette règle **ANNULE ET REMPLACE** le format de tableau de correction par défaut.\n\n**ÉTAPE A — ANALYSE EXHAUSTIVE (avant d'écrire quoi que ce soit) :**\n- Compte et copie EXACTEMENT les intitulés et l'ordre des colonnes de la correction modèle.\n- Analyse le style : tableaux, listes à puces, numérotations, présence de barèmes dans les colonnes ou à côté.\n\n**ÉTAPE B — REPRODUCTION STRICTE DU SQUELETTE :**\n- ❌ NE PAS utiliser le format à 4 colonnes de base si l'exemple est différent.\n- ❌ NE PAS changer le nom des colonnes par rapport à l'exemple.\n- ✅ La grille de correction générée doit être visuellement et structurellement IDENTIQUE à l'exemple.\n- ✅ Seul le CONTENU (réponses spécifiques à ce sujet) change. La FORME est clonée à l'identique.\n\n**ÉTAPE C — RAPPORT DE FORMAT** (insérer en haut de ta réponse) :\nIndique le format détecté (colonnes, structure) que tu as cloné.`;
+        
+        baseSystemPrompt = baseSystemPrompt.replace('</system_instructions>', cloningRule + '\n</system_instructions>');
+      }
+const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
         ? baseSystemPrompt + `\n\nREMARQUE CRITIQUE (MODE DOCUMENT) : Un ou plusieurs documents ont été joints à ce message. Tu dois IMPÉRATIVEMENT lire et analyser le contenu RÉEL de chaque document joint avant de générer quoi que ce soit. Si tu ne lis pas les documents, ta réponse sera inutilisable.`
         : baseSystemPrompt;
 
@@ -8706,6 +8756,12 @@ function bindEvents() {
         state.agent = null;
         state.selectedWorkflow = null;
         if (typeof openCorrectionModal !== 'undefined') openCorrectionModal();
+        return;
+      }
+      if (val === '__TOOL__didactique') {
+        state.agent = null;
+        state.selectedWorkflow = null;
+        if (typeof openDidactiqueModal !== 'undefined') openDidactiqueModal();
         return;
       }
 
@@ -9268,6 +9324,58 @@ function bindEvents() {
     };
   }
 
+
+  // Import Exemple Modèle (PDF/TXT) → extraire le texte ou stocker en base64
+  if ($('#corr-exemple-upload')) {
+    $('#corr-exemple-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const badge = $('#corr-exemple-badge');
+      const info = $('#corr-exemple-info');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
+
+      if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
+
+      if (isPdfOrImg) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _corrExempleName = file.name;
+          _corrExempleMime = file.type || 'application/pdf';
+          const dataUrl = ev.target.result;
+          _corrExempleBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          _corrExempleText = ''; 
+          if (badge) { badge.textContent = `📄 ${file.name} (mode clonage strict)`; badge.style.display = 'inline-block'; }
+          if (info) info.style.display = 'block';
+          toast(`✅ Fiche modèle "${file.name}" importée — L'IA la clonera nativement.`, 'success');
+        };
+        reader.onerror = () => {
+          toast(`❌ Erreur lecture de ${file.name}`, 'error');
+          if (badge) badge.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _corrExempleName = file.name;
+          _corrExempleText = ev.target.result.trim();
+          const exEl = $('#corr-exemple');
+          if (exEl) {
+            exEl.value = `--- Fiche modèle importée ---\n` + _corrExempleText;
+          }
+          if (badge) { badge.textContent = `📝 ${file.name} (mode clonage strict)`; badge.style.display = 'inline-block'; }
+          if (info) info.style.display = 'block';
+          toast(`✅ Fiche modèle "${file.name}" importée.`, 'success');
+        };
+        reader.onerror = () => {
+          toast(`❌ Erreur lecture de ${file.name}`, 'error');
+          if (badge) badge.style.display = 'none';
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
   // Import Cadre de Référence (PDF/TXT) → extraire le texte et l'injecter dans la zone compétences
   if ($('#corr-ref-upload')) {
     $('#corr-ref-upload').onchange = async (e) => {
@@ -9350,7 +9458,815 @@ function bindEvents() {
 
 
 
-  // Memory
+  
+
+// ==============================================================================
+// === FICHE DIDACTIQUE ========================================================
+// ==============================================================================
+
+const DIDACTIQUE_SYSTEM_PROMPT = `# SYSTEM INSTRUCTIONS
+
+## (C) Contexte et Rôle
+Tu es un **Expert Pédagogique Hybride**, fusion de trois spécialités :
+1.  **Ingénieur Pédagogique en SVT** : Maîtrise de la biologie cellulaire et des didactiques actives (investigation, approche par compétences).
+2.  **Concepteur de Programmes pour le Système Éducatif Marocain** : Connaissance des contraintes du BIOF (classes surchargées, niveau de français B1/B2, ressources limitées), des directives officielles et des difficultés récurrentes des élèves dans ce contexte.
+3.  **Coach en Méthodologie d’Apprentissage Actif** : Spécialiste de la décomposition des tâches complexes en étapes simples, explicites et répétables. Capable d’anticiper les obstacles d’apprentissage et d’y associer des remédiations concrètes, **systématiquement liées à une modalité de travail précise**.
+
+## (O) Objectif
+À partir des **fichiers PDF** (contenant texte, images, graphiques) et de tout exemple de fiche réussi fourni, tu vas générer une **fiche didactique complète, détaillée et prête à l’emploi** pour une séquence de leçon. La fiche comporte un tableau de déroulement enrichi d’une **colonne « Difficultés anticipées et remédiations »** et, pour chaque question de la Phase 2, une **grille d’évaluation critériée sans barème ni points**, à visée purement formative.
+
+## (S) Style et (T) Ton
+- **Style** : Professionnel, structuré, didactique, langage clair et accessible. Phrases courtes, vocabulaire scientifique précis mais expliqué.
+- **Ton** : Pédagogique, encourageant, rigoureux, réaliste et pragmatique. Tutoiement de l’enseignant lecteur.
+
+## (A) Audience
+L’enseignant marocain (spécialement en SVT, 2ème Bac BIOF).
+
+## (R) Format de Réponse — Format PAR DÉFAUT (appliqué UNIQUEMENT si aucune fiche exemple n'est fournie)
+Génère DIRECTEMENT le tableau final, sans étape de brouillon.
+Ta réponse FINALE DOIT ÊTRE PLACÉE UNIQUEMENT DANS LA BALISE <reponse_finale>. Ne génère RIEN en dehors de cette balise. La balise <reponse_finale> contient :
+1. **Le Tableau Didactique** en Markdown (8 colonnes) simulant une grille Word, syntaxe parfaite.
+2. **La Conclusion Justifiée**.
+
+### Structure du tableau (8 colonnes)
+| Le scenario pédagogique | Les tâches de l'enseignant | Les tâches de l'élève | Mode de travail | Objectifs | Évaluation | Difficultés anticipées et remédiations | La durée |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+Tu rempliras chaque phase avec ces 8 colonnes. Pour la Phase 2 (Résolution), la colonne « Les tâches de l’enseignant » contiendra, pour chaque question, les 3 volets détaillés ci-dessous, et le Volet 3 inclura la grille d’évaluation critériée sans barème.
+
+Détail des 3 volets pour la Phase 2
+•	Volet 1 : Travail sur Brouillon (Guidage oral) : Consignes orales précises, adaptées au contexte de la question, guidant l’élève dans l’analyse du problème, le repérage des verbes d’action, le choix des documents, l’extraction des informations clés et l’ébauche d’un plan.
+•	Volet 2 : Du Brouillon au Propre (Conseils méthodologiques) : Point de méthode spécifique, erreur la plus fréquente à éviter, objectif méthodologique.
+•	Volet 3 : Réponse Attendue (Modèle de rédaction) + Grille d’évaluation critériée sans barème :
+o	Rédaction idéale, français simple (phrases courtes), citations des documents (texte et visuels : « D’après le doc X… »).
+o	Juste après la réponse, une grille d’évaluation critériée sans notation chiffrée au format tableau Markdown simple à 2 colonnes (Critère | Indicateur de réussite), contenant 3 à 4 critères. Aucune colonne de points, aucun total. L’évaluation est formative.
+
+Colonne « Difficultés anticipées et remédiations » (toutes les phases)
+Pour chaque phase, tu indiqueras les obstacles d’apprentissage typiques et, pour chacun, la remédiation explicitement liée à une modalité de travail concrète.
+
+Règles Intangibles
+Analyse Multimodale Obligatoire
+•	Les PDF peuvent contenir images et graphiques. Analyse-les systématiquement.
+•	Intègre les données visuelles dans les réponses modèles avec des citations précises (« D’après le document X (graphique)… »).
+
+
+
+Contraintes Négatives
+•	❌ Ne JAMAIS casser la syntaxe Markdown du tableau. Vérifie chaque | et l’alignement.
+•	❌ Ne JAMAIS omettre un des 3 volets ou la grille d’évaluation.
+•	❌ Ne JAMAIS oublier la colonne « Difficultés anticipées et remédiations » ni le lien avec une modalité de travail pour chaque remédiation.
+•	❌ Ne pas inclure de barème chiffré (pas de points, pas de note) dans les grilles d’évaluation.
+•	❌ Ne pas inventer de données hors documents. En cas de doute, indiquer « (À confirmer avec le manuel) ».
+•	❌ Langue : phrases courtes, niveau B1+/B2 maximum.
+•	❌ Ne pas négliger les éléments visuels.
+
+Grounding & Anti-Hallucination
+Base-toi exclusivement sur les PDF et le texte fournis. Les réponses modèles et les grilles doivent refléter le contenu des documents, pas un cours externe.
+
+
+
+## ⚠️ RÈGLE ABSOLUE — CLONAGE STRICT DE LA FICHE EXEMPLE (PRIORITé MAXIMALE)
+
+Si une fiche exemple est fournie (PDF ou texte), cette règle **ANNULE ET REMPLACE** toutes les instructions de format par défaut ci-dessus.
+
+**ÉTAPE A — ANALYSE EXHAUSTIVE (avant d’écrire quoi que ce soit) :**
+- Compter et copier EXACTEMENT les intitulés et l'ordre des colonnes.
+- Identifier EXACTEMENT les phases/sections (noms, nombre, ordre, sous-sections).
+- Analyser le style de chaque cellule : puces, tirets, numérotation, texte continu, gras, italique, tableaux imbriqués...
+- Mesurer la profondeur de détail : longueur typique des cellules, granularité, niveau de langue.
+- Repérer toutes les sections hors-tableau : en-têtes, légendes, blocs spéciaux.
+
+**ÉTAPE B — REPRODUCTION STRICTE DU SQUELETTE :**
+- ❌ NE PAS ajouter de colonnes absentes de l’exemple.
+- ❌ NE PAS supprimer de colonnes présentes dans l’exemple.
+- ❌ NE PAS renommer les colonnes, phases ou sections.
+- ❌ NE PAS changer le style des cellules (puces → puces, tirets → tirets, etc.).
+- ❌ NE PAS ajouter de volets ou blocs absents de l’exemple.
+- ✅ Le tableau généré doit être visuellement et structurellement IDENTIQUE à l’exemple.
+- ✅ Seul le CONTENU (données du cours) change. La FORME est clonée à l’identique.
+
+**ÉTAPE C — RAPPORT DE FORMAT** (insérer avant <reponse_finale>) :
+Indique le format détecté : nombre de colonnes, noms, nombre de phases, style de cellules.
+
+Si aucune fiche exemple n’est fournie : appliquer le format par défaut défini dans la section (R) ci-dessus.`;
+
+let _didacPdfBase64 = null;
+let _didacPdfName = '';
+let _didacPdfMime = '';
+
+let _didacRefName   = '';
+let _didacRefText   = '';
+let _didacRefBase64 = null;
+let _didacRefMime   = '';
+
+let _didacExempleName   = '';
+let _didacExempleBase64 = null;
+let _didacExempleMime   = '';
+
+let _didacDirectivesName   = '';
+let _didacDirectivesText   = '';
+let _didacDirectivesBase64 = null;
+let _didacDirectivesMime   = '';
+
+
+
+const didactiqueValidateStep1 = () => {
+  const disc = $('#didac-discipline')?.value;
+  const niv = $('#didac-niveau')?.value;
+  if (!disc) { toast('Veuillez choisir une discipline.', 'error'); return false; }
+  if (!niv) { toast('Veuillez choisir un niveau scolaire.', 'error'); return false; }
+  return true;
+};
+const didactiqueValidateStep2 = () => {
+  if (_didacPdfBase64) return true; // OK si un document est chargé
+  const cours = $('#didac-cours')?.value?.trim();
+  if (!cours || cours.length < 20) { toast('Veuillez coller le cours (au moins 20 caractères) ou importer un PDF.', 'error'); return false; }
+  return true;
+};
+const didactiqueShowStep = (step) => {
+  document.querySelectorAll('#didactique-modal .corr-step').forEach(el => el.style.display = 'none');
+  const target = document.getElementById('didac-step-' + step);
+  if (target) target.style.display = 'block';
+
+  const labels = ['Contexte pédagogique', 'Support de cours', 'Objectifs & Cadre', 'Résumé & Génération'];
+  if ($('#didac-step-label')) $('#didac-step-label').textContent = labels[step-1];
+
+  for (let i = 1; i <= 4; i++) {
+    const dot = $('#ddot-'+i);
+    const line = $('#dline-'+(i-1));
+    if (!dot) continue;
+    dot.classList.remove('active', 'done');
+    if (line) line.classList.remove('done');
+    
+    if (i < step) { dot.classList.add('done'); if(line) line.classList.add('done'); }
+    else if (i === step) { dot.classList.add('active'); if(line) line.classList.add('done'); }
+  }
+};
+const didactiqueBuildSummary = () => {
+  const get = (id) => ($(`#${id}`)?.value || '').trim();
+  const discipline = get('didac-discipline') === 'Autre' ? (get('didac-custom-discipline') || 'Autre') : get('didac-discipline');
+  const coursPreview = get('didac-cours').slice(0, 120) + (get('didac-cours').length > 120 ? '…' : '');
+  const classeStr = `${get('didac-niveau') || '—'} ${get('didac-filiere') && !get('didac-filiere').includes('Aucune') ? ' - ' + get('didac-filiere') : ''} ${get('didac-option') && !get('didac-option').includes('Générale') ? '(' + get('didac-option') + ')' : ''}`.replace(/\s+/g, ' ').trim();
+  const html = `
+    <div style="display:grid;gap:6px">
+      <div><span style="color:var(--text-dim)">📚 Discipline :</span> <strong style="color:var(--cyan)">${discipline || '—'}</strong></div>
+      <div><span style="color:var(--text-dim)">🎓 Classe :</span> <strong style="color:var(--neon)">${classeStr}</strong></div>
+      <div><span style="color:var(--text-dim)">📋 Contenu (Extrait) :</span> <em style="color:var(--text-dim);font-size:11px">${coursPreview || '—'}</em></div>
+      <div><span style="color:var(--text-dim)">🎯 Objectifs définis :</span> ${get('didac-objectifs') ? '<span style="color:#a78bfa">✓ Oui</span>' : '<span style="color:#f59e0b">⚠ Non (l\'IA en déduira)</span>'}</div>
+      <div><span style="color:var(--text-dim)">📎 Exemple Few-Shot :</span> ${(get('didac-exemple') || _didacExempleBase64) ? '<span style="color:#f59e0b">✓ Fourni</span>' : '<span style="color:#f59e0b">⚠ Aucun</span>'}</div>
+      <div><span style="color:var(--text-dim)">📀 Directives spécifiques :</span> ${(get('didac-directives') || _didacDirectivesBase64) ? '<span style="color:#34d399">✓ Fournies (appliquées en priorité)</span>' : '<span style="color:var(--text-dim)">⚠ Aucune</span>'}</div>
+    </div>`;
+  const summaryEl = $('#didac-summary');
+  if (summaryEl) summaryEl.innerHTML = html;
+};
+const openDidactiqueModal = async () => {
+  const geminiId = "gemini-2.5-flash";
+  if (state.model !== geminiId) {
+    state.model = geminiId;
+    if ($('#model-select')) $('#model-select').value = geminiId;
+    if (typeof db !== 'undefined' && db.put) {
+      db.put('settings', { id: 'model', value: state.model }).catch(() => {});
+    }
+    if (typeof toast !== 'undefined') {
+      toast('Le modèle Gemini a été sélectionné (requis pour la structuration de tableau complexe).', 'info');
+    }
+  }
+
+  // Restaurer la config
+  try {
+    const saved = localStorage.getItem('didacSavedConfig');
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.discipline) $('#didac-discipline').value = s.discipline;
+      if (s.customDiscipline) $('#didac-custom-discipline').value = s.customDiscipline;
+      if (s.niveau) $('#didac-niveau').value = s.niveau;
+      if (s.filiere) $('#didac-filiere').value = s.filiere;
+      if (s.option) $('#didac-option').value = s.option;
+      if (s.objectifs) $('#didac-objectifs').value = s.objectifs;
+      if (s.exemple) $('#didac-exemple').value = s.exemple;
+      if ($('#didac-export-word')) $('#didac-export-word').checked = !!s.exportWord;
+    }
+  } catch(e) {}
+
+  if (_didacPdfBase64) {
+    if ($('#didac-pdf-badge')) {
+      $('#didac-pdf-badge').textContent = `📎 ${_didacPdfName} (Mémoire)`;
+      $('#didac-pdf-badge').style.display = 'inline-block';
+    }
+    if ($('#didac-pdf-info')) {
+      $('#didac-pdf-info').innerHTML = `✅ Fichier PDF chargé depuis la mémoire : <strong>${_didacPdfName}</strong>`;
+      $('#didac-pdf-info').style.display = 'block';
+    }
+  } else {
+    if ($('#didac-pdf-badge')) $('#didac-pdf-badge').style.display = 'none';
+    if ($('#didac-pdf-info')) $('#didac-pdf-info').style.display = 'none';
+  }
+
+  if (_didacExempleBase64 && $('#didac-exemple-badge')) {
+    $('#didac-exemple-badge').textContent = `📄 ${_didacExempleName} (Mémoire)`;
+    $('#didac-exemple-badge').style.display = 'inline-block';
+    if ($('#didac-exemple-info')) $('#didac-exemple-info').style.display = 'block';
+  } else {
+    if ($('#didac-exemple-badge')) $('#didac-exemple-badge').style.display = 'none';
+    if ($('#didac-exemple-info'))  $('#didac-exemple-info').style.display = 'none';
+  }
+
+  didactiqueShowStep(1);
+  $('#didactique-modal').classList.add('active');
+};
+const closeDidactiqueModal = () => $('#didactique-modal').classList.remove('active');
+
+const generateDidactiqueSheet = async () => {
+  if (state.isGenerating) {
+    console.warn("Génération déjà en cours, annulation du deuxième appel.");
+    return;
+  }
+  const get = (id) => ($(`#${id}`)?.value || '').trim();
+  const discipline = get('didac-discipline') === 'Autre'
+    ? (get('didac-custom-discipline') || 'Autre')
+    : get('didac-discipline');
+  const hasPdf = !!_didacPdfBase64;
+
+  const cfg = {
+    discipline,
+    niveau:       get('didac-niveau'),
+    filiere:      get('didac-filiere'),
+    option:       get('didac-option'),
+    cours:        get('didac-cours') || (hasPdf ? `[DOCUMENT JOINT EN PIÈCE JOINTE : ${_didacPdfName}]\n\nIMPORTANT : Le cours complet se trouve dans le document PDF/image attaché à ce message.` : ''),
+    objectifs:    get('didac-objectifs'),
+    directives:    get('didac-directives'),
+    exemple:      get('didac-exemple'),
+    exportWord:   $('#didac-export-word')?.checked || false,
+  };
+
+  if (!hasPdf && (!cfg.cours || cfg.cours.length < 20)) {
+    toast('Veuillez coller le cours ou importer un PDF.', 'error');
+    return;
+  }
+  if (!cfg.discipline || !cfg.niveau) {
+    toast('Veuillez compléter l\'étape 1.', 'error');
+    return;
+  }
+
+  try {
+    localStorage.setItem('didacSavedConfig', JSON.stringify(cfg));
+  } catch (e) {}
+
+  closeDidactiqueModal();
+
+  const classeStr = `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ' - ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? '(' + cfg.option : ''}`.replace(/\s+/g, ' ').trim();
+  const titre = `👨‍🏫 Fiche Didactique — ${cfg.discipline} ${classeStr}${hasPdf ? ' [PDF]' : ''}`;
+
+  if (!state.messages) state.messages = [];
+  state.messages.push({ role: 'user', content: titre, ts: Date.now() });
+  renderMessages();
+
+  const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: true };
+  state.messages.push(assistantMsg);
+  renderMessages();
+
+  const _savedAgent = state.agent;
+  state.isGenerating = true;
+  state.selectedWorkflow = null;
+  state.agent = null;
+  state.abortController = new AbortController();
+  const sendBtn = $('#send-btn');
+  if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
+  showTyping("gemini-2.5-flash");
+
+  try {
+    if (!state.geminiApiKey) {
+      throw new Error('Clé API Google Gemini requise. Configurez-la dans Paramètres API.');
+    }
+
+    let userContent = `# USER PROMPT
+
+**Contexte utilisateur :** Génération de la fiche didactique.
+**Matière :** ${cfg.discipline}
+**Niveau :** ${classeStr}
+
+`;
+    if (cfg.cours && !hasPdf) {
+      userContent += `**Contenu de la séquence / Activité :**\n` + cfg.cours + `\n\n`;
+    }
+    if (cfg.exemple) {
+      userContent += `**Exemples de Fiches Réussies (Few-Shot) :**\n[L'IA imitera ce style]\n` + cfg.exemple + `\n\n`;
+    }
+
+    const parts = [{ text: userContent }];
+
+    if (hasPdf && _didacPdfBase64) {
+      parts.unshift({
+        inlineData: { mimeType: _didacPdfMime || 'application/pdf', data: _didacPdfBase64 }
+      });
+      // PDF is BEFORE this text (unshifted at index 0), so "ci-dessus" is correct
+      parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT DE COURS — RÔLE : CONTENU PÉDAGOGIQUE SOURCE]\nLe document PDF ci-dessus contient le cours/l\'activité. Tu DOIS l\'analyser intégralement (texte, images, graphiques) pour construire la fiche.\n---\n\n' });
+    }
+
+    if (_didacRefBase64) {
+      // Text label BEFORE the PDF (push order: text then PDF = ci-dessous is correct)
+      parts.push({ text: `\n\n---\n[CADRE DE RÉFÉRENCE PÉDAGOGIQUE — RÔLE : RÉFÉRENTIEL DES COMPÉTENCES]\nLe document PDF ci-dessous est le cadre de référence officiel fourni par l'enseignant. Tu DOIS utiliser EXCLUSIVEMENT ses compétences, habiletés et sa terminologie exacte pour chaque évaluation de la fiche. Il remplace tout référentiel générique.\n---\n\n` });
+      parts.push({
+        inlineData: { mimeType: _didacRefMime || 'application/pdf', data: _didacRefBase64 }
+      });
+    }
+
+    if (_didacDirectivesBase64) {
+      // Text label BEFORE the PDF (ci-dessous is correct)
+      parts.push({ text: `\n\n---\n[DIRECTIVES PÉDAGOGIQUES & DIDACTIQUES — RÔLE : CONTRAINTES OBLIGATOIRES]\nLe document PDF ci-dessous contient les directives pédagogiques officielles de l'enseignant. Tu DOIS les respecter strictement dans chaque phase, chaque tâche et chaque remédiation de la fiche.\n---\n\n` });
+      parts.push({
+        inlineData: { mimeType: _didacDirectivesMime || 'application/pdf', data: _didacDirectivesBase64 }
+      });
+    }
+
+    if (_didacExempleBase64) {
+      parts.push({ text: `\n\n---\n[FICHE MODÈLE À CLONER — DOCUMENT JOINT : ${_didacExempleName}]\n⚠️ INSTRUCTION CRITIQUE : Le document PDF joint ci-dessous EST la fiche modèle de l'enseignant. Tu DOIS analyser sa mise en forme (nombre exact de colonnes, titres des colonnes, noms des phases, style de chaque cellule) et produire une fiche STRICTEMENT IDENTIQUE dans sa structure. Seul le contenu pédagogique change. Ton format par défaut est ANNULÉ.\n---\n\n` });
+      parts.push({
+        inlineData: { mimeType: _didacExempleMime || 'application/pdf', data: _didacExempleBase64 }
+      });
+    }
+
+    let sysPrompt = DIDACTIQUE_SYSTEM_PROMPT;
+    // Inject CLONING rule if example is present
+    if (_didacExempleBase64 || (cfg.exemple && cfg.exemple.length > 20)) {
+      const startTag = '## (R) Format de R\u00E9ponse';
+      const endTag = 'R\u00E8gles Intangibles';
+      const startIndex = sysPrompt.indexOf(startTag);
+      const endIndex = sysPrompt.indexOf(endTag);
+      if (startIndex !== -1 && endIndex !== -1) {
+        const strictCloningRule = `## (R) Format de R\u00E9ponse \u2014 CLONAGE STRICT
+Une fiche exemple a \u00E9t\u00E9 fournie. Tu DOIS ABSOLUMENT cloner son format (nombre de colonnes, titres, style, disposition, phases) et IGNORER ton format par d\u00E9faut \u00E0 8 colonnes. Le squelette de la fiche g\u00E9n\u00E9r\u00E9e doit \u00EAtre visuellement et structurellement IDENTIQUE \u00E0 l'exemple. Seul le contenu p\u00E9dagogique change.
+Ta r\u00E9ponse FINALE DOIT \u00CAtre PLAC\u00C9E UNIQUEMENT DANS LA BALISE <reponse_finale>. Ne g\u00E9n\u00E8re RIEN en dehors de cette balise.
+Avant la balise <reponse_finale>, g\u00E9n\u00E8re imp\u00E9rativement une balise [FORMAT D\u00C9TECT\u00C9 : ...] r\u00E9sumant le format de l'exemple que tu vas cloner.\n\n`;
+        sysPrompt = sysPrompt.substring(0, startIndex) + strictCloningRule + sysPrompt.substring(endIndex);
+      }
+    }
+  
+    if (_didacDirectivesText && !_didacDirectivesBase64) {
+      sysPrompt = `<directives_pedagogiques_prioritaires>\nCes directives sont OBLIGATOIRES et doivent être appliquées dans TOUTE la fiche, pour chaque phase, chaque tâche et chaque remédiation :\n${_didacDirectivesText}\n</directives_pedagogiques_prioritaires>\n\n` + sysPrompt;
+    } else if (cfg.directives) {
+      sysPrompt = `<directives_pedagogiques_prioritaires>\nCes directives sont OBLIGATOIRES et doivent être appliquées dans TOUTE la fiche, pour chaque phase, chaque tâche et chaque remédiation :\n${cfg.directives}\n</directives_pedagogiques_prioritaires>\n\n` + sysPrompt;
+    }
+    if (_didacRefText && !_didacRefBase64) {
+      sysPrompt += `\n\n<cadre_reference_importe>\n${_didacRefText}\n</cadre_reference_importe>`;
+    }
+    if (cfg.objectifs) {
+      sysPrompt += `\n\n<objectifs_fournis_par_enseignant>\nVoici les objectifs spécifiques pour cette séquence, intégre-les dans ta production :\n${cfg.objectifs}\n</objectifs_fournis_par_enseignant>`;
+    }
+
+    const geminiPayload = {
+      systemInstruction: { parts: [{ text: sysPrompt }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.95 }
+    };
+
+    const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
+    const geminiUrl = `/api/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanGeminiKey}`;
+
+    assistantMsg.content = `🔍 Gemini analyse l'activité pour la fiche didactique...`;
+    renderMessages();
+
+    const geminiRes = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: state.abortController.signal,
+      body: JSON.stringify(geminiPayload)
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      throw new Error(`Gemini API ${geminiRes.status}: ${errText.slice(0, 500)}`);
+    }
+
+    const geminiData = await geminiRes.json();
+    let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let finishReason = geminiData?.candidates?.[0]?.finishReason || 'STOP';
+
+    // Auto-continuation if generation was cut off (MAX_TOKENS)
+    let continuationCount = 0;
+    const MAX_CONTINUATIONS = 3;
+    while (finishReason === 'MAX_TOKENS' && continuationCount < MAX_CONTINUATIONS && !state.abortController?.signal?.aborted) {
+      continuationCount++;
+      assistantMsg.content = geminiText + `\n\n*⏳ Continuation automatique (${continuationCount}/${MAX_CONTINUATIONS})…*`;
+      renderMessages(true);
+
+      // Strip heavy inlineData (PDFs/images) from continuation — only keep text parts
+      const lightContents = geminiPayload.contents.map(turn => ({
+        role: turn.role,
+        parts: turn.parts.filter(p => p.text !== undefined)
+      })).filter(turn => turn.parts.length > 0);
+
+      const contPayload = {
+        systemInstruction: geminiPayload.systemInstruction,
+        contents: [
+          ...lightContents,
+          { role: 'model', parts: [{ text: geminiText }] },
+          { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté. Ne recommence pas depuis le début. Ne répète pas ce qui a déjà été écrit. Poursuis directement la fiche.' }] }
+        ],
+        generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.95 }
+      };
+
+      try {
+        const contRes = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: state.abortController?.signal,
+          body: JSON.stringify(contPayload)
+        });
+        if (!contRes.ok) break;
+        const contData = await contRes.json();
+        const contText = contData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
+        if (!contText) break;
+        geminiText += contText;
+      } catch(contErr) {
+        console.warn('Continuation failed:', contErr);
+        break;
+      }
+    }
+
+    // Extract what's inside <reponse_finale> if present
+    const matchReponse = geminiText.match(/<reponse_finale>([\s\S]*?)<\/reponse_finale>/i);
+    if (matchReponse) {
+      geminiText = matchReponse[1].trim();
+    } else {
+      const matchOpen = geminiText.match(/<reponse_finale>([\s\S]*)/i);
+      if (matchOpen) {
+        geminiText = matchOpen[1].trim();
+      }
+    }
+
+    if (cfg.exportWord) {
+      try {
+        exportToWord(geminiText, `Fiche_Didactique_${cfg.discipline}.doc`);
+        toast('📄 Fiche didactique exportée en Word avec succès !', 'success');
+      } catch(e) {
+        console.error('Export Word error:', e);
+      }
+    }
+
+    assistantMsg.content = geminiText;
+    assistantMsg.streaming = false;
+    renderMessages(true);
+    hideTyping();
+    await saveChat();
+
+  } catch(e) {
+    if (e.name === 'AbortError' || (e.message && e.message.includes('Aborted'))) {
+      assistantMsg.content = `*— Génération de la fiche interrompue —*`;
+    } else {
+      assistantMsg.content = `❌ Erreur génération fiche : ${e.message}`;
+    }
+    assistantMsg.streaming = false;
+    renderMessages(true);
+    hideTyping();
+  } finally {
+    state.isGenerating = false;
+    state.agent = _savedAgent;
+    state.abortController = null;
+    const sendBtn2 = $('#send-btn');
+    if (sendBtn2) { sendBtn2.className = 'send-btn'; sendBtn2.innerHTML = '▶'; sendBtn2.disabled = false; }
+  }
+};
+
+// ─── Sauvegarde / Chargement / Suppression du profil Didactique ───
+const refreshDidactiqueSavedList = async () => {
+  try {
+    const allSettings = await db.getAll('settings');
+    const saves = allSettings.filter(s => s.id && s.id.startsWith('didacSave_'));
+    const select = $('#didac-saved-list');
+    if (!select) return;
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">— Profils sauvegardés —</option>';
+    saves.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.data.name || 'Sauvegarde sans nom';
+      select.appendChild(opt);
+    });
+    if (saves.some(s => s.id === currentVal)) select.value = currentVal;
+  } catch (err) { console.error('Erreur refreshDidactiqueSavedList:', err); }
+};
+
+const saveDidactiqueConfigData = async () => {
+  const name = prompt('Entrez un nom pour cette sauvegarde (ex: 2Bac SVT - Glycémie) :');
+  if (!name || !name.trim()) return;
+  try {
+    const get = (id) => ($(`#${id}`)?.value || '');
+    const configToSave = {
+      name: name.trim(),
+      discipline: get('didac-discipline'),
+      customDiscipline: get('didac-custom-discipline'),
+      niveau: get('didac-niveau'),
+      filiere: get('didac-filiere'),
+      option: get('didac-option'),
+      cours: get('didac-cours'),
+      objectifs: get('didac-objectifs'),
+      exemple: get('didac-exemple'),
+      exportWord: $('#didac-export-word')?.checked || false,
+      _didacPdfName,
+      _didacPdfBase64,
+      _didacPdfMime,
+      _didacRefName,
+      _didacRefText,
+      _didacRefBase64,
+      _didacRefMime,
+      _didacExempleName,
+      _didacExempleBase64,
+      _didacExempleMime,
+      _didacDirectivesName,
+      _didacDirectivesText,
+      _didacDirectivesBase64,
+      _didacDirectivesMime
+    };
+    const saveId = 'didacSave_' + Date.now();
+    await db.put('settings', { id: saveId, data: configToSave });
+    await refreshDidactiqueSavedList();
+    toast(`Sauvegarde "${name}" réussie !`, 'success');
+  } catch (err) {
+    console.error('Erreur sauvegarde didactique:', err);
+    toast('Erreur lors de la sauvegarde.', 'error');
+  }
+};
+
+const loadDidactiqueConfigData = async () => {
+  try {
+    const id = $('#didac-saved-list')?.value;
+    if (!id) { toast('Veuillez sélectionner un profil sauvegardé.', 'info'); return; }
+    const record = await db.get('settings', id);
+    if (!record || !record.data) { toast('Erreur : profil introuvable.', 'error'); return; }
+    const data = record.data;
+    const set = (id, val) => { if ($(`#${id}`)) $(`#${id}`).value = val || ''; };
+    set('didac-discipline', data.discipline);
+    set('didac-custom-discipline', data.customDiscipline);
+    // Show custom discipline field if needed
+    if (data.discipline === 'Autre') {
+      const grp = $('#didac-custom-discipline-group');
+      if (grp) grp.style.display = 'block';
+    }
+    set('didac-niveau', data.niveau);
+    set('didac-filiere', data.filiere);
+    set('didac-option', data.option);
+    set('didac-cours', data.cours);
+    set('didac-objectifs', data.objectifs);
+    set('didac-exemple', data.exemple);
+    if ($('#didac-export-word')) $('#didac-export-word').checked = data.exportWord || false;
+    _didacPdfName   = data._didacPdfName   || '';
+    _didacPdfBase64 = data._didacPdfBase64 || null;
+    _didacPdfMime   = data._didacPdfMime   || '';
+    _didacRefName   = data._didacRefName   || '';
+    _didacRefText   = data._didacRefText   || '';
+    _didacRefBase64 = data._didacRefBase64 || null;
+    _didacRefMime   = data._didacRefMime   || '';
+    _didacExempleName   = data._didacExempleName   || '';
+    _didacExempleBase64 = data._didacExempleBase64 || null;
+    _didacExempleMime   = data._didacExempleMime   || '';
+    _didacDirectivesName   = data._didacDirectivesName   || '';
+    _didacDirectivesText   = data._didacDirectivesText   || '';
+    _didacDirectivesBase64 = data._didacDirectivesBase64 || null;
+    _didacDirectivesMime   = data._didacDirectivesMime   || '';
+    // Restaurer textarea directives
+    if (data.directives && $('#didac-directives')) $('#didac-directives').value = data.directives || '';
+    if (_didacDirectivesBase64 && $('#didac-directives-badge')) {
+      $('#didac-directives-badge').textContent = `📀 ${_didacDirectivesName} (Mémoire)`;
+      $('#didac-directives-badge').style.display = 'inline-block';
+      if ($('#didac-directives-info')) $('#didac-directives-info').style.display = 'block';
+    } else {
+      if ($('#didac-directives-badge')) $('#didac-directives-badge').style.display = 'none';
+      if ($('#didac-directives-info'))  $('#didac-directives-info').style.display  = 'none';
+    }
+    if (_didacPdfBase64 && $('#didac-pdf-badge')) {
+      $('#didac-pdf-badge').textContent = `📎 ${_didacPdfName} (Mémoire)`;
+      $('#didac-pdf-badge').style.display = 'inline-block';
+      const info = $('#didac-pdf-info');
+      if (info) { info.innerHTML = `✅ PDF chargé depuis la mémoire : <strong>${_didacPdfName}</strong>`; info.style.display = 'block'; }
+    } else {
+      if ($('#didac-pdf-badge')) $('#didac-pdf-badge').style.display = 'none';
+      if ($('#didac-pdf-info'))  $('#didac-pdf-info').style.display  = 'none';
+    }
+    if (_didacRefBase64 && $('#didac-ref-badge')) {
+      $('#didac-ref-badge').textContent = `📝 ${_didacRefName} (Mémoire)`;
+      $('#didac-ref-badge').style.display = 'inline-block';
+    } else {
+      if ($('#didac-ref-badge')) $('#didac-ref-badge').style.display = 'none';
+    }
+    if (_didacExempleBase64 && $('#didac-exemple-badge')) {
+      $('#didac-exemple-badge').textContent = `📄 ${_didacExempleName} (Mémoire)`;
+      $('#didac-exemple-badge').style.display = 'inline-block';
+      if ($('#didac-exemple-info')) $('#didac-exemple-info').style.display = 'block';
+    } else {
+      if ($('#didac-exemple-badge')) $('#didac-exemple-badge').style.display = 'none';
+      if ($('#didac-exemple-info'))  $('#didac-exemple-info').style.display = 'none';
+    }
+    toast(`Profil "${data.name}" chargé avec succès !`, 'success');
+  } catch (err) {
+    console.error('Erreur chargement didactique:', err);
+    toast('Erreur lors du chargement.', 'error');
+  }
+};
+
+const deleteDidactiqueConfigData = async () => {
+  try {
+    const id = $('#didac-saved-list')?.value;
+    if (!id) { toast('Veuillez sélectionner un profil à supprimer.', 'info'); return; }
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce profil ?')) return;
+    await db.delete('settings', id);
+    await refreshDidactiqueSavedList();
+    toast('Profil supprimé.', 'info');
+  } catch (err) {
+    console.error('Erreur suppression didactique:', err);
+    toast('Erreur lors de la suppression.', 'error');
+  }
+};
+
+document.removeEventListener('do-save-didactique-config',   window._didacSaveHandler);
+document.removeEventListener('do-load-didactique-config',   window._didacLoadHandler);
+document.removeEventListener('do-delete-didactique-config', window._didacDeleteHandler);
+window._didacSaveHandler   = saveDidactiqueConfigData;
+window._didacLoadHandler   = loadDidactiqueConfigData;
+window._didacDeleteHandler = deleteDidactiqueConfigData;
+document.addEventListener('do-save-didactique-config',   window._didacSaveHandler);
+document.addEventListener('do-load-didactique-config',   window._didacLoadHandler);
+document.addEventListener('do-delete-didactique-config', window._didacDeleteHandler);
+
+// Init saved list when modal opens
+const _origOpenDidactique = openDidactiqueModal;
+// Refresh list on next tick after DOM is ready
+setTimeout(() => refreshDidactiqueSavedList(), 500);
+
+// Inject file listeners inside an IIFE to keep scope clean
+(() => {
+  // Didactique Modal wiring
+  if ($('#open-didactique-modal'))  $('#open-didactique-modal').onclick = openDidactiqueModal;
+  if ($('#close-didactique-modal')) $('#close-didactique-modal').onclick = closeDidactiqueModal;
+  if ($('#didactique-modal'))       $('#didactique-modal').onclick = e => { if (e.target === $('#didactique-modal')) closeDidactiqueModal(); };
+
+  if ($('#didac-pdf-upload')) {
+    $('#didac-pdf-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const badge   = $('#didac-pdf-badge');
+      const info    = $('#didac-pdf-info');
+      const coursEl = $('#didac-cours');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
+      if (isPdfOrImg) {
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _didacPdfBase64 = ev.target.result.split(',')[1];
+          _didacPdfName = file.name;
+          _didacPdfMime = file.type || 'application/pdf';
+          if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (info) info.style.display = 'block';
+          if (coursEl) { coursEl.value = `[DOCUMENT ATTACHÉ: ${file.name}]\nSera analysé nativement par Gemini.`; coursEl.style.opacity = '1'; }
+          toast(`✅ ${file.name} importé avec succès.`, 'success');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (coursEl) { coursEl.value = ev.target.result.trim(); coursEl.style.opacity = '1'; }
+          _didacPdfBase64 = null;
+          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          if (info)  info.style.display = 'block';
+          toast('✅ Fichier texte importé.', 'success');
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
+
+  if ($('#didac-ref-upload')) {
+    $('#didac-ref-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const badge    = $('#didac-ref-badge');
+      const competEl = $('#didac-objectifs');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
+      if (isPdfOrImg) {
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _didacRefName = file.name;
+          _didacRefMime = file.type || 'application/pdf';
+          const dataUrl = ev.target.result;
+          _didacRefBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          _didacRefText = '';
+          if (competEl) competEl.value += `\n\n[CADRE PDF: ${file.name}]`;
+          if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          toast(`✅ Cadre de réf. ${file.name} importé.`, 'success');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _didacRefName = file.name;
+          _didacRefText = ev.target.result.trim();
+          if (competEl) competEl.value += '\n\n' + _didacRefText;
+          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          toast(`✅ Cadre texte importé.`, 'success');
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
+
+  if ($('#didac-exemple-upload')) {
+    $('#didac-exemple-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const badge   = $('#didac-exemple-badge');
+      const infoEl  = $('#didac-exemple-info');
+      const exemplEl = $('#didac-exemple');
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      if (isPdf) {
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _didacExempleName   = file.name;
+          _didacExempleMime   = file.type || 'application/pdf';
+          const dataUrl = ev.target.result;
+          _didacExempleBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          if (exemplEl) { exemplEl.value = `[FICHE EXEMPLE PDF : ${file.name}]\nSera analysée nativement par Gemini comme modèle de style.`; }
+          if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (infoEl) infoEl.style.display = 'block';
+          toast(`✅ Fiche exemple "${file.name}" importée. L'IA l'utilisera comme modèle.`, 'success');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _didacExempleName   = file.name;
+          _didacExempleBase64 = null;
+          _didacExempleMime   = '';
+          const txt = ev.target.result.trim();
+          if (exemplEl) exemplEl.value = txt;
+          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          if (infoEl) infoEl.style.display = 'block';
+          toast(`✅ Fiche exemple texte importée.`, 'success');
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
+
+  if ($('#didac-directives-upload')) {
+    $('#didac-directives-upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const badge   = $('#didac-directives-badge');
+      const infoEl  = $('#didac-directives-info');
+      const taEl    = $('#didac-directives');
+      const isPdf   = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      if (isPdf) {
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _didacDirectivesName   = file.name;
+          _didacDirectivesMime   = file.type || 'application/pdf';
+          _didacDirectivesText   = '';
+          const dataUrl = ev.target.result;
+          _didacDirectivesBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          if (taEl) taEl.value = `[DIRECTIVES PDF : ${file.name}]\nSeront analysées nativement par Gemini et appliquées en priorité.`;
+          if (badge) { badge.textContent = `📐 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (infoEl) infoEl.style.display = 'block';
+          toast(`✅ Directives "${file.name}" importées. L'IA les appliquera comme contraintes prioritaires.`, 'success');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          _didacDirectivesName   = file.name;
+          _didacDirectivesBase64 = null;
+          _didacDirectivesMime   = '';
+          _didacDirectivesText   = ev.target.result.trim();
+          if (taEl) taEl.value = _didacDirectivesText;
+          if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          if (infoEl) infoEl.style.display = 'block';
+          toast(`✅ Directives texte importées.`, 'success');
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      e.target.value = '';
+    };
+  }
+})();
+
+window.didactiqueValidateStep1 = didactiqueValidateStep1;
+window.didactiqueValidateStep2 = didactiqueValidateStep2;
+window.didactiqueShowStep = didactiqueShowStep;
+window.didactiqueBuildSummary = didactiqueBuildSummary;
+window.openDidactiqueModal = openDidactiqueModal;
+window.closeDidactiqueModal = closeDidactiqueModal;
+window.generateDidactiqueSheet = generateDidactiqueSheet;
+
+
+
+// Memory
   $("#memory-toggle").onclick = () => {
     const panel = $("#memory-panel");
     const isActive = panel.classList.toggle("active");
