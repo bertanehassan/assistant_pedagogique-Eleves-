@@ -51,7 +51,7 @@
           <!-- Discipline -->
           <div class="field-group">
             <label class="field-label">📚 Discipline <span style="color:var(--danger)">*</span></label>
-            <select class="field-input field-select" id="corr-discipline">
+            <select class="field-input field-select" id="corr-discipline" @change="handleDisciplineChange">
               <option value="">— Choisir une discipline —</option>
               <optgroup label="Sciences">
                 <option value="SVT">SVT (Sciences de la Vie et de la Terre)</option>
@@ -171,6 +171,19 @@
             </select>
           </div>
 
+          <!-- Langue de génération de la fiche -->
+          <div class="field-group" style="margin-top:12px">
+            <label class="field-label">🌍 Langue de génération de la fiche</label>
+            <select class="field-input field-select" id="corr-output-lang">
+              <option value="fr" selected>🇫🇷 Français (par défaut)</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="ar">🇲🇦 العربية (Arabe)</option>
+            </select>
+            <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
+              ℹ️ Détection automatique si la matière est « Arabe » ou « Anglais ».
+            </div>
+          </div>
+
           <div class="btn-row">
             <button class="btn-ghost" id="close-correction-modal-step1" @click="handleClose">Annuler</button>
             <button class="btn-primary" id="corr-next-1" @click="handleNext1">Suivant →</button>
@@ -194,10 +207,11 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="corr-pdf-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un fichier (PDF ou TXT)
+                Importer un fichier (PDF, image ou TXT)
               </label>
-              <input type="file" id="corr-pdf-upload" accept=".pdf,.txt,.md" style="display:none">
+              <input type="file" id="corr-pdf-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="corr-pdf-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
+              <button id="corr-pdf-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
             <div id="corr-pdf-info" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:6px;font-size:11px;color:#a78bfa">
               ✅ Texte extrait du PDF et collé dans la zone ci-dessus. Vous pouvez le modifier avant de passer à l'étape suivante.
@@ -246,10 +260,11 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="corr-ref-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un Cadre de Référence (PDF/TXT)
+                Importer un Cadre de Référence (PDF/Image/TXT)
               </label>
-              <input type="file" id="corr-ref-upload" accept=".pdf,.txt,.md" style="display:none">
+              <input type="file" id="corr-ref-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="corr-ref-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
+              <button id="corr-ref-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
               <span style="color:var(--text-dim)">Ces compétences alimenteront la 4ème colonne du tableau.</span>
             </div>
           </div>
@@ -276,10 +291,11 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
               <label for="corr-exemple-upload" class="corr-upload-btn" style="border-color:rgba(245,158,11,0.5);color:#f59e0b;background:rgba(245,158,11,0.07)">
                 <span style="font-size:13px">📄</span>
-                Importer une fiche modèle (PDF / Word / TXT)
+                Importer une fiche modèle (PDF / Image / TXT)
               </label>
-              <input type="file" id="corr-exemple-upload" accept=".pdf,.txt,.md,.doc,.docx" style="display:none">
+              <input type="file" id="corr-exemple-upload" accept=".pdf,.txt,.md,.doc,.docx,image/*" style="display:none">
               <span id="corr-exemple-badge" style="display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
+              <button id="corr-exemple-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
             <div id="corr-exemple-info" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:6px;font-size:11px;color:#f59e0b">
               ✅ Fiche modèle importée — l'IA l'utilisera comme référence absolue pour la mise en forme.
@@ -311,6 +327,14 @@
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim)">
               <input type="checkbox" id="corr-export-word" style="accent-color:var(--neon)">
               <span>📄 Exporter automatiquement en Word (.doc) après génération</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
+              <input type="checkbox" id="corr-export-html" style="accent-color:var(--neon)">
+              <span>🌐 Exporter automatiquement en HTML (Idéal pour les formules scientifiques)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
+              <input type="checkbox" id="corr-export-pdf" style="accent-color:var(--neon)">
+              <span>📕 Exporter automatiquement en PDF (Rendu parfait)</span>
             </label>
           </div>
 
@@ -374,6 +398,15 @@ const handleLoadConfig = () => {
 const handleDeleteSave = () => {
   document.dispatchEvent(new CustomEvent('do-delete-correction-config'));
 };
+
+// Auto-détection langue selon la discipline choisie
+const handleDisciplineChange = (e) => {
+  const langSel = document.getElementById('corr-output-lang');
+  if (!langSel) return;
+  if (e.target.value === 'Arabe') langSel.value = 'ar';
+  else if (e.target.value === 'Anglais') langSel.value = 'en';
+  else langSel.value = 'fr';
+};
 </script>
 
 <style scoped>
@@ -427,5 +460,25 @@ const handleDeleteSave = () => {
 .corr-upload-btn:hover {
   background: rgba(0, 229, 255, 0.14);
   border-color: rgba(0, 229, 255, 0.6);
+}
+.file-remove-btn {
+  background: rgba(255, 100, 100, 0.15);
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  border-radius: 50%;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.file-remove-btn:hover {
+  background: rgba(255, 100, 100, 0.35);
 }
 </style>

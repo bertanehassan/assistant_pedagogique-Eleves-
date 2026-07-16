@@ -51,13 +51,14 @@
           <!-- Discipline -->
           <div class="field-group">
             <label class="field-label">📚 Discipline <span style="color:var(--danger)">*</span></label>
-            <select class="field-input field-select" id="didac-discipline">
+            <select class="field-input field-select" id="didac-discipline" @change="handleDisciplineChange">
               <option value="SVT" selected>SVT (Sciences de la Vie et de la Terre)</option>
               <option value="Physique-Chimie">Physique-Chimie</option>
               <option value="Maths">Mathématiques</option>
               <option value="Informatique">Informatique / NSI</option>
               <option value="Français">Français / Littérature</option>
               <option value="Anglais">Anglais (English)</option>
+              <option value="Arabe">اللغة العربية (Arabe)</option>
               <option value="Autre">Autre discipline</option>
             </select>
           </div>
@@ -113,6 +114,19 @@
             </div>
           </div>
 
+          <!-- Langue de génération de la fiche -->
+          <div class="field-group" style="margin-top:12px">
+            <label class="field-label">🌍 Langue de génération de la fiche</label>
+            <select class="field-input field-select" id="didac-output-lang">
+              <option value="fr" selected>🇫🇷 Français (par défaut)</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="ar">🇲🇦 العربية (Arabe)</option>
+            </select>
+            <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
+              ℹ️ Détection automatique si la matière est « Arabe » ou « Anglais ».
+            </div>
+          </div>
+
           <div class="btn-row">
             <button class="btn-ghost" id="close-didactique-modal-step1" @click="handleClose">Annuler</button>
             <button class="btn-primary" id="didac-next-1" @click="handleNext1">Suivant →</button>
@@ -136,10 +150,11 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="didac-pdf-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un fichier (PDF ou TXT)
+                Importer un fichier (PDF, image ou TXT)
               </label>
               <input type="file" id="didac-pdf-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="didac-pdf-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
+              <button id="didac-pdf-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
             <div id="didac-pdf-info" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:6px;font-size:11px;color:#a78bfa">
               ✅ Fichier importé.
@@ -171,10 +186,11 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="didac-ref-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un Cadre de Référence (PDF/TXT)
+                Importer un Cadre de Référence (PDF/Image/TXT)
               </label>
-              <input type="file" id="didac-ref-upload" accept=".pdf,.txt,.md" style="display:none">
+              <input type="file" id="didac-ref-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="didac-ref-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
+              <button id="didac-ref-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
           </div>
 
@@ -186,10 +202,11 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
               <label for="didac-exemple-upload" class="corr-upload-btn" style="border-color:rgba(245,158,11,0.5);color:#f59e0b;background:rgba(245,158,11,0.07)">
                 <span style="font-size:13px">📄</span>
-                Importer une fiche exemple (PDF / Word / TXT)
+                Importer une fiche exemple (PDF / Image / TXT)
               </label>
-              <input type="file" id="didac-exemple-upload" accept=".pdf,.txt,.md,.doc,.docx" style="display:none">
+              <input type="file" id="didac-exemple-upload" accept=".pdf,.txt,.md,.doc,.docx,image/*" style="display:none">
               <span id="didac-exemple-badge" style="display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
+              <button id="didac-exemple-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
             <div id="didac-exemple-info" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:6px;font-size:11px;color:#f59e0b">
               ✅ Fiche exemple importée — l'IA l'utilisera comme modèle de style et de structure.
@@ -215,10 +232,11 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
               <label for="didac-directives-upload" class="corr-upload-btn" style="border-color:rgba(52,211,153,0.5);color:#34d399;background:rgba(52,211,153,0.07)">
                 <span style="font-size:13px">📐</span>
-                Importer des directives (PDF / TXT)
+                Importer des directives (PDF / Image / TXT)
               </label>
-              <input type="file" id="didac-directives-upload" accept=".pdf,.txt,.md" style="display:none">
+              <input type="file" id="didac-directives-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="didac-directives-badge" style="display:none;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#34d399"></span>
+              <button id="didac-directives-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
             <div id="didac-directives-info" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:6px;font-size:11px;color:#34d399">
               ✅ Directives importées — l'IA les appliquera comme contraintes prioritaires dans toute la fiche.
@@ -250,6 +268,14 @@
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim)">
               <input type="checkbox" id="didac-export-word" style="accent-color:var(--neon)">
               <span>📄 Exporter automatiquement en Word (.doc) après génération</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
+              <input type="checkbox" id="didac-export-html" style="accent-color:var(--neon)">
+              <span>🌐 Exporter automatiquement en HTML (Idéal pour les formules scientifiques)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
+              <input type="checkbox" id="didac-export-pdf" style="accent-color:var(--neon)">
+              <span>📕 Exporter automatiquement en PDF (Rendu parfait)</span>
             </label>
           </div>
 
@@ -306,6 +332,15 @@ const handleLoadConfig = () => {
 const handleDeleteSave = () => {
   document.dispatchEvent(new CustomEvent('do-delete-didactique-config'));
 };
+
+// Auto-détection langue selon la discipline choisie
+const handleDisciplineChange = (e) => {
+  const langSel = document.getElementById('didac-output-lang');
+  if (!langSel) return;
+  if (e.target.value === 'Arabe') langSel.value = 'ar';
+  else if (e.target.value === 'Anglais') langSel.value = 'en';
+  else langSel.value = 'fr';
+};
 </script>
 
 <style scoped>
@@ -359,5 +394,25 @@ const handleDeleteSave = () => {
 .corr-upload-btn:hover {
   background: rgba(0, 229, 255, 0.14);
   border-color: rgba(0, 229, 255, 0.6);
+}
+.file-remove-btn {
+  background: rgba(255, 100, 100, 0.15);
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  border-radius: 50%;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.file-remove-btn:hover {
+  background: rgba(255, 100, 100, 0.35);
 }
 </style>

@@ -254,6 +254,13 @@ function shuffleQcmOptions(text, seq) {
 // MARKDOWN CONFIG
 // ════════════════════════════════════════
 if (typeof marked !== 'undefined') {
+  if (typeof window.markedKatex !== 'undefined') {
+    marked.use(window.markedKatex({
+      throwOnError: false,
+      displayMode: true,
+      output: 'mathml' // Utilisé pour que l'export Word (et le web moderne) affiche des formules parfaites sans doublons
+    }));
+  }
   marked.setOptions({
     breaks: true, // line breaks
     highlight: function(code, lang) {
@@ -388,12 +395,34 @@ import { db } from './storage.js';
 // UTILS: WORD EXPORT
 // ════════════════════════════════════════
 function exportToWord(text, filename = "Export_IA.doc") {
-  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+  // Convertir les formules LaTeX en images pour que MS Word puisse les lire
+  let wordText = text;
+  wordText = wordText.replace(/\$\$(.*?)\$\$/gs, (match, math) => {
+    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
+  });
+  wordText = wordText.replace(/\$(.*?)\$/g, (match, math) => {
+    return `<img style="vertical-align:middle" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
+  });
+
+  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(wordText) : wordText.replace(/\n/g, '<br>');
   const htmlContent = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head><meta charset='utf-8'><title>Export IA</title></head>
+    <head>
+      <meta charset='utf-8'>
+      <title>Export IA</title>
+      <style>
+        @page WordSection1 {
+          size: 841.9pt 595.3pt; /* A4 Landscape */
+          mso-page-orientation: landscape;
+          margin: 36.0pt 36.0pt 36.0pt 36.0pt;
+        }
+        div.WordSection1 { page: WordSection1; }
+      </style>
+    </head>
     <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #333;">
-      ${parsedHtml}
+      <div class="WordSection1">
+        ${parsedHtml}
+      </div>
     </body>
     </html>
   `;
@@ -408,6 +437,111 @@ function exportToWord(text, filename = "Export_IA.doc") {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, 100);
+}
+
+function exportToHtml(text, filename = "Export_IA.html") {
+  // Remplacement robuste des formules par des SVG CodeCogs (fiabilité à 100% indépendante du parseur Markdown)
+  let htmlText = text;
+  htmlText = htmlText.replace(/\$\$(.*?)\$\$/gs, (match, math) => {
+    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
+  });
+  htmlText = htmlText.replace(/\$(.*?)\$/g, (match, math) => {
+    return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
+  });
+
+  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(htmlText) : htmlText.replace(/\n/g, '<br>');
+  const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Export HTML</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }
+    @media print {
+      @page { size: landscape; margin: 15mm; }
+      body { max-width: 100%; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  ${parsedHtml}
+</body>
+</html>`;
+  const blob = new Blob(['\ufeff', htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
+function exportToPdf(text, filename = "Export_IA.pdf") {
+  if (typeof window.html2pdf === 'undefined') {
+    console.error("html2pdf n'est pas chargé.");
+    toast("Erreur : la librairie PDF n'est pas chargée.", "error");
+    return;
+  }
+  
+  let htmlText = text;
+  htmlText = htmlText.replace(/\$\$(.*?)\$\$/gs, (match, math) => {
+    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
+  });
+  htmlText = htmlText.replace(/\$(.*?)\$/g, (match, math) => {
+    return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
+  });
+
+  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(htmlText) : htmlText.replace(/\n/g, '<br>');
+  const container = document.createElement('div');
+  container.innerHTML = parsedHtml;
+  container.style.padding = '20px';
+  container.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+  container.style.lineHeight = '1.6';
+  container.style.color = '#333';
+  container.style.fontSize = '12px'; // slightly smaller for PDF fit
+  
+  // Apply some basic styles directly to elements for html2pdf
+  const tables = container.querySelectorAll('table');
+  tables.forEach(t => {
+    t.style.borderCollapse = 'collapse';
+    t.style.width = '100%';
+    t.style.marginBottom = '20px';
+    t.querySelectorAll('th, td').forEach(cell => {
+      cell.style.border = '1px solid #ddd';
+      cell.style.padding = '8px';
+      cell.style.textAlign = 'left';
+    });
+    t.querySelectorAll('th').forEach(th => {
+      th.style.backgroundColor = '#f2f2f2';
+    });
+  });
+
+  const blockquotes = container.querySelectorAll('blockquote');
+  blockquotes.forEach(bq => {
+    bq.style.borderLeft = '4px solid #ccc';
+    bq.style.marginLeft = '0';
+    bq.style.paddingLeft = '16px';
+    bq.style.color = '#666';
+  });
+  
+  const opt = {
+    margin:       15,
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  };
+  
+  html2pdf().set(opt).from(container).save();
 }
 
 // ════════════════════════════════════════
@@ -8162,8 +8296,9 @@ function bindEvents() {
 
   // ── Assemblage du prompt utilisateur dynamique ─────────────────────────
   const buildCorrectionUserPrompt = (cfg) => {
+    const langInstruction = getOutputLanguageInstruction(cfg.outputLanguage || 'fr');
     return `<user_prompt>
-
+${langInstruction ? langInstruction + '\n---\n' : ''}
   <checklist_prealable>
     - [x] Sujet fourni : OUI
     - [${cfg.bareme ? 'x' : ' '}] Barème : ${cfg.bareme ? 'FOURNI' : 'NON FOURNI — à définir'}
@@ -8182,6 +8317,7 @@ function bindEvents() {
     - Option (Langue) : ${cfg.option}
     - Type d'évaluation : ${cfg.typeEval}
     ${cfg.niveauLangue ? `- Niveau de langue attendu : ${cfg.niveauLangue}` : ''}
+    - Langue de sortie : ${cfg.outputLanguage === 'ar' ? 'العربية' : cfg.outputLanguage === 'en' ? 'English' : 'Français'}
   </contexte_imperatif>
 
   <format_sortie_souhaite>
@@ -8212,6 +8348,8 @@ function bindEvents() {
     Applique rigoureusement les System Instructions.
     Génère la fiche complète au format demandé.
     ${cfg.exportWord ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_WORD] sur une ligne seule." : ''}
+    ${cfg.exportHtml ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_HTML] sur une ligne seule." : ''}
+    ${cfg.exportPdf ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_PDF] sur une ligne seule." : ''}
   </instruction>
 
 </user_prompt>`;
@@ -8249,6 +8387,7 @@ function bindEvents() {
         option: get('corr-option'),
         typeEval: get('corr-type-eval'),
         niveauLangue: get('corr-niveau-langue'),
+        outputLanguage: get('corr-output-lang'),
         sujet: get('corr-sujet'),
         format: get('corr-format'),
         competences: get('corr-competences'),
@@ -8257,6 +8396,8 @@ function bindEvents() {
         consignes: get('corr-consignes'),
         exemple: get('corr-exemple'),
         exportWord: $('#corr-export-word')?.checked || false,
+        exportHtml: $('#corr-export-html')?.checked || false,
+        exportPdf: $('#corr-export-pdf')?.checked || false,
         _corrPdfName,
         _corrPdfBase64,
         _corrPdfMime,
@@ -8296,6 +8437,7 @@ function bindEvents() {
       set('corr-option', data.option);
       set('corr-type-eval', data.typeEval);
       set('corr-niveau-langue', data.niveauLangue);
+      set('corr-output-lang', data.outputLanguage);
       set('corr-sujet', data.sujet);
       set('corr-format', data.format);
       
@@ -8308,6 +8450,8 @@ function bindEvents() {
       set('corr-consignes', data.consignes);
       set('corr-exemple', data.exemple);
       if ($('#corr-export-word')) $('#corr-export-word').checked = data.exportWord;
+      if ($('#corr-export-html')) $('#corr-export-html').checked = !!data.exportHtml;
+      if ($('#corr-export-pdf')) $('#corr-export-pdf').checked = !!data.exportPdf;
       
       _corrPdfName = data._corrPdfName || '';
       _corrPdfBase64 = data._corrPdfBase64 || null;
@@ -8426,6 +8570,7 @@ function bindEvents() {
       option:       get('corr-option'),
       typeEval:     get('corr-type-eval'),
       niveauLangue: get('corr-niveau-langue'),
+      outputLanguage: get('corr-output-lang'),
       // Si PDF chargé : on conserve le texte de la zone (qui inclut déjà la mention du PDF lors de l'import, plus les éventuels ajouts manuels)
       sujet:        get('corr-sujet') || (hasPdf ? `[DOCUMENT JOINT EN PIÈCE JOINTE : ${_corrPdfName}]\n\nIMPORTANT : Le sujet complet se trouve dans le document PDF/image attaché à ce message.` : ''),
       bareme:       get('corr-bareme'),
@@ -8435,6 +8580,8 @@ function bindEvents() {
       consignes:    get('corr-consignes'),
       exemple:      get('corr-exemple'),
       exportWord:   $('#corr-export-word')?.checked || false,
+      exportHtml:   $('#corr-export-html')?.checked || false,
+      exportPdf:    $('#corr-export-pdf')?.checked || false,
     };
 
     // Validation
@@ -8457,10 +8604,13 @@ function bindEvents() {
         option: get('corr-option'),
         typeEval: get('corr-type-eval'),
         niveauLangue: get('corr-niveau-langue'),
+        outputLanguage: get('corr-output-lang'),
         format: get('corr-format'),
         criteres: get('corr-criteres'),
         consignes: get('corr-consignes'),
-        exportWord: $('#corr-export-word')?.checked || false
+        exportWord: $('#corr-export-word')?.checked || false,
+        exportHtml: $('#corr-export-html')?.checked || false,
+        exportPdf: $('#corr-export-pdf')?.checked || false
       };
       localStorage.setItem('corrSavedConfig', JSON.stringify(configToSave));
     } catch (e) { console.error("Could not save config", e); }
@@ -8637,6 +8787,36 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
           toast('📄 Fiche exportée en Word avec succes !', 'success');
         } catch(e) {
           console.error('Export Word error:', e);
+        }
+      }
+
+      // Export HTML si demande
+      if (cfg.exportHtml) {
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_HTML]')) {
+          textToExport = textToExport.replace('[EXPORT_HTML]', '').trim();
+          geminiText = textToExport;
+        }
+        try {
+          exportToHtml(textToExport, `Fiche_Correction_${extractedTitle.replace(/\s+/g, '_').slice(0,50)}.html`);
+          toast('🌐 Fiche exportée en HTML avec succes !', 'success');
+        } catch(e) {
+          console.error('Export HTML error:', e);
+        }
+      }
+
+      // Export PDF si demande
+      if (cfg.exportPdf) {
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_PDF]')) {
+          textToExport = textToExport.replace('[EXPORT_PDF]', '').trim();
+          geminiText = textToExport;
+        }
+        try {
+          exportToPdf(textToExport, `Fiche_Correction_${extractedTitle.replace(/\s+/g, '_').slice(0,50)}.pdf`);
+          toast('📕 Fiche exportée en PDF avec succes !', 'success');
+        } catch(e) {
+          console.error('Export PDF error:', e);
         }
       }
 
@@ -9263,6 +9443,8 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
         if (s.criteres) $('#corr-criteres').value = s.criteres;
         if (s.consignes) $('#corr-consignes').value = s.consignes;
         if ($('#corr-export-word')) $('#corr-export-word').checked = !!s.exportWord;
+        if ($('#corr-export-html')) $('#corr-export-html').checked = !!s.exportHtml;
+        if ($('#corr-export-pdf')) $('#corr-export-pdf').checked = !!s.exportPdf;
       }
     } catch(e) { console.error("Could not load config", e); }
 
@@ -9302,9 +9484,10 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
       const file = e.target.files[0];
       if (!file) return;
 
-      const badge   = $('#corr-pdf-badge');
-      const info    = $('#corr-pdf-info');
-      const sujetEl = $('#corr-sujet');
+      const badge     = $('#corr-pdf-badge');
+      const info      = $('#corr-pdf-info');
+      const removeBtn = $('#corr-pdf-remove');
+      const sujetEl   = $('#corr-sujet');
       const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
 
       if (isPdfOrImg) {
@@ -9321,6 +9504,7 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
             badge.style.display = 'inline-block';
           }
           if (info) info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           
           if (sujetEl) { 
             sujetEl.value = `[DOCUMENT ATTACHÉ: ${file.name}]\nSera analysé nativement par Gemini.`; 
@@ -9339,8 +9523,10 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
         reader.onload = (ev) => {
           if (sujetEl) { sujetEl.value = ev.target.result.trim(); sujetEl.style.opacity = '1'; }
           _corrPdfBase64 = null; // on reset vision car c'est du texte
+          _corrPdfName = file.name;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
           if (info)  info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast('✅ Fichier texte importé dans la zone sujet.', 'success');
         };
         reader.readAsText(file, 'UTF-8');
@@ -9357,8 +9543,9 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
       const file = e.target.files[0];
       if (!file) return;
 
-      const badge = $('#corr-exemple-badge');
-      const info = $('#corr-exemple-info');
+      const badge     = $('#corr-exemple-badge');
+      const info      = $('#corr-exemple-info');
+      const removeBtn = $('#corr-exemple-remove');
       const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
 
       if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
@@ -9373,6 +9560,7 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
           _corrExempleText = ''; 
           if (badge) { badge.textContent = `📄 ${file.name} (mode clonage strict)`; badge.style.display = 'inline-block'; }
           if (info) info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Fiche modèle "${file.name}" importée — L'IA la clonera nativement.`, 'success');
         };
         reader.onerror = () => {
@@ -9391,6 +9579,7 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
           }
           if (badge) { badge.textContent = `📝 ${file.name} (mode clonage strict)`; badge.style.display = 'inline-block'; }
           if (info) info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Fiche modèle "${file.name}" importée.`, 'success');
         };
         reader.onerror = () => {
@@ -9408,8 +9597,9 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
       const file = e.target.files[0];
       if (!file) return;
 
-      const badge    = $('#corr-ref-badge');
-      const competEl = $('#corr-competences');
+      const badge     = $('#corr-ref-badge');
+      const removeBtn = $('#corr-ref-remove');
+      const competEl  = $('#corr-competences');
       const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
 
       if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
@@ -9431,6 +9621,7 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
               : `📄 Cadre de référence importé (PDF) : ${file.name}\nGemini extraira les compétences officielles directement depuis ce document.`;
           }
           if (badge) { badge.textContent = `📄 ${file.name} (cadre de réf. — vision native)`; badge.style.display = 'inline-block'; }
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Cadre de référence "${file.name}" importé — Gemini lira le PDF natif.`, 'success');
         };
         reader.onerror = () => {
@@ -9451,6 +9642,7 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
               : _corrRefText;
           }
           if (badge) { badge.textContent = `📝 ${file.name} (cadre de réf.)`; badge.style.display = 'inline-block'; }
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Cadre de référence "${file.name}" importé dans la zone compétences.`, 'success');
         };
         reader.onerror = () => {
@@ -9461,6 +9653,37 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
       }
 
       e.target.value = ''; // reset input
+    };
+  }
+
+  // ── Boutons ✕ Supprimer fichier — Correction ──────────────────────────────
+  if ($('#corr-pdf-remove')) {
+    $('#corr-pdf-remove').onclick = () => {
+      _corrPdfBase64 = null; _corrPdfName = ''; _corrPdfMime = '';
+      const sujetEl = $('#corr-sujet');
+      if (sujetEl && sujetEl.value.startsWith('[DOCUMENT ATTACHÉ:')) sujetEl.value = '';
+      const badge = $('#corr-pdf-badge'); if (badge) badge.style.display = 'none';
+      const info  = $('#corr-pdf-info');  if (info)  info.style.display  = 'none';
+      $('#corr-pdf-remove').style.display = 'none';
+      toast('🗑️ Fichier sujet supprimé.', 'info');
+    };
+  }
+  if ($('#corr-exemple-remove')) {
+    $('#corr-exemple-remove').onclick = () => {
+      _corrExempleName = ''; _corrExempleBase64 = null; _corrExempleText = '';
+      const exEl = $('#corr-exemple'); if (exEl) exEl.value = '';
+      const badge = $('#corr-exemple-badge'); if (badge) badge.style.display = 'none';
+      const info  = $('#corr-exemple-info');  if (info)  info.style.display  = 'none';
+      $('#corr-exemple-remove').style.display = 'none';
+      toast('🗑️ Fiche modèle supprimée.', 'info');
+    };
+  }
+  if ($('#corr-ref-remove')) {
+    $('#corr-ref-remove').onclick = () => {
+      _corrRefBase64 = null; _corrRefName = ''; _corrRefText = '';
+      const badge = $('#corr-ref-badge'); if (badge) badge.style.display = 'none';
+      $('#corr-ref-remove').style.display = 'none';
+      toast('🗑️ Cadre de référence supprimé.', 'info');
     };
   }
 
@@ -9667,6 +9890,7 @@ const openDidactiqueModal = async () => {
       if (s.niveau) $('#didac-niveau').value = s.niveau;
       if (s.filiere) $('#didac-filiere').value = s.filiere;
       if (s.option) $('#didac-option').value = s.option;
+      if (s.outputLanguage) $('#didac-output-lang').value = s.outputLanguage;
       if (s.objectifs) $('#didac-objectifs').value = s.objectifs;
       if (s.exemple) $('#didac-exemple').value = s.exemple;
       if ($('#didac-export-word')) $('#didac-export-word').checked = !!s.exportWord;
@@ -9717,6 +9941,7 @@ const generateDidactiqueSheet = async () => {
     niveau:       get('didac-niveau'),
     filiere:      get('didac-filiere'),
     option:       get('didac-option'),
+    outputLanguage: get('didac-output-lang'),
     cours:        get('didac-cours') || (hasPdf ? `[DOCUMENT JOINT EN PIÈCE JOINTE : ${_didacPdfName}]\n\nIMPORTANT : Le cours complet se trouve dans le document PDF/image attaché à ce message.` : ''),
     objectifs:    get('didac-objectifs'),
     directives:    get('didac-directives'),
@@ -9769,6 +9994,7 @@ const generateDidactiqueSheet = async () => {
 **Contexte utilisateur :** Génération de la fiche didactique.
 **Matière :** ${cfg.discipline}
 **Niveau :** ${classeStr}
+**Langue de génération de la fiche :** ${cfg.outputLanguage === 'ar' ? 'العربية' : cfg.outputLanguage === 'en' ? 'English' : 'Français'}
 
 `;
     if (cfg.cours && !hasPdf) {
@@ -9812,6 +10038,11 @@ const generateDidactiqueSheet = async () => {
     }
 
     let sysPrompt = DIDACTIQUE_SYSTEM_PROMPT;
+    const langInstruction = getOutputLanguageInstruction(cfg.outputLanguage || 'fr');
+    if (langInstruction) {
+      sysPrompt = langInstruction + '\n\n' + sysPrompt;
+    }
+
     // Inject CLONING rule if example is present
     if (_didacExempleBase64 || (cfg.exemple && cfg.exemple.length > 20)) {
       const startTag = '## (R) Format de R\u00E9ponse';
@@ -9923,10 +10154,43 @@ Avant la balise <reponse_finale>, g\u00E9n\u00E8re imp\u00E9rativement une balis
 
     if (cfg.exportWord) {
       try {
-        exportToWord(geminiText, `Fiche_Didactique_${cfg.discipline}.doc`);
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_WORD]')) {
+          textToExport = textToExport.replace('[EXPORT_WORD]', '').trim();
+          geminiText = textToExport;
+        }
+        exportToWord(textToExport, `Fiche_Didactique_${cfg.discipline}.doc`);
         toast('📄 Fiche didactique exportée en Word avec succès !', 'success');
       } catch(e) {
         console.error('Export Word error:', e);
+      }
+    }
+
+    if (cfg.exportHtml) {
+      try {
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_HTML]')) {
+          textToExport = textToExport.replace('[EXPORT_HTML]', '').trim();
+          geminiText = textToExport;
+        }
+        exportToHtml(textToExport, `Fiche_Didactique_${cfg.discipline}.html`);
+        toast('🌐 Fiche didactique exportée en HTML avec succès !', 'success');
+      } catch(e) {
+        console.error('Export HTML error:', e);
+      }
+    }
+
+    if (cfg.exportPdf) {
+      try {
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_PDF]')) {
+          textToExport = textToExport.replace('[EXPORT_PDF]', '').trim();
+          geminiText = textToExport;
+        }
+        exportToPdf(textToExport, `Fiche_Didactique_${cfg.discipline}.pdf`);
+        toast('📕 Fiche didactique exportée en PDF avec succès !', 'success');
+      } catch(e) {
+        console.error('Export PDF error:', e);
       }
     }
 
@@ -9985,6 +10249,7 @@ const saveDidactiqueConfigData = async () => {
       niveau: get('didac-niveau'),
       filiere: get('didac-filiere'),
       option: get('didac-option'),
+      outputLanguage: get('didac-output-lang'),
       cours: get('didac-cours'),
       objectifs: get('didac-objectifs'),
       exemple: get('didac-exemple'),
@@ -10032,6 +10297,7 @@ const loadDidactiqueConfigData = async () => {
     set('didac-niveau', data.niveau);
     set('didac-filiere', data.filiere);
     set('didac-option', data.option);
+    set('didac-output-lang', data.outputLanguage);
     set('didac-cours', data.cours);
     set('didac-objectifs', data.objectifs);
     set('didac-exemple', data.exemple);
@@ -10130,9 +10396,10 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
     $('#didac-pdf-upload').onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const badge   = $('#didac-pdf-badge');
-      const info    = $('#didac-pdf-info');
-      const coursEl = $('#didac-cours');
+      const badge     = $('#didac-pdf-badge');
+      const info      = $('#didac-pdf-info');
+      const removeBtn = $('#didac-pdf-remove');
+      const coursEl   = $('#didac-cours');
       const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
       if (isPdfOrImg) {
         if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
@@ -10143,6 +10410,7 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
           _didacPdfMime = file.type || 'application/pdf';
           if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
           if (info) info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           if (coursEl) { coursEl.value = `[DOCUMENT ATTACHÉ: ${file.name}]\nSera analysé nativement par Gemini.`; coursEl.style.opacity = '1'; }
           toast(`✅ ${file.name} importé avec succès.`, 'success');
         };
@@ -10152,8 +10420,10 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
         reader.onload = (ev) => {
           if (coursEl) { coursEl.value = ev.target.result.trim(); coursEl.style.opacity = '1'; }
           _didacPdfBase64 = null;
+          _didacPdfName = file.name;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
           if (info)  info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast('✅ Fichier texte importé.', 'success');
         };
         reader.readAsText(file, 'UTF-8');
@@ -10166,8 +10436,9 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
     $('#didac-ref-upload').onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const badge    = $('#didac-ref-badge');
-      const competEl = $('#didac-objectifs');
+      const badge     = $('#didac-ref-badge');
+      const removeBtn = $('#didac-ref-remove');
+      const competEl  = $('#didac-objectifs');
       const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
       if (isPdfOrImg) {
         if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
@@ -10180,6 +10451,7 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
           _didacRefText = '';
           if (competEl) competEl.value += `\n\n[CADRE PDF: ${file.name}]`;
           if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Cadre de réf. ${file.name} importé.`, 'success');
         };
         reader.readAsDataURL(file);
@@ -10190,6 +10462,7 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
           _didacRefText = ev.target.result.trim();
           if (competEl) competEl.value += '\n\n' + _didacRefText;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Cadre texte importé.`, 'success');
         };
         reader.readAsText(file, 'UTF-8');
@@ -10202,12 +10475,13 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
     $('#didac-exemple-upload').onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const badge   = $('#didac-exemple-badge');
-      const infoEl  = $('#didac-exemple-info');
-      const exemplEl = $('#didac-exemple');
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const badge     = $('#didac-exemple-badge');
+      const infoEl    = $('#didac-exemple-info');
+      const removeBtn = $('#didac-exemple-remove');
+      const exemplEl  = $('#didac-exemple');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
 
-      if (isPdf) {
+      if (isPdfOrImg) {
         if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -10218,6 +10492,7 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
           if (exemplEl) { exemplEl.value = `[FICHE EXEMPLE PDF : ${file.name}]\nSera analysée nativement par Gemini comme modèle de style.`; }
           if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
           if (infoEl) infoEl.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Fiche exemple "${file.name}" importée. L'IA l'utilisera comme modèle.`, 'success');
         };
         reader.readAsDataURL(file);
@@ -10231,6 +10506,7 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
           if (exemplEl) exemplEl.value = txt;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
           if (infoEl) infoEl.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Fiche exemple texte importée.`, 'success');
         };
         reader.readAsText(file, 'UTF-8');
@@ -10243,12 +10519,13 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
     $('#didac-directives-upload').onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const badge   = $('#didac-directives-badge');
-      const infoEl  = $('#didac-directives-info');
-      const taEl    = $('#didac-directives');
-      const isPdf   = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const badge     = $('#didac-directives-badge');
+      const infoEl    = $('#didac-directives-info');
+      const removeBtn = $('#didac-directives-remove');
+      const taEl      = $('#didac-directives');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
 
-      if (isPdf) {
+      if (isPdfOrImg) {
         if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -10258,8 +10535,9 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
           const dataUrl = ev.target.result;
           _didacDirectivesBase64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
           if (taEl) taEl.value = `[DIRECTIVES PDF : ${file.name}]\nSeront analysées nativement par Gemini et appliquées en priorité.`;
-          if (badge) { badge.textContent = `📐 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
           if (infoEl) infoEl.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Directives "${file.name}" importées. L'IA les appliquera comme contraintes prioritaires.`, 'success');
         };
         reader.readAsDataURL(file);
@@ -10273,11 +10551,53 @@ setTimeout(() => refreshDidactiqueSavedList(), 500);
           if (taEl) taEl.value = _didacDirectivesText;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
           if (infoEl) infoEl.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Directives texte importées.`, 'success');
         };
         reader.readAsText(file, 'UTF-8');
       }
       e.target.value = '';
+    };
+  }
+
+  // ── Boutons ✕ Supprimer fichier — Didactique ───────────────────────────
+  if ($('#didac-pdf-remove')) {
+    $('#didac-pdf-remove').onclick = () => {
+      _didacPdfBase64 = null; _didacPdfName = ''; _didacPdfMime = '';
+      const coursEl = $('#didac-cours');
+      if (coursEl && coursEl.value.startsWith('[DOCUMENT ATTACHÉ:')) coursEl.value = '';
+      const badge = $('#didac-pdf-badge'); if (badge) badge.style.display = 'none';
+      const info  = $('#didac-pdf-info');  if (info)  info.style.display  = 'none';
+      $('#didac-pdf-remove').style.display = 'none';
+      toast('🗑️ Fichier cours supprimé.', 'info');
+    };
+  }
+  if ($('#didac-ref-remove')) {
+    $('#didac-ref-remove').onclick = () => {
+      _didacRefBase64 = null; _didacRefName = ''; _didacRefText = '';
+      const badge = $('#didac-ref-badge'); if (badge) badge.style.display = 'none';
+      $('#didac-ref-remove').style.display = 'none';
+      toast('🗑️ Cadre de référence supprimé.', 'info');
+    };
+  }
+  if ($('#didac-exemple-remove')) {
+    $('#didac-exemple-remove').onclick = () => {
+      _didacExempleName = ''; _didacExempleBase64 = null; _didacExempleMime = '';
+      const exemplEl = $('#didac-exemple'); if (exemplEl) exemplEl.value = '';
+      const badge = $('#didac-exemple-badge'); if (badge) badge.style.display = 'none';
+      const info  = $('#didac-exemple-info');  if (info)  info.style.display  = 'none';
+      $('#didac-exemple-remove').style.display = 'none';
+      toast('🗑️ Fiche exemple supprimée.', 'info');
+    };
+  }
+  if ($('#didac-directives-remove')) {
+    $('#didac-directives-remove').onclick = () => {
+      _didacDirectivesName = ''; _didacDirectivesBase64 = null; _didacDirectivesMime = ''; _didacDirectivesText = '';
+      const taEl = $('#didac-directives'); if (taEl) taEl.value = '';
+      const badge = $('#didac-directives-badge'); if (badge) badge.style.display = 'none';
+      const info  = $('#didac-directives-info');  if (info)  info.style.display  = 'none';
+      $('#didac-directives-remove').style.display = 'none';
+      toast('🗑️ Directives supprimées.', 'info');
     };
   }
 })();
@@ -10290,6 +10610,38 @@ window.openDidactiqueModal = openDidactiqueModal;
 window.closeDidactiqueModal = closeDidactiqueModal;
 window.generateDidactiqueSheet = generateDidactiqueSheet;
 
+
+// ==============================================================================
+// === HELPER : INSTRUCTION DE LANGUE DE SORTIE =================================
+// ==============================================================================
+
+/**
+ * Retourne une instruction forte demandant à l'IA de générer sa réponse
+ * dans la langue spécifiée.
+ * @param {'fr'|'en'|'ar'} lang - code langue
+ * @returns {string} instruction à injecter dans le prompt
+ */
+function getOutputLanguageInstruction(lang) {
+  if (lang === 'ar') {
+    return `
+⚠️ تعليمة اللغة (إلزامية - MANDATORY LANGUAGE INSTRUCTION):
+يجب أن تكتب إجابتك الكاملة باللغة العربية الفصحى.
+جميع العناوين والتفسيرات والأمثلة والجداول والمحتويات يجب أن تكون باللغة العربية.
+اتجاه الكتابة: من اليمين إلى اليسار (RTL).
+لا تستخدم الفرنسية أو الإنجليزية إلا للمصطلحات العلمية التي لا ترجمة عربية شائعة لها (بين قوسين).
+`;
+  }
+  if (lang === 'en') {
+    return `
+⚠️ MANDATORY LANGUAGE INSTRUCTION:
+You MUST write the ENTIRE response in ENGLISH.
+All titles, headings, explanations, examples, tables, and content must be in English.
+Do not use French in the output. Only use French terms when they are proper nouns or have no English equivalent (in parentheses).
+`;
+  }
+  // 'fr' ou défaut — aucune instruction supplémentaire
+  return '';
+}
 
 // ==============================================================================
 // === FICHE MÉTHODE ============================================================
@@ -10352,14 +10704,16 @@ Avant de générer la réponse finale détaillée selon le modèle ci-dessus, tu
 </system_instructions>`;
 
 const buildMethodeUserPrompt = (cfg) => {
+  const langInstruction = getOutputLanguageInstruction(cfg.outputLanguage || 'fr');
   let p = `<user_prompt>
-
+${langInstruction ? langInstruction + '\n---\n' : ''}
 # CRÉATION DE VOTRE TUTEUR PÉDAGOGIQUE PERSONNALISÉ
 
 ## 1. CONTEXTE GÉNÉRAL
 - **Matière / Discipline** : ${cfg.discipline}
 - **Niveau du public** : ${cfg.niveau}
 - **Niveau de langue de l'élève** : ${cfg.niveauLangue}
+- **Langue de génération de la fiche** : ${cfg.outputLanguage === 'ar' ? 'العربية' : cfg.outputLanguage === 'en' ? 'English' : 'Français'}
 
 ## 2. RÔLE ET EXPERTISE DE L'IA
 ${cfg.role}
@@ -10576,7 +10930,10 @@ const openMethodeModal = async () => {
       if (s.competences) $('#methode-competences').value = s.competences;
       if (s.directives) $('#methode-directives').value = s.directives;
       if (s.exemple) $('#methode-exemple').value = s.exemple;
+      if (s.outputLanguage) $('#methode-output-lang').value = s.outputLanguage;
       if ($('#methode-export-word')) $('#methode-export-word').checked = !!s.exportWord;
+      if ($('#methode-export-html')) $('#methode-export-html').checked = !!s.exportHtml;
+      if ($('#methode-export-pdf')) $('#methode-export-pdf').checked = !!s.exportPdf;
     }
   } catch(e) {}
 
@@ -10617,13 +10974,16 @@ const generateMethodeSheet = async () => {
     discipline,
     niveau:       get('methode-niveau'),
     niveauLangue: get('methode-niveau-langue'),
+    outputLanguage: get('methode-output-lang'),
     role:         get('methode-role'),
     exercice:     get('methode-exercice') || (hasPdf ? `[EXERCICE EN PIÈCE JOINTE : ${_methodePdfName}]\n\nIMPORTANT : Le sujet complet se trouve dans le document PDF/image attaché à ce message.` : ''),
     competences:  get('methode-competences'),
     directives:   get('methode-directives'),
     exemple:      get('methode-exemple'),
+    hasPdf,
     exportWord:   $('#methode-export-word')?.checked || false,
-    hasPdf
+    exportHtml:   $('#methode-export-html')?.checked || false,
+    exportPdf:    $('#methode-export-pdf')?.checked || false
   };
 
   if (!hasPdf && (!cfg.exercice || cfg.exercice.length < 10)) {
@@ -10774,10 +11134,43 @@ const generateMethodeSheet = async () => {
 
     if (cfg.exportWord) {
       try {
-        exportToWord(geminiText, `Fiche_Methode_${cfg.discipline}.doc`);
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_WORD]')) {
+          textToExport = textToExport.replace('[EXPORT_WORD]', '').trim();
+          geminiText = textToExport;
+        }
+        exportToWord(textToExport, `Fiche_Methode_${cfg.discipline}.doc`);
         toast('📄 Fiche méthode exportée en Word avec succès !', 'success');
       } catch(e) {
         console.error('Export Word error:', e);
+      }
+    }
+
+    if (cfg.exportHtml) {
+      try {
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_HTML]')) {
+          textToExport = textToExport.replace('[EXPORT_HTML]', '').trim();
+          geminiText = textToExport;
+        }
+        exportToHtml(textToExport, `Fiche_Methode_${cfg.discipline}.html`);
+        toast('🌐 Fiche méthode exportée en HTML avec succès !', 'success');
+      } catch(e) {
+        console.error('Export HTML error:', e);
+      }
+    }
+
+    if (cfg.exportPdf) {
+      try {
+        let textToExport = geminiText;
+        if (textToExport.includes('[EXPORT_PDF]')) {
+          textToExport = textToExport.replace('[EXPORT_PDF]', '').trim();
+          geminiText = textToExport;
+        }
+        exportToPdf(textToExport, `Fiche_Methode_${cfg.discipline}.pdf`);
+        toast('📕 Fiche méthode exportée en PDF avec succès !', 'success');
+      } catch(e) {
+        console.error('Export PDF error:', e);
       }
     }
 
@@ -10840,6 +11233,8 @@ const saveMethodeConfigData = async () => {
       exemple: get('methode-exemple'),
       directives: get('methode-directives'),
       exportWord: $('#methode-export-word')?.checked || false,
+      exportHtml: $('#methode-export-html')?.checked || false,
+      exportPdf: $('#methode-export-pdf')?.checked || false,
       _methodePdfName,
       _methodePdfBase64,
       _methodePdfMime,
@@ -10883,6 +11278,8 @@ const loadMethodeConfigData = async () => {
     set('methode-exemple', data.exemple);
     set('methode-directives', data.directives);
     if ($('#methode-export-word')) $('#methode-export-word').checked = data.exportWord || false;
+    if ($('#methode-export-html')) $('#methode-export-html').checked = data.exportHtml || false;
+    if ($('#methode-export-pdf')) $('#methode-export-pdf').checked = data.exportPdf || false;
     _methodePdfName   = data._methodePdfName   || '';
     _methodePdfBase64 = data._methodePdfBase64 || null;
     _methodePdfMime   = data._methodePdfMime   || '';
@@ -10971,9 +11368,10 @@ setTimeout(() => refreshMethodeSavedList(), 500);
     $('#methode-pdf-upload').onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const badge   = $('#methode-pdf-badge');
-      const info    = $('#methode-pdf-info');
-      const exoEl   = $('#methode-exercice');
+      const badge     = $('#methode-pdf-badge');
+      const info      = $('#methode-pdf-info');
+      const removeBtn = $('#methode-pdf-remove');
+      const exoEl     = $('#methode-exercice');
       const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
       if (isPdfOrImg) {
         if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
@@ -10984,6 +11382,7 @@ setTimeout(() => refreshMethodeSavedList(), 500);
           _methodePdfMime = file.type || 'application/pdf';
           if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
           if (info) info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           if (exoEl) { exoEl.value = `[EXERCICE PDF: ${file.name}]\nSera analysé nativement par Gemini.`; exoEl.style.opacity = '1'; }
           toast(`✅ ${file.name} importé avec succès.`, 'success');
         };
@@ -10993,8 +11392,10 @@ setTimeout(() => refreshMethodeSavedList(), 500);
         reader.onload = (ev) => {
           if (exoEl) { exoEl.value = ev.target.result.trim(); exoEl.style.opacity = '1'; }
           _methodePdfBase64 = null;
+          _methodePdfName = file.name;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
           if (info) info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast('✅ Fichier texte importé.', 'success');
         };
         reader.readAsText(file, 'UTF-8');
@@ -11007,8 +11408,9 @@ setTimeout(() => refreshMethodeSavedList(), 500);
     $('#methode-ref-upload').onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const badge    = $('#methode-ref-badge');
-      const competEl = $('#methode-competences');
+      const badge     = $('#methode-ref-badge');
+      const removeBtn = $('#methode-ref-remove');
+      const competEl  = $('#methode-competences');
       const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
       if (isPdfOrImg) {
         if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
@@ -11021,6 +11423,7 @@ setTimeout(() => refreshMethodeSavedList(), 500);
           _methodeRefText = '';
           if (competEl) competEl.value += `\n\n[CADRE PDF: ${file.name}]`;
           if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Référentiel ${file.name} importé.`, 'success');
         };
         reader.readAsDataURL(file);
@@ -11031,6 +11434,7 @@ setTimeout(() => refreshMethodeSavedList(), 500);
           _methodeRefText = ev.target.result.trim();
           if (competEl) competEl.value += '\n\n' + _methodeRefText;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Référentiel texte importé.`, 'success');
         };
         reader.readAsText(file, 'UTF-8');
@@ -11043,12 +11447,13 @@ setTimeout(() => refreshMethodeSavedList(), 500);
     $('#methode-exemple-upload').onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const badge   = $('#methode-exemple-badge');
-      const infoEl  = $('#methode-exemple-info');
-      const exemplEl = $('#methode-exemple');
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const badge     = $('#methode-exemple-badge');
+      const infoEl    = $('#methode-exemple-info');
+      const removeBtn = $('#methode-exemple-remove');
+      const exemplEl  = $('#methode-exemple');
+      const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
 
-      if (isPdf) {
+      if (isPdfOrImg) {
         if (badge) { badge.textContent = `⏳ ${file.name} — Lecture…`; badge.style.display = 'inline-block'; }
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -11059,6 +11464,7 @@ setTimeout(() => refreshMethodeSavedList(), 500);
           if (exemplEl) { exemplEl.value = `[FICHE EXEMPLE PDF : ${file.name}]\nSera analysée nativement par Gemini comme modèle de style.`; }
           if (badge) { badge.textContent = `📄 ${file.name} (Prêt)`; badge.style.display = 'inline-block'; }
           if (infoEl) infoEl.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Fiche exemple "${file.name}" importée. L'IA l'utilisera comme modèle.`, 'success');
         };
         reader.readAsDataURL(file);
@@ -11072,11 +11478,43 @@ setTimeout(() => refreshMethodeSavedList(), 500);
           if (exemplEl) exemplEl.value = txt;
           if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
           if (infoEl) infoEl.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
           toast(`✅ Fiche exemple texte importée.`, 'success');
         };
         reader.readAsText(file, 'UTF-8');
       }
       e.target.value = '';
+    };
+  }
+
+  // ── Boutons ✕ Supprimer fichier — Méthode ────────────────────────────
+  if ($('#methode-pdf-remove')) {
+    $('#methode-pdf-remove').onclick = () => {
+      _methodePdfBase64 = null; _methodePdfName = ''; _methodePdfMime = '';
+      const exoEl = $('#methode-exercice');
+      if (exoEl && exoEl.value.startsWith('[EXERCICE PDF:')) exoEl.value = '';
+      const badge = $('#methode-pdf-badge'); if (badge) badge.style.display = 'none';
+      const info  = $('#methode-pdf-info');  if (info)  info.style.display  = 'none';
+      $('#methode-pdf-remove').style.display = 'none';
+      toast('🗑️ Exercice supprimé.', 'info');
+    };
+  }
+  if ($('#methode-ref-remove')) {
+    $('#methode-ref-remove').onclick = () => {
+      _methodeRefBase64 = null; _methodeRefName = ''; _methodeRefText = '';
+      const badge = $('#methode-ref-badge'); if (badge) badge.style.display = 'none';
+      $('#methode-ref-remove').style.display = 'none';
+      toast('🗑️ Référentiel supprimé.', 'info');
+    };
+  }
+  if ($('#methode-exemple-remove')) {
+    $('#methode-exemple-remove').onclick = () => {
+      _methodeExempleName = ''; _methodeExempleBase64 = null; _methodeExempleMime = '';
+      const exemplEl = $('#methode-exemple'); if (exemplEl) exemplEl.value = '';
+      const badge = $('#methode-exemple-badge'); if (badge) badge.style.display = 'none';
+      const info  = $('#methode-exemple-info');  if (info)  info.style.display  = 'none';
+      $('#methode-exemple-remove').style.display = 'none';
+      toast('🗑️ Fiche modèle supprimée.', 'info');
     };
   }
 })();
