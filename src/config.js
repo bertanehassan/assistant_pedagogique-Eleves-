@@ -1,6 +1,6 @@
 export const MODELS = [
   // ── Modèles d'Élite & Raisonnement Complexe (Les plus performants) ──
-  { id:"gemini-2.5-flash",            name:"✨ Gemini 2.5 Flash — Vision & PDF",   badge:"✨ Vision",     desc:"Vision native PDF/images, graphiques, raisonnement avancé, très rapide",   tokens:1000000, ctx:"1M",   temp:0.4, vision:true },
+  { id:"gemini-3.5-flash",            name:"✨ Gemini 3.5 Flash — Vision & PDF",   badge:"✨ Vision",     desc:"Vision native PDF/images, graphiques, raisonnement avancé, très rapide",   tokens:1000000, ctx:"1M",   temp:0.4, vision:true },
   { id:"mistral-large-2512",          name:"🔥 Mistral Large 3 — Puissant",        badge:"🔥 Puissant",   desc:"41B actifs / 675B total, multimodal, raisonnement complexe",   tokens:256000, ctx:"256K", temp:0.42, vision:true },
   { id:"deepseek/deepseek-chat",      name:"🧠 DeepSeek Chat v3",                 badge:"🧠 Intelligent",desc:"Modèle très avancé d'OpenRouter", tokens:64000, ctx:"64K", temp:0.5 },
   { id:"mistral-medium-2604",         name:"🔥 Mistral Medium 3.5 — Flagship",     badge:"🔥 Flagship",   desc:"Frontier-class 128B, multimodal, agents & code (avr. 2026)",   tokens:256000, ctx:"256K", temp:0.42, vision:true },

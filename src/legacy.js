@@ -8627,7 +8627,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
     renderMessages();
 
-    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: true };
+    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-3.5-flash', isCorrection: true };
     state.messages.push(assistantMsg);
     renderMessages();
 
@@ -8639,13 +8639,13 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     state.abortController = new AbortController();
     const sendBtn = $('#send-btn');
     if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
-    showTyping("gemini-2.5-flash");
+    showTyping("gemini-3.5-flash");
 
     try {
       // ═══════════════════════════════════════════════════════════
       // EXCLUSIVEMENT : Gemini Vision (PDF/Image) 
       // ═══════════════════════════════════════════════════════════
-      const GEMINI_MODEL = 'gemini-2.5-flash';
+      const GEMINI_MODEL = 'gemini-3.5-flash';
 
       if (!state.geminiApiKey) {
         throw new Error('Clé API Google Gemini requise pour la reconnaissance de documents. Configurez-la dans Paramètres API (bouton 🔑 API en haut à droite).');
@@ -9118,7 +9118,7 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
         await fetch(`/api/gemini/v1beta/models?key=${cleanKey}`);
         
         // Test 2: POST (génération réelle)
-        const res = await fetch(`/api/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanKey}`, {
+        const res = await fetch(`/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -9412,7 +9412,7 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
   // ── Ouvrir / Fermer la modale ──────────────────────────────────────────
   const openCorrectionModal = async () => {
     // Forcer le modèle Gemini car la fiche de correction l'exige
-    const geminiId = "gemini-2.5-flash";
+    const geminiId = "gemini-3.5-flash";
     if (state.model !== geminiId) {
       state.model = geminiId;
       if ($('#model-select')) $('#model-select').value = geminiId;
@@ -9868,7 +9868,7 @@ const didactiqueBuildSummary = () => {
   if (summaryEl) summaryEl.innerHTML = html;
 };
 const openDidactiqueModal = async () => {
-  const geminiId = "gemini-2.5-flash";
+  const geminiId = "gemini-3.5-flash";
   if (state.model !== geminiId) {
     state.model = geminiId;
     if ($('#model-select')) $('#model-select').value = geminiId;
@@ -9971,7 +9971,7 @@ const generateDidactiqueSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: true };
+  const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-3.5-flash', isCorrection: true };
   state.messages.push(assistantMsg);
   renderMessages();
 
@@ -9982,7 +9982,7 @@ const generateDidactiqueSheet = async () => {
   state.abortController = new AbortController();
   const sendBtn = $('#send-btn');
   if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
-  showTyping("gemini-2.5-flash");
+  showTyping("gemini-3.5-flash");
 
   try {
     if (!state.geminiApiKey) {
@@ -10077,7 +10077,7 @@ Avant la balise <reponse_finale>, g\u00E9n\u00E8re imp\u00E9rativement une balis
     };
 
     const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-    const geminiUrl = `/api/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanGeminiKey}`;
+    const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
 
     assistantMsg.content = `🔍 Gemini analyse l'activité pour la fiche didactique...`;
     renderMessages();
@@ -10908,7 +10908,7 @@ const methodeBuildSummary = () => {
 };
 
 const openMethodeModal = async () => {
-  const geminiId = "gemini-2.5-flash";
+  const geminiId = "gemini-3.5-flash";
   if (state.model !== geminiId) {
     state.model = geminiId;
     if ($('#model-select')) $('#model-select').value = geminiId;
@@ -11003,7 +11003,7 @@ const generateMethodeSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const assistantMsg = { role: 'assistant', content: '⏳ Génération de la fiche méthode en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-2.5-flash', isCorrection: false, isMethode: true };
+  const assistantMsg = { role: 'assistant', content: '⏳ Génération de la fiche méthode en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-3.5-flash', isCorrection: false, isMethode: true };
   state.messages.push(assistantMsg);
   renderMessages();
 
@@ -11014,7 +11014,7 @@ const generateMethodeSheet = async () => {
   state.abortController = new AbortController();
   const sendBtn = $('#send-btn');
   if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
-  showTyping("gemini-2.5-flash");
+  showTyping("gemini-3.5-flash");
 
   try {
     if (!state.geminiApiKey) {
@@ -11058,7 +11058,7 @@ const generateMethodeSheet = async () => {
     };
 
     const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-    const geminiUrl = `/api/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanGeminiKey}`;
+    const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
 
     assistantMsg.content = `🔍 L'IA analyse votre exercice pour élaborer la fiche méthode...`;
     renderMessages();
