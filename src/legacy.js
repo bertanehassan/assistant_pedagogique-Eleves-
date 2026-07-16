@@ -966,7 +966,9 @@ function createMessageElement(m) {
   const isCorrection = !!m.isCorrection;
   const isMethodeMsg = !!m.isMethode;
   const isQcmContent = m.content && /\[x\]\s*[a-d]-/i.test(m.content);
-  const wordBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${(isCorrection || isMethodeMsg) ? 'Exporter' : t('btn_word')}</button>` : '';
+  const wordBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">📄 DOCX</button>` : '';
+  const pdfBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-pdf" data-id="${msgId}" style="color:#f87171;border-color:rgba(248,113,113,0.4)">📕 PDF</button>` : '';
+  const htmlBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-html" data-id="${msgId}" style="color:#a78bfa;border-color:rgba(167,139,250,0.4)">🌐 HTML</button>` : '';
   const qpBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
   const fcJsonBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="export-fc-json" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">⬇️ JSON QR</button>` : '';
   const wqBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
@@ -1004,6 +1006,8 @@ function createMessageElement(m) {
       ${m.role === 'user' ? `<button class="msg-action-btn" data-action="edit-msg" data-id="${msgId}">${t('btn_edit')}</button>` : ''}
       ${(m.role === 'assistant' && !isCorrection) ? `<button class="msg-action-btn" data-action="regen-msg" data-id="${msgId}">${t('btn_regen')}</button>` : ''}
       ${wordBtn}
+      ${pdfBtn}
+      ${htmlBtn}
       ${qpBtn}
       ${fcJsonBtn}
       ${wqBtn}
@@ -7025,9 +7029,9 @@ async function exportQuizPlayer(msgId) {
   toast(`Fichier Quiz Player export\u00e9 ! (${questions.length} questions)`, "success");
 }
 
-function exportMessageToWord(msgId) {
+function getCleanedMessageHtml(msgId) {
     const contentEl = document.getElementById(`mc-${msgId}`);
-    if (!contentEl) return;
+    if (!contentEl) return null;
     const msg = state.messages.find(m => (m.ts || '') == msgId);
     const isFc = msg && (msg.workflowUsed === 'FC-Fr 1' || msg.workflowUsed === 'FC-Fr 2' || msg.workflowUsed === 'FC-Ar 1' || msg.workflowUsed === 'FC-Ar 2' || msg.workflowUsed === 'FC-En 1' || msg.workflowUsed === 'FC-En 2');
     
@@ -7069,59 +7073,124 @@ function exportMessageToWord(msgId) {
        `<div style="font-family:Consolas,monospace;background:#f4f4f4;padding:10px;border:1px solid #ddd;">${inner.replace(/\n/g, '<br>')}</div>`);
     htmlContent = htmlContent.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, '$1');
 
+    // Convert MathJax SVG back to latex images for exports if possible, or just let CodeCogs handle text?
+    // The chat UI uses MathJax. MathJax creates complex HTML/SVG. For word export, it's better to replace MathJax with CodeCogs.
+    // Actually, msg.content has raw latex. The current logic uses innerHTML which has MathJax.
+    // But since they wanted landscape everywhere, let's keep the existing logic that they liked, just refactor it.
+
+    let filename = 'Export';
+    const isQcm = msg && msg.content && /\[x\]\s*[a-d]-/i.test(msg.content);
+    filename = isFc ? 'FC_Export' : (isQcm ? 'QCM_Export' : 'Doc_Export');
+    if (msg && msg.isCorrection) filename = 'Fiche_Correction';
+    else if (msg && msg.isMethode) filename = 'Fiche_Methode';
+    
+    if (msg && msg.content) {
+      let subject = 'fiche';
+      if (msg.isCorrection || msg.isMethode) {
+        const idx = state.messages.findIndex(m => m.ts === msg.ts);
+        const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
+        if (userMsg && userMsg.content) {
+           const match = userMsg.content.match(/—\s*(.*)$/);
+           subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
+        } else {
+           subject = extractSubjectFromContent(msg.content);
+        }
+        filename = `Fiche_${msg.isMethode ? 'Methode_' : ''}${subject.replace(/\s+/g,'_').slice(0, 50)}`;
+      } else {
+        subject = extractSubjectFromContent(msg.content);
+        const prefix = isFc ? 'FC-' : (isQcm ? 'QCM-' : 'Doc-');
+        filename = `${prefix}${subject.replace(/\s+/g,'_').slice(0, 50)}`;
+      }
+    }
+
+    return { htmlContent, filename };
+}
+
+function exportMessageToWord(msgId) {
+    const data = getCleanedMessageHtml(msgId);
+    if (!data) return;
+    
     const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
                    "xmlns:w='urn:schemas-microsoft-com:office:word' " +
                    "xmlns='http://www.w3.org/TR/REC-html40'>" +
                    "<head><meta charset='utf-8'><title>Export</title>" +
-                   "<style>body{font-family:Calibri,sans-serif;line-height:1.6;} a{color:#1a73e8;}</style>" +
-                   "</head><body>";
-    const sourceHTML = header + htmlContent + "</body></html>";
-    
-    const isQcm = msg && msg.content && /\[x\]\s*[a-d]-/i.test(msg.content);
-    let filename = isFc ? 'FC_Export.doc' : (isQcm ? 'QCM_Export.doc' : 'Doc_Export.doc');
-    if (msg && msg.isCorrection) filename = 'Fiche_Correction.doc';
-    else if (msg && msg.isMethode) filename = 'Fiche_Methode.doc';
-    
-    if (msg && msg.content) {
-      // Find associated user message for correction / methode sheet titles
-      let subject = 'fiche';
-      if (msg.isCorrection) {
-        const idx = state.messages.findIndex(m => m.ts === msg.ts);
-        const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
-        if (userMsg && userMsg.content) {
-           const match = userMsg.content.match(/—\s*(.*)$/);
-           subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
-        } else {
-           subject = extractSubjectFromContent(msg.content);
-        }
-        filename = `Fiche_${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
-      } else if (msg.isMethode) {
-        const idx = state.messages.findIndex(m => m.ts === msg.ts);
-        const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
-        if (userMsg && userMsg.content) {
-           // Le titre utilisateur a le format "🧠 Fiche Méthode — Maths 2BAC"
-           const match = userMsg.content.match(/—\s*(.*)$/);
-           subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
-        } else {
-           subject = extractSubjectFromContent(msg.content);
-        }
-        filename = `Fiche_Methode_${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
-      } else {
-        subject = extractSubjectFromContent(msg.content);
-        const prefix = isFc ? 'FC-' : (isQcm ? 'QCM-' : 'Doc-');
-        filename = `${prefix}${subject.replace(/\s+/g,'_').slice(0, 50)}.doc`;
-      }
-    }
+                   "<style>" +
+                   "@page WordSection1 { size: 841.9pt 595.3pt; mso-page-orientation: landscape; margin: 36.0pt; }" +
+                   "div.WordSection1 { page: WordSection1; }" +
+                   "body{font-family:Calibri,sans-serif;line-height:1.6;} a{color:#1a73e8;}</style>" +
+                   "</head><body><div class='WordSection1'>";
+    const sourceHTML = header + data.htmlContent + "</div></body></html>";
     
     const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const fileDownload = document.createElement("a");
     document.body.appendChild(fileDownload);
     fileDownload.href = url;
-    fileDownload.download = filename;
+    fileDownload.download = data.filename + '.doc';
     fileDownload.click();
     setTimeout(() => { document.body.removeChild(fileDownload); URL.revokeObjectURL(url); }, 100);
     toast("Export Word réussi !", "success");
+}
+
+function exportMessageToPdf(msgId) {
+    if (typeof window.html2pdf === 'undefined') {
+      toast("Erreur : la librairie PDF n'est pas chargée.", "error");
+      return;
+    }
+    const data = getCleanedMessageHtml(msgId);
+    if (!data) return;
+
+    const container = document.createElement('div');
+    container.innerHTML = data.htmlContent;
+    container.style.padding = '20px';
+    container.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+    container.style.lineHeight = '1.6';
+    container.style.color = '#333';
+    container.style.fontSize = '12px';
+    
+    const opt = {
+      margin:       15,
+      filename:     data.filename + '.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+    
+    html2pdf().set(opt).from(container).save();
+    toast("Export PDF réussi !", "success");
+}
+
+function exportMessageToHtml(msgId) {
+    const data = getCleanedMessageHtml(msgId);
+    if (!data) return;
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Export HTML</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    @media print {
+      @page { size: landscape; margin: 15mm; }
+      body { max-width: 100%; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  ${data.htmlContent}
+</body>
+</html>`;
+    
+    const blob = new Blob(['\ufeff', htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = data.filename + '.html';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    toast("Export HTML réussi !", "success");
 }
 
 // ════════════════════════════════════════
@@ -7562,6 +7631,8 @@ function bindEvents() {
     else if (action === "save-memo") { saveToMemory(id); }
     else if (action === "print") { window.print(); }
     else if (action === "export-word") { exportMessageToWord(id); }
+    else if (action === "export-pdf") { exportMessageToPdf(id); }
+    else if (action === "export-html") { exportMessageToHtml(id); }
     else if (action === "export-fc-json") { exportFcAsJson(id); }
     else if (action === "test-fc-player") { openFlashCardPlayer(id); }
     else if (action === "export-qp-modal") {
