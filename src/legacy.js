@@ -440,22 +440,13 @@ function exportToWord(text, filename = "Export_IA.doc") {
 }
 
 function exportToHtml(text, filename = "Export_IA.html") {
-  // Remplacement robuste des formules par des SVG CodeCogs (fiabilité à 100% indépendante du parseur Markdown)
-  let htmlText = text;
-  htmlText = htmlText.replace(/(?:\$\$|\\\[)([\s\S]*?)(?:\$\$|\\\])/g, (match, math) => {
-    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
-  });
-  htmlText = htmlText.replace(/(?:\$|\\\()([\s\S]*?)(?:\$|\\\))/g, (match, math) => {
-    return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
-  });
-
-  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(htmlText) : htmlText.replace(/\n/g, '<br>');
+  // On ne remplace plus par des images pour garder le texte éditable, on utilise MathJax
+  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
   const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <title>Export HTML</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
     table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
@@ -467,6 +458,18 @@ function exportToHtml(text, filename = "Export_IA.html") {
       body { max-width: 100%; padding: 0; }
     }
   </style>
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+        displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']]
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
   ${parsedHtml}
@@ -479,10 +482,7 @@ function exportToHtml(text, filename = "Export_IA.html") {
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
 function exportToPdf(text, filename = "Export_IA.pdf") {
@@ -7162,36 +7162,52 @@ function exportMessageToPdf(msgId) {
 }
 
 function exportMessageToHtml(msgId) {
-    const data = getCleanedMessageHtml(msgId);
-    if (!data) return;
-
-    const htmlContent = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Export HTML</title>
-  <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
-    @media print {
-      @page { size: landscape; margin: 15mm; }
-      body { max-width: 100%; padding: 0; }
-    }
-  </style>
-</head>
-<body>
-  ${data.htmlContent}
-</body>
-</html>`;
+    const msg = state.messages.find(m => (m.ts || '') == msgId);
+    if (!msg) return;
     
-    const blob = new Blob(['\ufeff', htmlContent], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = data.filename + '.html';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-    toast("Export HTML réussi !", "success");
+    let textContent = msg.content || '';
+    const isFc = msg && (msg.workflowUsed === 'FC-Fr 1' || msg.workflowUsed === 'FC-Fr 2' || msg.workflowUsed === 'FC-Ar 1' || msg.workflowUsed === 'FC-Ar 2' || msg.workflowUsed === 'FC-En 1' || msg.workflowUsed === 'FC-En 2');
+    
+    // Supprimer le bloc de trace de chaîne
+    textContent = textContent.replace(/<details[\s\S]*?<\/details>/gi, '');
+    textContent = textContent.replace(/🔗 Résultat de la chaîne.*?(<br>|<\/p>|<h[1-6]>|\n)/ig, '$1');
+
+    if (isFc) {
+      const cards = parseFcOutput(textContent);
+      if (cards.length > 0) {
+        textContent = cards.map(c => `**${c.id}- ${c.question}**\n\nRéponse : ${c.reponse}\n\n• Explication : ${c.explication}\n\n${c.pour_aller_plus_loin ? `• Pour aller plus loin : ${c.pour_aller_plus_loin}` : ''}\n\n---\n\n`).join('');
+      }
+    } else {
+      const firstQMatch = textContent.match(/(^|\n)\s*1-\s/i);
+      if (firstQMatch) textContent = textContent.substring(firstQMatch.index);
+      const traceIdx = textContent.indexOf('🔗 Détail du parcours');
+      if (traceIdx !== -1) {
+        const hrIdx = textContent.lastIndexOf('---', traceIdx);
+        textContent = textContent.substring(0, hrIdx !== -1 ? hrIdx : traceIdx);
+      }
+    }
+
+    const isQcm = msg && msg.content && /\[x\]\s*[a-d]-/i.test(msg.content);
+    let filename = isFc ? 'FC_Export' : (isQcm ? 'QCM_Export' : 'Doc_Export');
+    if (msg.isCorrection) filename = 'Fiche_Correction';
+    else if (msg.isMethode) filename = 'Fiche_Methode';
+    
+    let subject = 'fiche';
+    if (msg.isCorrection || msg.isMethode) {
+      const idx = state.messages.findIndex(m => m.ts === msg.ts);
+      const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
+      if (userMsg && userMsg.content) {
+         const match = userMsg.content.match(/—\s*(.*)$/);
+         subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
+      } else subject = extractSubjectFromContent(msg.content);
+      filename = `Fiche_${msg.isMethode ? 'Methode_' : ''}${subject.replace(/\s+/g,'_').slice(0, 50)}`;
+    } else {
+      subject = extractSubjectFromContent(msg.content);
+      const prefix = isFc ? 'FC-' : (isQcm ? 'QCM-' : 'Doc-');
+      filename = `${prefix}${subject.replace(/\s+/g,'_').slice(0, 50)}`;
+    }
+
+    exportToHtml(textContent, filename + '.html');
 }
 
 // ════════════════════════════════════════
