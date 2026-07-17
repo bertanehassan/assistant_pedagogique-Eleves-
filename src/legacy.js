@@ -392,6 +392,31 @@ const isValidApiKey = k => {
 import { db } from './storage.js';
 
 // ════════════════════════════════════════
+// UTILS: MARKDOWN & MATH
+// ════════════════════════════════════════
+function parseMarkdownSafeMath(rawText) {
+  if (!rawText) return "";
+  const blocks = [];
+  function stash(content) {
+    blocks.push(content);
+    return `__MATH_BLOCK_${blocks.length - 1}__`;
+  }
+  let text = rawText;
+  
+  // Stash math blocks to protect them from marked
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (m) => stash(m));
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (m) => stash(m));
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (m) => stash(m));
+  text = text.replace(/\$((?:[^$\\]|\\.)+)\$/g, (m) => stash(m));
+
+  let html = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+  
+  // Restore math blocks
+  html = html.replace(/__MATH_BLOCK_(\d+)__/g, (m, idx) => blocks[parseInt(idx, 10)]);
+  return html;
+}
+
+// ════════════════════════════════════════
 // UTILS: WORD EXPORT
 // ════════════════════════════════════════
 function exportToWord(text, filename = "Export_IA.doc") {
@@ -441,7 +466,7 @@ function exportToWord(text, filename = "Export_IA.doc") {
 
 function exportToHtml(text, filename = "Export_IA.html") {
   // On ne remplace plus par des images pour garder le texte éditable, on utilise MathJax
-  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+  const parsedHtml = parseMarkdownSafeMath(text);
   const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -986,7 +1011,7 @@ function createMessageElement(m) {
   }
   let finalContent = escapeHtml(displayContent).replace(/\n/g, '<br>');
   if (typeof marked !== 'undefined') {
-    const rawHtml = m.role === 'user' ? escapeHtml(displayContent).replace(/\n/g, '<br>') : marked.parse(displayContent);
+    const rawHtml = m.role === 'user' ? escapeHtml(displayContent).replace(/\n/g, '<br>') : parseMarkdownSafeMath(displayContent);
     finalContent = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
   }
 
@@ -1315,7 +1340,7 @@ function updateLiveMessage(content) {
       const contentEl = lastEl.querySelector('.message-content');
       if (contentEl) {
         const displayContent = (content || '').replace(/<brouillon>[\s\S]*?(?:<\/brouillon>|$)/gi, '').trim();
-        const rawHtml = marked.parse(displayContent);
+        const rawHtml = parseMarkdownSafeMath(displayContent);
         contentEl.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
       }
     }
