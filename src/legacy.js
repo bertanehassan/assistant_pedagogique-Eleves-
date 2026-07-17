@@ -990,7 +990,10 @@ function createMessageElement(m) {
   const isFcMsg = (m.workflowUsed === 'FC-Fr 1' || m.workflowUsed === 'FC-Fr 2' || m.workflowUsed === 'FC-Ar 1' || m.workflowUsed === 'FC-Ar 2' || m.workflowUsed === 'FC-En 1' || m.workflowUsed === 'FC-En 2');
   const isCorrection = !!m.isCorrection;
   const isMethodeMsg = !!m.isMethode;
-  const isQcmContent = m.content && /\[x\]\s*[a-d]-/i.test(m.content);
+  const isQcmContent = m.content && (
+    /\[x\]\s*[a-d]-/i.test(m.content) || 
+    /(?:Explication|Explanation)\s*:\s*(?:VRAI|FAUX|TRUE|FALSE)\b/i.test(m.content)
+  );
   const isFiche = (isCorrection || isMethodeMsg);
   const wordBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${isFiche ? '📄 DOCX' : t('btn_word')}</button>` : '';
   const pdfBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent' && isFiche) ? `<button class="msg-action-btn" data-action="export-pdf" data-id="${msgId}" style="color:#f87171;border-color:rgba(248,113,113,0.4)">📕 PDF</button>` : '';
