@@ -397,10 +397,10 @@ import { db } from './storage.js';
 function exportToWord(text, filename = "Export_IA.doc") {
   // Convertir les formules LaTeX en images pour que MS Word puisse les lire
   let wordText = text;
-  wordText = wordText.replace(/\$\$(.*?)\$\$/gs, (match, math) => {
+  wordText = wordText.replace(/(?:\$\$|\\\[)([\s\S]*?)(?:\$\$|\\\])/g, (match, math) => {
     return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
   });
-  wordText = wordText.replace(/\$(.*?)\$/g, (match, math) => {
+  wordText = wordText.replace(/(?:\$|\\\()([\s\S]*?)(?:\$|\\\))/g, (match, math) => {
     return `<img style="vertical-align:middle" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
   });
 
@@ -442,10 +442,10 @@ function exportToWord(text, filename = "Export_IA.doc") {
 function exportToHtml(text, filename = "Export_IA.html") {
   // Remplacement robuste des formules par des SVG CodeCogs (fiabilité à 100% indépendante du parseur Markdown)
   let htmlText = text;
-  htmlText = htmlText.replace(/\$\$(.*?)\$\$/gs, (match, math) => {
+  htmlText = htmlText.replace(/(?:\$\$|\\\[)([\s\S]*?)(?:\$\$|\\\])/g, (match, math) => {
     return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
   });
-  htmlText = htmlText.replace(/\$(.*?)\$/g, (match, math) => {
+  htmlText = htmlText.replace(/(?:\$|\\\()([\s\S]*?)(?:\$|\\\))/g, (match, math) => {
     return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
   });
 
@@ -493,10 +493,10 @@ function exportToPdf(text, filename = "Export_IA.pdf") {
   }
   
   let htmlText = text;
-  htmlText = htmlText.replace(/\$\$(.*?)\$\$/gs, (match, math) => {
+  htmlText = htmlText.replace(/(?:\$\$|\\\[)([\s\S]*?)(?:\$\$|\\\])/g, (match, math) => {
     return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
   });
-  htmlText = htmlText.replace(/\$(.*?)\$/g, (match, math) => {
+  htmlText = htmlText.replace(/(?:\$|\\\()([\s\S]*?)(?:\$|\\\))/g, (match, math) => {
     return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
   });
 
@@ -9966,6 +9966,8 @@ const openDidactiqueModal = async () => {
       if (s.objectifs) $('#didac-objectifs').value = s.objectifs;
       if (s.exemple) $('#didac-exemple').value = s.exemple;
       if ($('#didac-export-word')) $('#didac-export-word').checked = !!s.exportWord;
+      if ($('#didac-export-html')) $('#didac-export-html').checked = !!s.exportHtml;
+      if ($('#didac-export-pdf')) $('#didac-export-pdf').checked = !!s.exportPdf;
     }
   } catch(e) {}
 
@@ -10019,6 +10021,8 @@ const generateDidactiqueSheet = async () => {
     directives:    get('didac-directives'),
     exemple:      get('didac-exemple'),
     exportWord:   $('#didac-export-word')?.checked || false,
+    exportHtml:   $('#didac-export-html')?.checked || false,
+    exportPdf:    $('#didac-export-pdf')?.checked || false,
   };
 
   if (!hasPdf && (!cfg.cours || cfg.cours.length < 20)) {
@@ -10326,6 +10330,8 @@ const saveDidactiqueConfigData = async () => {
       objectifs: get('didac-objectifs'),
       exemple: get('didac-exemple'),
       exportWord: $('#didac-export-word')?.checked || false,
+      exportHtml: $('#didac-export-html')?.checked || false,
+      exportPdf: $('#didac-export-pdf')?.checked || false,
       _didacPdfName,
       _didacPdfBase64,
       _didacPdfMime,
@@ -10374,6 +10380,8 @@ const loadDidactiqueConfigData = async () => {
     set('didac-objectifs', data.objectifs);
     set('didac-exemple', data.exemple);
     if ($('#didac-export-word')) $('#didac-export-word').checked = data.exportWord || false;
+    if ($('#didac-export-html')) $('#didac-export-html').checked = data.exportHtml || false;
+    if ($('#didac-export-pdf')) $('#didac-export-pdf').checked = data.exportPdf || false;
     _didacPdfName   = data._didacPdfName   || '';
     _didacPdfBase64 = data._didacPdfBase64 || null;
     _didacPdfMime   = data._didacPdfMime   || '';
