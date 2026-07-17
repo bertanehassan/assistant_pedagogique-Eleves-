@@ -399,7 +399,7 @@ function parseMarkdownSafeMath(rawText) {
   const blocks = [];
   function stash(content) {
     blocks.push(content);
-    return `__MATH_BLOCK_${blocks.length - 1}__`;
+    return `@@MATH_BLOCK_${blocks.length - 1}@@`;
   }
   let text = rawText;
   
@@ -412,7 +412,7 @@ function parseMarkdownSafeMath(rawText) {
   let html = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
   
   // Restore math blocks
-  html = html.replace(/__MATH_BLOCK_(\d+)__/g, (m, idx) => blocks[parseInt(idx, 10)]);
+  html = html.replace(/@@MATH_BLOCK_(\d+)@@/g, (m, idx) => blocks[parseInt(idx, 10)]);
   return html;
 }
 
@@ -7133,29 +7133,44 @@ function getCleanedMessageHtml(msgId) {
 }
 
 function exportMessageToWord(msgId) {
-    const data = getCleanedMessageHtml(msgId);
-    if (!data) return;
-    
-    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
-                   "xmlns:w='urn:schemas-microsoft-com:office:word' " +
-                   "xmlns='http://www.w3.org/TR/REC-html40'>" +
-                   "<head><meta charset='utf-8'><title>Export</title>" +
-                   "<style>" +
-                   "@page WordSection1 { size: 841.9pt 595.3pt; mso-page-orientation: landscape; margin: 36.0pt; }" +
-                   "div.WordSection1 { page: WordSection1; }" +
-                   "body{font-family:Calibri,sans-serif;line-height:1.6;} a{color:#1a73e8;}</style>" +
-                   "</head><body><div class='WordSection1'>";
-    const sourceHTML = header + data.htmlContent + "</div></body></html>";
-    
-    const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const fileDownload = document.createElement("a");
-    document.body.appendChild(fileDownload);
-    fileDownload.href = url;
-    fileDownload.download = data.filename + '.doc';
-    fileDownload.click();
-    setTimeout(() => { document.body.removeChild(fileDownload); URL.revokeObjectURL(url); }, 100);
-    toast("Export Word réussi !", "success");
+    const msg = state.messages.find(m => (m.ts || '') == msgId);
+    if (!msg) return;
+
+    let textContent = msg.content || '';
+    const isFc = msg && (msg.workflowUsed === 'FC-Fr 1' || msg.workflowUsed === 'FC-Fr 2' || msg.workflowUsed === 'FC-Ar 1' || msg.workflowUsed === 'FC-Ar 2' || msg.workflowUsed === 'FC-En 1' || msg.workflowUsed === 'FC-En 2');
+
+    // Supprimer le bloc de trace de chaîne
+    textContent = textContent.replace(/<details[\s\S]*?<\/details>/gi, '');
+    textContent = textContent.replace(/🔗 Résultat de la chaîne.*?(<br>|<\/p>|<h[1-6]>|\n)/ig, '$1');
+
+    if (isFc) {
+      const cards = parseFcOutput(textContent);
+      if (cards.length > 0) {
+        textContent = cards.map(c => `**${c.id}- ${c.question}**\n\nRéponse : ${c.reponse}\n\n• Explication : ${c.explication}\n\n${c.pour_aller_plus_loin ? `• Pour aller plus loin : ${c.pour_aller_plus_loin}` : ''}\n\n---\n\n`).join('');
+      }
+    }
+
+    const isQcm = msg && msg.content && /\[x\]\s*[a-d]-/i.test(msg.content);
+    let filename = isFc ? 'FC_Export' : (isQcm ? 'QCM_Export' : 'Doc_Export');
+    if (msg.isCorrection) filename = 'Fiche_Correction';
+    else if (msg.isMethode) filename = 'Fiche_Methode';
+
+    let subject = 'fiche';
+    if (msg.isCorrection || msg.isMethode) {
+      const idx = state.messages.findIndex(m => m.ts === msg.ts);
+      const userMsg = state.messages.slice(0, idx).reverse().find(m => m.role === 'user');
+      if (userMsg && userMsg.content) {
+         const match = userMsg.content.match(/—\s*(.*)$/);
+         subject = match ? match[1].trim() : extractSubjectFromContent(msg.content);
+      } else subject = extractSubjectFromContent(msg.content);
+      filename = `Fiche_${msg.isMethode ? 'Methode_' : ''}${subject.replace(/\s+/g,'_').slice(0, 50)}`;
+    } else {
+      subject = extractSubjectFromContent(msg.content);
+      const prefix = isFc ? 'FC-' : (isQcm ? 'QCM-' : 'Doc-');
+      filename = `${prefix}${subject.replace(/\s+/g,'_').slice(0, 50)}`;
+    }
+
+    exportToWord(textContent, filename + '.doc');
 }
 
 function exportMessageToPdf(msgId) {
