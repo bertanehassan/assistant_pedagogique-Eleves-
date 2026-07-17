@@ -991,13 +991,14 @@ function createMessageElement(m) {
   const isCorrection = !!m.isCorrection;
   const isMethodeMsg = !!m.isMethode;
   const isQcmContent = m.content && /\[x\]\s*[a-d]-/i.test(m.content);
-  const isFiche = (isCorrection || isMethodeMsg);
-  const wordBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent') ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${isFiche ? '📄 DOCX' : t('btn_word')}</button>` : '';
-  const pdfBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent' && isFiche) ? `<button class="msg-action-btn" data-action="export-pdf" data-id="${msgId}" style="color:#f87171;border-color:rgba(248,113,113,0.4)">📕 PDF</button>` : '';
-  const htmlBtn = (m.role === 'assistant' && state.agent?.id !== 'default-guide-agent' && isFiche) ? `<button class="msg-action-btn" data-action="export-html" data-id="${msgId}" style="color:#a78bfa;border-color:rgba(167,139,250,0.4)">🌐 HTML</button>` : '';
-  const qpBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
+  const isDidactiqueMsg = !!m.isCorrection && !m.isMethode && !isFcMsg;  // Didactique uses isCorrection:true
+  const isFiche = (isCorrection || isMethodeMsg);  // Fiches Correction + Méthode get PDF/HTML buttons
+  const wordBtn = m.role === 'assistant' ? `<button class="msg-action-btn" data-action="export-word" data-id="${msgId}" style="color:#4fc3f7;border-color:rgba(79,195,247,0.4)">${isFiche ? '📄 DOCX' : t('btn_word')}</button>` : '';
+  const pdfBtn = (m.role === 'assistant' && isFiche) ? `<button class="msg-action-btn" data-action="export-pdf" data-id="${msgId}" style="color:#f87171;border-color:rgba(248,113,113,0.4)">📕 PDF</button>` : '';
+  const htmlBtn = (m.role === 'assistant' && isFiche) ? `<button class="msg-action-btn" data-action="export-html" data-id="${msgId}" style="color:#a78bfa;border-color:rgba(167,139,250,0.4)">🌐 HTML</button>` : '';
+  const qpBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && !isMethodeMsg && isQcmContent) ? `<button class="msg-action-btn" data-action="export-qp-modal" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">${t('btn_convert')}</button>` : '';
   const fcJsonBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="export-fc-json" data-id="${msgId}" style="color:var(--neon);border-color:rgba(0,255,157,0.3)">⬇️ JSON QR</button>` : '';
-  const wqBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && state.agent?.id !== 'default-guide-agent' && isQcmContent) ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
+  const wqBtn = (m.role === 'assistant' && !isFcMsg && !isCorrection && !isMethodeMsg && isQcmContent) ? `<button class="msg-action-btn" data-action="test-web-quiz" data-id="${msgId}" style="color:#d4af37;border-color:rgba(212,175,55,0.4)">${t('btn_test_qcm')}</button>` : '';
   const fcPlayerBtn = m.role === 'assistant' && isFcMsg ? `<button class="msg-action-btn" data-action="test-fc-player" data-id="${msgId}" style="color:#f59e0b;border-color:rgba(245,158,11,0.4)">📇 Tester</button>` : '';
   const ratingHtml = m.role === 'assistant' ? `<div class="msg-rating" aria-label="Évaluer la réponse"><span class="rating-label">${t('ui_quality')}</span>${[1,2,3,4,5].map(s => `<button class="rating-star${(m.rating||0)>=s?' active':''}" data-action="rate" data-id="${msgId}" data-score="${s}" title="Noter ${s}/5">★</button>`).join('')}</div>` : '';
   const imgHtml = m.imageData ? `<div class="msg-image"><img src="${m.imageData}" alt="Image jointe" loading="lazy"></div>` : '';
