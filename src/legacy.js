@@ -420,16 +420,8 @@ function parseMarkdownSafeMath(rawText) {
 // UTILS: WORD EXPORT
 // ════════════════════════════════════════
 function exportToWord(text, filename = "Export_IA.doc") {
-  // Convertir les formules LaTeX en images pour que MS Word puisse les lire
-  let wordText = text;
-  wordText = wordText.replace(/(?:\$\$|\\\[)([\s\S]*?)(?:\$\$|\\\])/g, (match, math) => {
-    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
-  });
-  wordText = wordText.replace(/(?:\$|\\\()([\s\S]*?)(?:\$|\\\))/g, (match, math) => {
-    return `<img style="vertical-align:middle" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
-  });
-
-  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(wordText) : wordText.replace(/\n/g, '<br>');
+  // L'utilisateur demande du LaTeX brut pour Word. parseMarkdownSafeMath protège les balises.
+  const parsedHtml = parseMarkdownSafeMath(text);
   const htmlContent = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
@@ -517,15 +509,8 @@ function exportToPdf(text, filename = "Export_IA.pdf") {
     return;
   }
   
-  let htmlText = text;
-  htmlText = htmlText.replace(/(?:\$\$|\\\[)([\s\S]*?)(?:\$\$|\\\])/g, (match, math) => {
-    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
-  });
-  htmlText = htmlText.replace(/(?:\$|\\\()([\s\S]*?)(?:\$|\\\))/g, (match, math) => {
-    return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
-  });
-
-  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(htmlText) : htmlText.replace(/\n/g, '<br>');
+  // Remplacer CodeCogs par parseMarkdownSafeMath et MathJax pour garantir le rendu sans requêtes externes qui échouent
+  const parsedHtml = parseMarkdownSafeMath(text);
   const container = document.createElement('div');
   container.innerHTML = parsedHtml;
   container.style.padding = '20px';
@@ -566,7 +551,17 @@ function exportToPdf(text, filename = "Export_IA.pdf") {
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
   };
   
-  html2pdf().set(opt).from(container).save();
+  // Rendre avec MathJax avant de lancer html2pdf
+  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+    window.MathJax.typesetPromise([container]).then(() => {
+      html2pdf().set(opt).from(container).save();
+    }).catch(e => {
+      console.error('MathJax typeset error in PDF export:', e);
+      html2pdf().set(opt).from(container).save();
+    });
+  } else {
+    html2pdf().set(opt).from(container).save();
+  }
 }
 
 // ════════════════════════════════════════
