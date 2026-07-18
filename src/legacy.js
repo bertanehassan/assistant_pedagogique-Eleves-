@@ -420,8 +420,24 @@ function parseMarkdownSafeMath(rawText) {
 // UTILS: WORD EXPORT
 // ════════════════════════════════════════
 function exportToWord(text, filename = "Export_IA.doc") {
-  // L'utilisateur demande du LaTeX brut pour Word. parseMarkdownSafeMath protège les balises.
-  const parsedHtml = parseMarkdownSafeMath(text);
+  // Convertir les formules LaTeX en images CodeCogs pour MS Word
+  let wordText = text;
+
+  // Blocs centrés
+  const blockReplacer = (match, math) => {
+    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
+  };
+  wordText = wordText.replace(/\\\[([\s\S]*?)\\\]/g, blockReplacer);
+  wordText = wordText.replace(/\$\$([\s\S]*?)\$\$/g, blockReplacer);
+
+  // Blocs en ligne
+  const inlineReplacer = (match, math) => {
+    return `<img style="vertical-align:middle" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
+  };
+  wordText = wordText.replace(/\\\(([\s\S]*?)\\\)/g, inlineReplacer);
+  wordText = wordText.replace(/\$((?:[^$\\]|\\.)+)\$/g, inlineReplacer);
+
+  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(wordText) : wordText.replace(/\n/g, '<br>');
   const htmlContent = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
@@ -509,8 +525,23 @@ function exportToPdf(text, filename = "Export_IA.pdf") {
     return;
   }
   
-  // Remplacer CodeCogs par parseMarkdownSafeMath et MathJax pour garantir le rendu sans requêtes externes qui échouent
-  const parsedHtml = parseMarkdownSafeMath(text);
+  let htmlText = text;
+
+  // Blocs centrés CodeCogs SVG
+  const blockReplacerSvg = (match, math) => {
+    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
+  };
+  htmlText = htmlText.replace(/\\\[([\s\S]*?)\\\]/g, blockReplacerSvg);
+  htmlText = htmlText.replace(/\$\$([\s\S]*?)\$\$/g, blockReplacerSvg);
+
+  // Blocs en ligne CodeCogs SVG
+  const inlineReplacerSvg = (match, math) => {
+    return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
+  };
+  htmlText = htmlText.replace(/\\\(([\s\S]*?)\\\)/g, inlineReplacerSvg);
+  htmlText = htmlText.replace(/\$((?:[^$\\]|\\.)+)\$/g, inlineReplacerSvg);
+
+  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(htmlText) : htmlText.replace(/\n/g, '<br>');
   const container = document.createElement('div');
   container.innerHTML = parsedHtml;
   container.style.padding = '20px';
@@ -551,17 +582,7 @@ function exportToPdf(text, filename = "Export_IA.pdf") {
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
   };
   
-  // Rendre avec MathJax avant de lancer html2pdf
-  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
-    window.MathJax.typesetPromise([container]).then(() => {
-      html2pdf().set(opt).from(container).save();
-    }).catch(e => {
-      console.error('MathJax typeset error in PDF export:', e);
-      html2pdf().set(opt).from(container).save();
-    });
-  } else {
-    html2pdf().set(opt).from(container).save();
-  }
+  html2pdf().set(opt).from(container).save();
 }
 
 // ════════════════════════════════════════
