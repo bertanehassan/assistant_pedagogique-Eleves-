@@ -475,7 +475,148 @@ function exportToWord(text, filename = "Export_IA.doc") {
 function exportToHtml(text, filename = "Export_IA.html") {
   // On ne remplace plus par des images pour garder le texte éditable, on utilise MathJax
   const parsedHtml = parseMarkdownSafeMath(text);
-  const htmlContent = `<!DOCTYPE html>
+  
+  let htmlContent = '';
+  
+  if (filename.includes('Fiche_Correction')) {
+    htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modèle de fiche générique</title>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Dancing Script SemiBold', 'Segoe UI', Arial, sans-serif;
+      font-size: 24px;
+      line-height: 1.6;
+      color: #050472;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 10px 20px 20px 20px;
+    }
+
+    h3 {
+      text-align: center;
+      font-size: 36px;
+      color: #70040499;
+      margin-bottom: 10px;
+      text-decoration: underline;
+      text-decoration-color: #1506b5;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0 auto 10px auto;
+    }
+
+    table, th, td {
+      font-family: 'Dancing Script SemiBold', 'Segoe Script', cursive;
+    }
+
+    th, td {
+      border: 2px solid #470202;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #decaca;
+      text-align: center;
+      font-size: 26px;
+      color: #e71414;
+    }
+
+    td {
+      text-align: left;
+      font-size: 24px;
+      color: #170bc3cd;
+    }
+
+    td:first-child {
+      text-align: center;
+      font-size: 26px;
+      color: #e71414;
+      font-weight: bold;
+      vertical-align: middle !important;
+        text-align: center;
+    }
+
+    th:nth-child(3), td:nth-child(3),
+    th:nth-child(4), td:nth-child(4) {
+      width: 24%;
+      min-width: 220px;
+    }
+
+    tr {
+      border-bottom: 2px solid #470202;
+    }
+
+    p {
+      text-align: left;
+      font-size: 26px;
+      color: #0383298a;
+      margin-bottom: 1px;
+    }
+
+    li {
+      margin-bottom: 1px;
+      font-size: 26px;
+      color: #140599b0;
+      font-weight: bold;
+    }
+
+    .MathJax, .MathJax span, .MathJax_Display, .mjx-chtml {
+      color: #c90a0a !important;
+      font-size: 1.2em !important;
+      font-family: 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif !important;
+      line-height: 1.35;
+    }
+
+    .MathJax_Display {
+      text-align: left !important;
+      margin: 6px 0 !important;
+    }
+
+    mjx-container {
+      display: inline-block !important;
+      vertical-align: middle;
+    }
+
+    blockquote {
+      border-left: 4px solid #0a8a37;
+      margin-left: 0;
+      padding-left: 16px;
+      color: #666;
+    }
+
+    @media print {
+      @page { size: landscape; margin: 15mm; }
+      body { max-width: 100%; padding: 0; }
+    }
+  </style>
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+        displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']]
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  ${parsedHtml}
+</body>
+</html>`;
+  } else {
+    htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -508,6 +649,8 @@ function exportToHtml(text, filename = "Export_IA.html") {
   ${parsedHtml}
 </body>
 </html>`;
+  }
+
   const blob = new Blob(['\ufeff', htmlContent], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -8279,10 +8422,10 @@ function bindEvents() {
     </objective>
 
     <style>
-      - Réponse attendue : Rédige en français simple (niveau B2). Explique le cheminement intellectuel étape par étape : "D'après le document 1, on observe que...", "En combinant cette information avec nos connaissances sur...", "On en déduit donc que...". La démarche est plus importante que la réponse brute.
+      - Réponse attendue : Rédige en français simple (niveau B2) mais rigoureusement exact scientifiquement. Explique le cheminement intellectuel étape par étape : "D'après le document 1, on observe que...", "En combinant cette information avec nos connaissances sur...", "On en déduit donc que...". La démarche est plus importante que la réponse brute.
       - Critères d'évaluation + barème : Décompose le barème total de la question en points attribués pour chaque étape du raisonnement. Exemple : "Identification correcte de la courbe (0.25 pt) / Extraction de la valeur (0.25 pt) / Formulation d'une phrase d'analyse correcte (0.5 pt) / Conclusion valide (0.5 pt)".
       - Compétence évaluée : Choisis l'intitulé le plus pertinent parmi la liste du Référentiel Pédagogique. Tu peux combiner deux compétences si nécessaire (ex: "Analyser un graphique et déduire").
-      - Intégration des schémas-blocs fonctionnels en ASCII : Lorsque le sujet demande de réaliser ou légender un schéma, produis une représentation en art ASCII compact (max 5 lignes) avec des flèches (-->, =>), des barres (|) et des encadrés ([Nom du bloc]).
+      - Formules et Génétique : Utilise la syntaxe LaTeX (avec $...$) pour les conventions d'écriture en génétique (ex: $X^N$, $X^n$) et les calculs.
     </style>
 
     <tone>
@@ -8329,15 +8472,17 @@ function bindEvents() {
 
   <gardes_fous>
     <contraintes_negatives>
+      - NE PAS utiliser de retours à la ligne (\n) dans les cellules du tableau Markdown. Utilise EXCLUSIVEMENT la balise HTML <br> pour aérer le texte. Un retour à la ligne cassera le tableau !
+      - EXHAUSTIVITÉ OBLIGATOIRE : Tu DOIS traiter TOUTES les questions du sujet, de la première à la dernière. N'en saute aucune et ne les résume pas.
       - NE PAS inventer de barème : Utilise [Barème à définir] si non fourni.
       - NE PAS faire de hors-sujet sur le format de sortie.
       - NE PAS ignorer le référentiel marocain : La colonne compétence DOIT utiliser la terminologie officielle fournie.
-      - NE PAS dépasser le niveau B2 dans la formulation des réponses attendues.
+      - NE PAS dessiner de schémas ASCII complexes dans le tableau, décris-les plutôt avec du texte et des balises <br> pour ne pas casser le formatage.
     </contraintes_negatives>
 
     <grounding>
       - Strict : Utilise uniquement les informations du sujet et du barème fournis.
-      - N'utilise PAS de balises LaTeX ($...) pour les variables ou les gènes, écris-les normalement en texte brut.
+      - Scientific_formatting_directives : Utilise la syntaxe LaTeX ($...$) pour la génétique et les formules, le rendu supporte MathJax.
     </grounding>
   </gardes_fous>
 
@@ -8413,6 +8558,8 @@ function bindEvents() {
 
   <gardes_fous>
     <contraintes_negatives>
+      - NE PAS utiliser de retours à la ligne (\n) dans les cellules du tableau Markdown. Utilise EXCLUSIVEMENT la balise HTML <br> pour aérer le texte. Un retour à la ligne cassera le tableau !
+      - EXHAUSTIVITÉ OBLIGATOIRE : Tu DOIS traiter TOUTES les questions du sujet, de la première à la dernière. N'en saute aucune.
       - NE PAS inventer de barème : Utilise [Barème à définir] si non fourni.
       - NE PAS faire de hors-sujet sur le format de sortie.
       - NE PAS être trop long : Une réponse (hors schéma-bloc) ne doit pas dépasser 10 lignes.
