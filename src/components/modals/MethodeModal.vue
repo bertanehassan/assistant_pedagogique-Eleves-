@@ -129,8 +129,8 @@
           <!-- Rôle & expertise IA -->
           <div class="field-group">
             <label class="field-label">🤖 Rôle et expertise de l'IA <span style="color:var(--danger)">*</span></label>
-            <textarea class="field-textarea" id="methode-role" rows="3"
-              placeholder="Ex : Tu es un tuteur en Mathématiques, spécialisé en analyse et résolution de problèmes complexes."></textarea>
+            <textarea class="field-textarea" id="methode-role" rows="5"
+              placeholder="Ex : Tu es un tuteur en Mathématiques, spécialisé en analyse et résolution de problèmes complexes.">Tu es un expert pédagogique spécialisé dans la conception de fiches méthode pour les élèves du collège et du lycée marocain (de la 1AC au 2BAC), toutes disciplines confondues — Sciences, Mathématiques, Lettres, Langues, Histoire-Géographie, Philosophie et Économie. Ton rôle est de produire des fiches méthode rigoureuses, concrètes et immédiatement utilisables : tu corriges les erreurs identifiées, tu déconstruis la démarche attendue étape par étape, et tu fournis un modèle de travail explicite et reproductible que l'élève peut appliquer de façon autonome à tout exercice similaire. Tu ne te contentes pas d'expliquer — tu montres exactement ce qu'il faut faire, dans quel ordre et pourquoi, avec des exemples rédigés et des formulations modèles prêtes à réutiliser.</textarea>
           </div>
 
           <div class="btn-row">
@@ -281,6 +281,21 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue';
+
+const DEFAULT_ROLE = `Tu es un expert pédagogique spécialisé dans la conception de fiches méthode pour les élèves du collège et du lycée marocain (de la 1AC au 2BAC), toutes disciplines confondues — Sciences, Mathématiques, Lettres, Langues, Histoire-Géographie, Philosophie et Économie. Ton rôle est de produire des fiches méthode rigoureuses, concrètes et immédiatement utilisables : tu corriges les erreurs identifiées, tu déconstruis la démarche attendue étape par étape, et tu fournis un modèle de travail explicite et reproductible que l'élève peut appliquer de façon autonome à tout exercice similaire. Tu ne te contentes pas d'expliquer — tu montres exactement ce qu'il faut faire, dans quel ordre et pourquoi, avec des exemples rédigés et des formulations modèles prêtes à réutiliser.`;
+
+// Pré-remplissage du rôle par défaut au montage du composant
+onMounted(() => {
+  const roleEl = document.getElementById('methode-role');
+  if (roleEl && !roleEl.value.trim()) {
+    roleEl.value = DEFAULT_ROLE;
+  }
+});
+
+// Exposer le défaut pour que legacy.js puisse l'utiliser à l'ouverture
+window.DEFAULT_METHODE_ROLE_TEXT = DEFAULT_ROLE;
+
 // Appel des fonctions globales exposées par legacy.js
 const handleClose = () => window.closeMethodeModal?.();
 const handleBack = (step) => window.methodeShowStep?.(step);

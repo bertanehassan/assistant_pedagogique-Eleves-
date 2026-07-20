@@ -11209,6 +11209,8 @@ const methodeBuildSummary = () => {
   if (summaryEl) summaryEl.innerHTML = html;
 };
 
+const DEFAULT_METHODE_ROLE = `Tu es un expert pédagogique spécialisé dans la conception de fiches méthode pour les élèves du collège et du lycée marocain (de la 1AC au 2BAC), toutes disciplines confondues — Sciences, Mathématiques, Lettres, Langues, Histoire-Géographie, Philosophie et Économie. Ton rôle est de produire des fiches méthode rigoureuses, concrètes et immédiatement utilisables : tu corriges les erreurs identifiées, tu déconstruis la démarche attendue étape par étape, et tu fournis un modèle de travail explicite et reproductible que l'élève peut appliquer de façon autonome à tout exercice similaire. Tu ne te contentes pas d'expliquer — tu montres exactement ce qu'il faut faire, dans quel ordre et pourquoi, avec des exemples rédigés et des formulations modèles prêtes à réutiliser.`;
+
 const openMethodeModal = async () => {
   const geminiId = "gemini-3.5-flash";
   if (state.model !== geminiId) {
@@ -11228,7 +11230,9 @@ const openMethodeModal = async () => {
       if (s.customDiscipline) $('#methode-custom-discipline').value = s.customDiscipline;
       if (s.niveau) $('#methode-niveau').value = s.niveau;
       if (s.niveauLangue) $('#methode-niveau-langue').value = s.niveauLangue;
+      // Toujours préserver le rôle sauvegardé, sinon mettre le défaut
       if (s.role) $('#methode-role').value = s.role;
+      else if ($('#methode-role')) $('#methode-role').value = DEFAULT_METHODE_ROLE;
       if (s.competences) $('#methode-competences').value = s.competences;
       if (s.directives) $('#methode-directives').value = s.directives;
       if (s.exemple) $('#methode-exemple').value = s.exemple;
@@ -11238,6 +11242,13 @@ const openMethodeModal = async () => {
       if ($('#methode-export-pdf')) $('#methode-export-pdf').checked = !!s.exportPdf;
     }
   } catch(e) {}
+
+  // Toujours appliquer le rôle par défaut si le champ est vide
+  if ($('#methode-role') && !$('#methode-role').value.trim()) {
+    $('#methode-role').value = DEFAULT_METHODE_ROLE;
+  }
+  // Supprimer l'ancienne sauvegarde rapide localStorage si elle existe (migration)
+  try { if (localStorage.getItem('methodeSavedConfig')) { const _s = JSON.parse(localStorage.getItem('methodeSavedConfig')); if (!_s.role) { _s.role = DEFAULT_METHODE_ROLE; localStorage.setItem('methodeSavedConfig', JSON.stringify(_s)); } } } catch(e) {}
 
   if (_methodePdfBase64) {
     if ($('#methode-pdf-badge')) {
@@ -11257,6 +11268,15 @@ const openMethodeModal = async () => {
 
   methodeShowStep(1);
   $('#methode-modal').classList.add('active');
+
+  // Injection différée du rôle par défaut (après rendu Vue)
+  setTimeout(() => {
+    const roleEl = document.getElementById('methode-role');
+    const defaultRole = window.DEFAULT_METHODE_ROLE_TEXT || DEFAULT_METHODE_ROLE;
+    if (roleEl && !roleEl.value.trim()) {
+      roleEl.value = defaultRole;
+    }
+  }, 200);
 };
 
 const closeMethodeModal = () => $('#methode-modal').classList.remove('active');
@@ -11574,7 +11594,12 @@ const loadMethodeConfigData = async () => {
     }
     set('methode-niveau', data.niveau);
     set('methode-niveau-langue', data.niveauLangue);
-    set('methode-role', data.role);
+    // Si le rôle sauvegardé est vide, injecter le défaut
+    if (data.role && data.role.trim()) {
+      set('methode-role', data.role);
+    } else {
+      if ($('#methode-role')) $('#methode-role').value = DEFAULT_METHODE_ROLE;
+    }
     set('methode-exercice', data.exercice);
     set('methode-competences', data.competences);
     set('methode-exemple', data.exemple);
@@ -11649,6 +11674,37 @@ window._methodeDeleteHandler = deleteMethodeConfigData;
 document.addEventListener('do-save-methode-config',   window._methodeSaveHandler);
 document.addEventListener('do-load-methode-config',   window._methodeLoadHandler);
 document.addEventListener('do-delete-methode-config', window._methodeDeleteHandler);
+
+// ── MutationObserver : injection du rôle par défaut à chaque ouverture ──
+(function() {
+  const applyDefaultRole = () => {
+    const roleEl = document.getElementById('methode-role');
+    if (roleEl && !roleEl.value.trim()) {
+      roleEl.value = DEFAULT_METHODE_ROLE;
+    }
+  };
+  const tryObserve = () => {
+    const modalEl = document.getElementById('methode-modal');
+    if (modalEl) {
+      new MutationObserver((mutations) => {
+        mutations.forEach((m) => {
+          if (m.attributeName === 'class' && modalEl.classList.contains('active')) {
+            applyDefaultRole();
+            setTimeout(applyDefaultRole, 150);
+          }
+        });
+      }).observe(modalEl, { attributes: true });
+    } else {
+      // Modal pas encore dans le DOM, attendre
+      setTimeout(tryObserve, 300);
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryObserve);
+  } else {
+    tryObserve();
+  }
+})();
 
 window.methodeValidateStep1 = methodeValidateStep1;
 window.methodeValidateStep2 = methodeValidateStep2;
