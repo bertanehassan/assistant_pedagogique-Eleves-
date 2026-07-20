@@ -438,17 +438,27 @@ function exportToWord(text, filename = "Export_IA.doc") {
   wordText = wordText.replace(/\$((?:[^$\\]|\\.)+)\$/g, inlineReplacer);
 
   const parsedHtml = typeof marked !== 'undefined' ? marked.parse(wordText) : wordText.replace(/\n/g, '<br>');
+  const isEval = filename.includes('Evaluation_');
+  const pageCss = isEval ? `
+        @page WordSection1 {
+          size: 595.3pt 841.9pt; /* A4 Portrait */
+          margin: 36.0pt 36.0pt 36.0pt 36.0pt;
+        }
+  ` : `
+        @page WordSection1 {
+          size: 841.9pt 595.3pt; /* A4 Landscape */
+          mso-page-orientation: landscape;
+          margin: 36.0pt 36.0pt 36.0pt 36.0pt;
+        }
+  `;
+
   const htmlContent = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
       <meta charset='utf-8'>
       <title>Export IA</title>
       <style>
-        @page WordSection1 {
-          size: 841.9pt 595.3pt; /* A4 Landscape */
-          mso-page-orientation: landscape;
-          margin: 36.0pt 36.0pt 36.0pt 36.0pt;
-        }
+${pageCss}
         div.WordSection1 { page: WordSection1; }
       </style>
     </head>
@@ -649,7 +659,6 @@ function exportToHtml(text, filename = "Export_IA.html") {
     table { border-collapse:collapse; width:100%; margin:10px 0 16px 0; font-size:13px; }
     th { background:#0d0d6b; color:white; padding:7px 12px; text-align:center; font-weight:700; border:1px solid #0d0d6b; }
     td { border:1px solid #aaa; padding:6px 12px; text-align:left; vertical-align:top; color:#1a1a2e; }
-    td:first-child { font-weight:700; color:#0d0d6b; text-align:center; background:#f0f0ff; }
     tr:nth-child(even) td { background:#fafafa; }
     ol { margin:8px 0 12px 0; padding-left:22px; }
     ol li { margin-bottom:8px; color:#1a1a2e; }
@@ -663,9 +672,23 @@ function exportToHtml(text, filename = "Export_IA.html") {
     .MathJax, .MathJax span, .MathJax_Display, .mjx-chtml { font-size:1em !important; }
     mjx-container { display:inline-block !important; vertical-align:middle; }
     @media print {
-      @page { size: A4 portrait; margin: 15mm 12mm; }
-      body { max-width:100%; padding:0; font-size:13px; }
-      .page-break { page-break-before:always; border:none; margin:0; }
+      @page { size: A4 portrait; margin: 10mm 10mm; }
+      body { max-width:100%; padding:0; font-size:11.5px; line-height: 1.4; }
+      h1 { font-size: 16px; margin: 0; }
+      h2 { font-size: 13px; margin-top: 10px; margin-bottom: 4px; padding-bottom: 2px; }
+      h3 { font-size: 12px; margin-top: 8px; margin-bottom: 4px; }
+      h4 { font-size: 11.5px; margin-top: 6px; margin-bottom: 2px; }
+      .exam-header { padding: 6px 10px; margin-bottom: 8px; }
+      .exam-header .exam-title { font-size: 13px; margin: 4px 0; }
+      .exam-header p { font-size: 11px; margin: 1px 0; }
+      .version-a, .version-b, .corrige-header { padding: 6px 12px; margin: 15px 0 8px 0; font-size: 14px; }
+      table { margin: 6px 0; font-size: 11px; }
+      th, td { padding: 4px 8px; }
+      ol, ul { margin: 4px 0; padding-left: 18px; }
+      ol li, ul li { margin-bottom: 2px; }
+      .texte-trous { padding: 8px 12px; margin: 6px 0; font-size: 11.5px; line-height: 1.6; }
+      .word-list { padding: 4px 10px; margin: 4px 0 8px 0; font-size: 11px; }
+      .page-break { page-break-before:always; border:none; margin:0; padding:0; }
       a { color:inherit; text-decoration:none; }
     }
   </style>
@@ -13321,8 +13344,9 @@ INSTRUCTIONS STRICTES :
    - Si une notion est si centrale qu'elle doit être évoquée dans les deux versions, évalue-la sous des angles différents (ex: une définition dans la Version A, et son application dans une question Vrai/Faux dans la Version B).
 4. NIVEAU ET CLARTÉ : Rédige toutes les questions dans un français clair, précis et accessible, correspondant à un niveau B1-B2. La terminologie scientifique doit être exacte mais les phrases doivent rester simples.
 5. OBJECTIF PÉDAGOGIQUE : Conçois des questions qui évaluent la compréhension profonde et la réflexion (analyse, liens logiques) plutôt que la simple mémorisation.
-6. DOMAINE STRICT : L'évaluation doit rester strictement dans le contenu du cours fourni.
-7. FORMAT OBLIGATOIRE : Respecte IMPÉRATIVEMENT la structure de sortie ci-dessous.
+6. CONCISION (1 PAGE MAX) : SOYEZ TRÈS CONCIS. Chaque version (A et B) DOIT IMPÉRATIVEMENT tenir sur UNE SEULE page A4 maximum au format portrait. Limitez la longueur des questions, des propositions QCM et des textes à trous pour économiser de l'espace vertical.
+7. DOMAINE STRICT : L'évaluation doit rester strictement dans le contenu du cours fourni.
+8. FORMAT OBLIGATOIRE : Respecte IMPÉRATIVEMENT la structure de sortie ci-dessous.
 
 STRUCTURE DE SORTIE OBLIGATOIRE :
 Génère EXACTEMENT dans cet ordre :
@@ -13355,29 +13379,16 @@ FORMAT DE CHAQUE VERSION :
 
 *Recopiez les couples suivants, et entourez la bonne lettre : (1; ...) ; (2; ...) ; (3; ...) ; (4; ...)*
 
-1- [Question 1]
-   a- [Proposition a]
-   b- [Proposition b]
-   c- [Proposition c]
-   d- [Proposition d]
-
-2- [Question 2]
-   a- [Proposition a]
-   b- [Proposition b]
-   c- [Proposition c]
-   d- [Proposition d]
-
-3- [Question 3]
-   a- [Proposition a]
-   b- [Proposition b]
-   c- [Proposition c]
-   d- [Proposition d]
-
-4- [Question 4]
-   a- [Proposition a]
-   b- [Proposition b]
-   c- [Proposition c]
-   d- [Proposition d]
+<table style="width:100%; border:none; margin:6px 0;">
+  <tr>
+    <td style="width:50%; border:none; padding:4px;"><b>1- [Question 1]</b><br>a- [Proposition a]<br>b- [Proposition b]<br>c- [Proposition c]<br>d- [Proposition d]</td>
+    <td style="width:50%; border:none; padding:4px;"><b>2- [Question 2]</b><br>a- [Proposition a]<br>b- [Proposition b]<br>c- [Proposition c]<br>d- [Proposition d]</td>
+  </tr>
+  <tr>
+    <td style="width:50%; border:none; padding:4px;"><b>3- [Question 3]</b><br>a- [Proposition a]<br>b- [Proposition b]<br>c- [Proposition c]<br>d- [Proposition d]</td>
+    <td style="width:50%; border:none; padding:4px;"><b>4- [Question 4]</b><br>a- [Proposition a]<br>b- [Proposition b]<br>c- [Proposition c]<br>d- [Proposition d]</td>
+  </tr>
+</table>
 
 ---
 **III. Association (1 pt)**
