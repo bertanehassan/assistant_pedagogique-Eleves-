@@ -6887,9 +6887,9 @@ function obfuscateAnswer(index) {
 function isExplanationLine(text) {
   const tl = text.toLowerCase().trim();
   const ts = text.trim();
-  if (ts.startsWith('\u2022') || (ts.startsWith('-') && tl.includes('explication'))) return true;
-  if (ts.startsWith('.') && tl.includes('explication')) return true;
-  if (tl.startsWith('explication')) return true;
+  if (ts.startsWith('\u2022') || (ts.startsWith('-') && (tl.includes('explication') || tl.includes('explanation')))) return true;
+  if (ts.startsWith('.') && (tl.includes('explication') || tl.includes('explanation'))) return true;
+  if (tl.startsWith('explication') || tl.startsWith('explanation')) return true;
   if (tl.includes('justification') && (text.includes(':') || tl.startsWith('justification'))) return true;
   if (ts.includes('\u0634\u0631\u062d') || ts.includes('\u0627\u0644\u062a\u0641\u0633\u064a\u0631')) return true;
   return false;
@@ -6898,7 +6898,7 @@ function isExplanationLine(text) {
 function isPourAllerPlusLoinLine(text) {
   const tl = text.toLowerCase().trim();
   const ts = text.trim();
-  if (tl.includes('pour aller plus loin')) return true;
+  if (tl.includes('pour aller plus loin') || tl.includes('learn more')) return true;
   if (ts.includes('\u0644\u0644\u0645\u0632\u064a\u062f \u0645\u0646 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062a') || ts.includes('\u0644\u0644\u062a\u0648\u0633\u0639')) return true;
   return false;
 }
@@ -6910,7 +6910,7 @@ function extractExplanationText(text) {
   if (cleaned.startsWith('-')) cleaned = cleaned.substring(1).trim();
   const prefixesFr = [
     'explication et la justification :', 'explication et justification :',
-    'explication :', 'justification :'
+    'explication :', 'justification :', 'explanation :', 'explanation:'
   ];
   const cl = cleaned.toLowerCase();
   for (const p of prefixesFr) {
@@ -6929,7 +6929,7 @@ function extractPourAllerPlusLoinText(text) {
   if (cleaned.startsWith('\u2022')) cleaned = cleaned.substring(1).trim();
   if (cleaned.startsWith('-')) cleaned = cleaned.substring(1).trim();
   if (cleaned.startsWith('.')) cleaned = cleaned.substring(1).trim();
-  const prefixesFr = ['pour aller plus loin :', 'pour aller plus loin:', 'pour aller plus loin'];
+  const prefixesFr = ['pour aller plus loin :', 'pour aller plus loin:', 'pour aller plus loin', 'learn more :', 'learn more:', 'learn more'];
   const cl = cleaned.toLowerCase();
   for (const p of prefixesFr) {
     if (cl.startsWith(p)) { cleaned = cleaned.substring(p.length).trim(); break; }
