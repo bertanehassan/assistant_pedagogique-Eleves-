@@ -541,8 +541,7 @@ function exportToHtml(text, filename = "Export_IA.html") {
       font-size: 26px;
       color: #e71414;
       font-weight: bold;
-      vertical-align: middle !important;
-        text-align: center;
+      vertical-align: middle;
     }
 
     th:nth-child(3), td:nth-child(3),
@@ -615,7 +614,75 @@ function exportToHtml(text, filename = "Export_IA.html") {
   ${parsedHtml}
 </body>
 </html>`;
+  } else if (filename.includes('Evaluation_')) {
+    htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Devoir Surveillé — Évaluation de Connaissances</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', 'Noto Serif', Georgia, serif;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px 30px 40px 30px;
+      background: #fff;
+    }
+    h1 { text-align:center; font-size:20px; font-weight:900; color:#0d0d6b; margin:0 0 4px 0; text-transform:uppercase; letter-spacing:1px; }
+    h2 { font-size:15px; font-weight:700; color:#0d0d6b; border-bottom:2px solid #0d0d6b; padding-bottom:4px; margin-top:20px; margin-bottom:8px; text-transform:uppercase; }
+    h3 { font-size:14px; font-weight:700; color:#1a1a2e; margin-top:14px; margin-bottom:6px; }
+    h4 { font-size:13px; font-weight:700; color:#444; margin-top:8px; margin-bottom:4px; }
+    .version-a { background:#1a3a8f; color:white; text-align:center; font-size:17px; font-weight:900; padding:10px 20px; border-radius:4px; margin:30px 0 16px 0; letter-spacing:2px; text-transform:uppercase; }
+    .version-b { background:#6b1a1a; color:white; text-align:center; font-size:17px; font-weight:900; padding:10px 20px; border-radius:4px; margin:30px 0 16px 0; letter-spacing:2px; text-transform:uppercase; }
+    .corrige-header { background:#1a6b2e; color:white; text-align:center; font-size:17px; font-weight:900; padding:10px 20px; border-radius:4px; margin:30px 0 16px 0; letter-spacing:2px; text-transform:uppercase; }
+    .exam-header { text-align:center; border:2px solid #0d0d6b; padding:10px 16px; border-radius:4px; margin-bottom:18px; background:#f5f5ff; }
+    .exam-header p { margin:2px 0; font-size:13px; color:#333; }
+    .exam-header .exam-title { font-size:15px; font-weight:900; color:#0d0d6b; text-transform:uppercase; margin:6px 0; }
+    .exam-header .total-pts { font-size:13px; font-weight:700; color:#c00; }
+    .page-break { border:none; border-top:3px dashed #aaa; margin:40px 0 30px 0; }
+    table { border-collapse:collapse; width:100%; margin:10px 0 16px 0; font-size:13px; }
+    th { background:#0d0d6b; color:white; padding:7px 12px; text-align:center; font-weight:700; border:1px solid #0d0d6b; }
+    td { border:1px solid #aaa; padding:6px 12px; text-align:left; vertical-align:top; color:#1a1a2e; }
+    td:first-child { font-weight:700; color:#0d0d6b; text-align:center; background:#f0f0ff; }
+    tr:nth-child(even) td { background:#fafafa; }
+    ol { margin:8px 0 12px 0; padding-left:22px; }
+    ol li { margin-bottom:8px; color:#1a1a2e; }
+    ul { margin:4px 0; padding-left:20px; }
+    ul li { margin-bottom:4px; color:#333; }
+    .texte-trous { background:#f5f5ff; border:1px solid #c0c0e0; border-radius:4px; padding:12px 16px; font-size:14px; line-height:1.9; color:#1a1a2e; margin:8px 0 10px 0; }
+    .word-list { font-style:italic; color:#444; background:#fffbe6; border:1px solid #e0d0a0; border-radius:4px; padding:6px 12px; font-size:13px; margin:6px 0 12px 0; }
+    .corrige-block { background:#f0fff4; border:1px solid #6ab04c; border-radius:4px; padding:10px 16px; font-size:13px; color:#1a4a1e; margin:6px 0 14px 0; }
+    .corrige-block strong { color:#1a6b2e; }
+    blockquote { border-left:4px solid #0d0d6b; margin-left:0; padding-left:14px; color:#444; }
+    .MathJax, .MathJax span, .MathJax_Display, .mjx-chtml { font-size:1em !important; }
+    mjx-container { display:inline-block !important; vertical-align:middle; }
+    @media print {
+      @page { size: A4 portrait; margin: 15mm 12mm; }
+      body { max-width:100%; padding:0; font-size:13px; }
+      .page-break { page-break-before:always; border:none; margin:0; }
+      a { color:inherit; text-decoration:none; }
+    }
+  </style>
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$','$'],['\\\\(','\\\\)']], displayMath: [['$$','$$'],['\\\\[','\\\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  <\/script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+</head>
+<body>
+  ${parsedHtml}
+</body>
+</html>`;
   } else {
+
     htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -2443,7 +2510,14 @@ async function loadAgents() {
     methodeOpt.title = "Générer une fiche méthode étape par étape à partir d'un exercice";
     toolsGroup.appendChild(methodeOpt);
 
+    const evalOpt = document.createElement("option");
+    evalOpt.value = "__TOOL__evaluation";
+    evalOpt.textContent = "📝 Évaluations A/B (Générateur)";
+    evalOpt.title = "Générer deux versions complémentaires d'une évaluation sommative (A et B) avec corrigés, à partir du contenu d'un cours";
+    toolsGroup.appendChild(evalOpt);
+
     sel.appendChild(toolsGroup);
+
 
     // ── Workflows optgroup ──
     if (workflows.length) {
@@ -9264,6 +9338,12 @@ const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
         if (typeof openMethodeModal !== 'undefined') openMethodeModal();
         return;
       }
+      if (val === '__TOOL__evaluation') {
+        state.agent = null;
+        state.selectedWorkflow = null;
+        if (typeof openEvaluationModal !== 'undefined') openEvaluationModal();
+        return;
+      }
 
       // Fiche SVT — 2e Bac SP Maroc supprimée
 
@@ -13215,6 +13295,639 @@ window.addEventListener('online', () => {
 });
 
 // Save/load buttons are handled by Vue @click + CustomEvents — no global delegation needed
+
+
+// ════════════════════════════════════════════════════════════════════
+// OUTIL N°4 — GÉNÉRATEUR D'ÉVALUATIONS DOUBLE VERSION A/B
+// ════════════════════════════════════════════════════════════════════
+
+// ── Variables globales pour le fichier PDF/image du cours ──
+let _evalPdfBase64 = null;
+let _evalPdfName   = '';
+let _evalPdfMime   = 'application/pdf';
+
+// ── Prompt système principal ──
+const EVALUATION_SYSTEM_PROMPT = `Tu es un Concepteur Pédagogique expert en toutes les matières scolaires, spécialisé dans la création d'évaluations pour des élèves du système éducatif marocain. Tu es également un expert en didactique.
+
+OBJECTIF :
+Générer deux versions distinctes et complémentaires (Version A et Version B) d'une évaluation de connaissances sommative, basée sur le contenu de cours fourni. Ces deux versions doivent évaluer l'ensemble des notions importantes du cours de manière équilibrée, mais sans redondance directe, afin de limiter la triche.
+
+INSTRUCTIONS STRICTES :
+1. ANALYSE APPROFONDIE : Analyse l'intégralité du contenu du cours fourni. Identifie toutes les notions clés, les concepts fondamentaux, les processus importants, et les relations de cause à effet.
+2. DIVISION CONCEPTUELLE : Répartis l'ensemble des notions identifiées en deux groupes thématiques équilibrés et distincts (Groupe A et Groupe B). L'objectif est que la Version A porte sur le Groupe A, et la Version B sur le Groupe B.
+3. CONCEPTION COMPLÉMENTAIRE :
+   - Construis l'évaluation Version A en te basant exclusivement sur les notions du Groupe A.
+   - Construis l'évaluation Version B en te basant exclusivement sur les notions du Groupe B.
+   - Si une notion est si centrale qu'elle doit être évoquée dans les deux versions, évalue-la sous des angles différents (ex: une définition dans la Version A, et son application dans une question Vrai/Faux dans la Version B).
+4. NIVEAU ET CLARTÉ : Rédige toutes les questions dans un français clair, précis et accessible, correspondant à un niveau B1-B2. La terminologie scientifique doit être exacte mais les phrases doivent rester simples.
+5. OBJECTIF PÉDAGOGIQUE : Conçois des questions qui évaluent la compréhension profonde et la réflexion (analyse, liens logiques) plutôt que la simple mémorisation.
+6. DOMAINE STRICT : L'évaluation doit rester strictement dans le contenu du cours fourni.
+7. FORMAT OBLIGATOIRE : Respecte IMPÉRATIVEMENT la structure de sortie ci-dessous.
+
+STRUCTURE DE SORTIE OBLIGATOIRE :
+Génère EXACTEMENT dans cet ordre :
+1. L'en-tête de la Version A
+2. Le contenu complet de la Version A (5 sections)
+3. Un séparateur ---PAGE BREAK---
+4. L'en-tête de la Version B
+5. Le contenu complet de la Version B (5 sections)
+6. Un séparateur ---CORRIGÉS---
+7. Le corrigé détaillé de la Version A
+8. Le corrigé détaillé de la Version B
+
+FORMAT DE CHAQUE VERSION :
+
+---
+**Semestre [N°] — DEVOIR SURVEILLÉ N° : [N°] — [Niveau] — [Filière/Option]**
+
+**RESTITUTION DE CONNAISSANCE — [VERSION A ou B] — /5 points**
+
+---
+**I. Définissez les notions suivantes : (1 pt)**
+
+1. [Notion 1]
+2. [Notion 2]
+3. [Notion 3]
+4. [Notion 4]
+
+---
+**II. QCM – Une seule réponse correcte par question (1 pt)**
+
+*Recopiez les couples suivants, et entourez la bonne lettre : (1; ...) ; (2; ...) ; (3; ...) ; (4; ...)*
+
+1- [Question 1]
+   a- [Proposition a]
+   b- [Proposition b]
+   c- [Proposition c]
+   d- [Proposition d]
+
+2- [Question 2]
+   a- [Proposition a]
+   b- [Proposition b]
+   c- [Proposition c]
+   d- [Proposition d]
+
+3- [Question 3]
+   a- [Proposition a]
+   b- [Proposition b]
+   c- [Proposition c]
+   d- [Proposition d]
+
+4- [Question 4]
+   a- [Proposition a]
+   b- [Proposition b]
+   c- [Proposition c]
+   d- [Proposition d]
+
+---
+**III. Association (1 pt)**
+
+*Associez chaque numéro du groupe 1 à la lettre correspondante du groupe 2. Recopiez et complétez le tableau de réponse.*
+
+| Élément du groupe 1 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| Lettre du groupe 2 | | | | |
+
+| Groupe 1 | Groupe 2 |
+|---|---|
+| 1- [Élément 1] | a- [Élément a] |
+| 2- [Élément 2] | b- [Élément b] |
+| 3- [Élément 3] | c- [Élément c] |
+| 4- [Élément 4] | d- [Élément d] |
+
+---
+**IV. Vrai ou Faux (1 pt)**
+
+*Indiquez pour chaque affirmation si elle est vraie ou fausse. Recopiez la lettre et écrivez à côté "Vrai" ou "Faux".*
+
+a) [Affirmation 1]
+b) [Affirmation 2]
+c) [Affirmation 3]
+d) [Affirmation 4]
+
+---
+**V. Texte à trous (1 pt)**
+
+*Complétez le texte suivant en utilisant les mots de la liste ci-dessous. Chaque mot ne peut être utilisé qu'une seule fois.*
+
+[Court texte scientifique avec exactement 5 blancs à remplir, indiqués par ____]
+
+**Liste de mots :** [Mot 1], [Mot 2], [Mot 3], [Mot 4], [Mot 5], [Mot 6], [Mot 7]
+
+---
+
+IMPORTANT : Le corrigé doit être complet, avec les bonnes réponses pour chaque section de chaque version, clairement numérotées et référencées.`;
+
+// ── Fonctions d'étapes de la modale ──
+function evalShowStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const step = document.getElementById(`eval-step-${i}`);
+    const dot  = document.getElementById(`evdot-${i}`);
+    const line = document.getElementById(`evline-${i}`);
+    if (step) step.style.display = i === n ? 'block' : 'none';
+    if (dot) {
+      dot.classList.remove('active', 'done');
+      if (i < n)  dot.classList.add('done');
+      if (i === n) dot.classList.add('active');
+    }
+    if (line && i < 3) {
+      line.classList.toggle('done', i < n);
+    }
+  }
+  const labels = ['Contexte de l\'évaluation', 'Contenu du cours', 'Résumé & Génération'];
+  const lbl = document.getElementById('eval-step-label');
+  if (lbl) lbl.textContent = labels[n - 1] || '';
+}
+
+function evalValidateStep1() {
+  const disc = document.getElementById('eval-discipline')?.value;
+  const niv  = document.getElementById('eval-niveau')?.value;
+  if (!disc) { toast('Veuillez choisir une discipline.', 'error'); return false; }
+  if (!niv)  { toast('Veuillez choisir un niveau scolaire.', 'error'); return false; }
+  return true;
+}
+
+function evalValidateStep2() {
+  const cours   = (document.getElementById('eval-cours')?.value || '').trim();
+  const hasPdf  = !!_evalPdfBase64;
+  if (!hasPdf && cours.length < 20) {
+    toast('Veuillez coller le contenu du cours ou importer un fichier PDF/image.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function evalBuildSummary() {
+  const get = (id) => (document.getElementById(id)?.value || '').trim();
+  const disc = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
+  const niv      = get('eval-niveau');
+  const filiere  = get('eval-filiere');
+  const sem      = get('eval-semestre');
+  const numDS    = get('eval-num-devoir');
+  const hasPdf   = !!_evalPdfBase64;
+  const coursLen = (get('eval-cours') || '').length;
+  const el = document.getElementById('eval-summary');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">
+      <div><span style="color:var(--text-dim)">📚 Discipline :</span> <strong>${disc || '—'}</strong></div>
+      <div><span style="color:var(--text-dim)">🎓 Niveau :</span> <strong>${niv || '—'}</strong></div>
+      <div><span style="color:var(--text-dim)">🏫 Filière :</span> <strong>${filiere || '—'}</strong></div>
+      <div><span style="color:var(--text-dim)">📅 Semestre :</span> <strong>${sem}</strong></div>
+      <div><span style="color:var(--text-dim)">🔢 N° Devoir :</span> <strong>DS N° ${numDS}</strong></div>
+      <div><span style="color:var(--text-dim)">📄 Cours :</span> <strong>${hasPdf ? `📎 ${_evalPdfName}` : (coursLen > 0 ? `${coursLen} caractères` : '—')}</strong></div>
+    </div>`;
+}
+
+// ── Construction du prompt utilisateur ──
+function buildEvaluationUserPrompt(cfg) {
+  return `Tu vas générer deux versions complémentaires d'une évaluation de connaissances pour la matière suivante.
+
+PARAMÈTRES DE L'ÉVALUATION :
+- Discipline / Matière : ${cfg.discipline}
+- Niveau scolaire : ${cfg.niveau}
+- Filière / Option : ${cfg.filiere || 'Non précisée'}
+- Semestre : ${cfg.semestre}
+- Numéro du Devoir Surveillé : DS N° ${cfg.numDevoir}
+- Langue de génération : ${cfg.outputLanguage === 'ar' ? 'Arabe' : cfg.outputLanguage === 'en' ? 'Anglais' : 'Français'}
+
+${cfg.consignes ? `CONSIGNES SPÉCIFIQUES DE L'ENSEIGNANT :\n${cfg.consignes}\n\n` : ''}CONTENU DU COURS À ÉVALUER :
+${cfg.cours || '[Le cours est fourni en pièce jointe — veuillez l\'analyser nativement depuis le document.]'}
+
+---
+Génère maintenant les deux évaluations (Version A et Version B) en respectant STRICTEMENT le format et le barème définis dans tes instructions système. N'oublie pas les corrigés détaillés pour les deux versions.`;
+}
+
+// ── Ouverture de la modale ──
+const openEvaluationModal = async () => {
+  const geminiId = 'gemini-3.5-flash';
+  if (state.model !== geminiId) {
+    state.model = geminiId;
+    if ($('#model-select')) $('#model-select').value = geminiId;
+    if (typeof db !== 'undefined' && db.put) {
+      db.put('settings', { id: 'model', value: state.model }).catch(() => {});
+    }
+    if (typeof toast !== 'undefined') {
+      toast('Le modèle Gemini a été sélectionné (requis pour cet outil).', 'info');
+    }
+  }
+
+  // Restaurer la config
+  try {
+    const saved = localStorage.getItem('evalSavedConfig');
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.discipline) { const el = $('#eval-discipline'); if (el) el.value = s.discipline; }
+      if (s.customDiscipline) { const el = $('#eval-custom-discipline'); if (el) el.value = s.customDiscipline; }
+      if (s.niveau) { const el = $('#eval-niveau'); if (el) el.value = s.niveau; }
+      if (s.filiere) { const el = $('#eval-filiere'); if (el) el.value = s.filiere; }
+      if (s.semestre) { const el = $('#eval-semestre'); if (el) el.value = s.semestre; }
+      if (s.numDevoir) { const el = $('#eval-num-devoir'); if (el) el.value = s.numDevoir; }
+      if (s.outputLanguage) { const el = $('#eval-output-lang'); if (el) el.value = s.outputLanguage; }
+      if (s.consignes) { const el = $('#eval-consignes'); if (el) el.value = s.consignes; }
+      if ($('#eval-export-word')) $('#eval-export-word').checked = !!s.exportWord;
+      if ($('#eval-export-html')) $('#eval-export-html').checked = s.exportHtml !== undefined ? !!s.exportHtml : true;
+      if ($('#eval-export-pdf')) $('#eval-export-pdf').checked = !!s.exportPdf;
+    } else {
+      if ($('#eval-export-html')) $('#eval-export-html').checked = true;
+    }
+  } catch(e) {}
+
+  // Badge PDF si fichier en mémoire
+  if (_evalPdfBase64) {
+    const badge = $('#eval-pdf-badge');
+    if (badge) { badge.textContent = `📎 ${_evalPdfName} (Mémoire)`; badge.style.display = 'inline-block'; }
+    const info = $('#eval-pdf-info');
+    if (info) info.style.display = 'block';
+  } else {
+    const badge = $('#eval-pdf-badge');
+    if (badge) badge.style.display = 'none';
+    const info = $('#eval-pdf-info');
+    if (info) info.style.display = 'none';
+  }
+
+  evalShowStep(1);
+  const modal = document.getElementById('evaluation-modal');
+  if (modal) modal.classList.add('active');
+};
+
+const closeEvaluationModal = () => {
+  const modal = document.getElementById('evaluation-modal');
+  if (modal) modal.classList.remove('active');
+};
+
+// ── Génération principale ──
+const generateEvaluationSheet = async () => {
+  if (state.isGenerating) { console.warn('Génération déjà en cours.'); return; }
+
+  const get = (id) => (document.getElementById(id)?.value || '').trim();
+  const discipline = get('eval-discipline') === 'Autre'
+    ? (get('eval-custom-discipline') || 'Autre')
+    : get('eval-discipline');
+  const hasPdf = !!_evalPdfBase64;
+
+  const cfg = {
+    discipline,
+    niveau:         get('eval-niveau'),
+    filiere:        get('eval-filiere'),
+    semestre:       get('eval-semestre'),
+    numDevoir:      get('eval-num-devoir'),
+    outputLanguage: get('eval-output-lang'),
+    cours:          get('eval-cours') || (hasPdf ? `[COURS EN PIÈCE JOINTE : ${_evalPdfName}]` : ''),
+    consignes:      get('eval-consignes'),
+    hasPdf,
+    exportWord: document.getElementById('eval-export-word')?.checked || false,
+    exportHtml: document.getElementById('eval-export-html')?.checked || false,
+    exportPdf:  document.getElementById('eval-export-pdf')?.checked  || false
+  };
+
+  if (!hasPdf && (!cfg.cours || cfg.cours.length < 20)) {
+    toast('Veuillez coller le contenu du cours ou importer un fichier PDF/image.', 'error');
+    return;
+  }
+
+  // Sauvegarde rapide
+  try { localStorage.setItem('evalSavedConfig', JSON.stringify(cfg)); } catch(e) {}
+
+  closeEvaluationModal();
+
+  const titre = `📝 Évaluation A/B — ${cfg.discipline} ${cfg.niveau}${cfg.filiere ? ` (${cfg.filiere})` : ''}${hasPdf ? ' [PDF]' : ''}`;
+  if (!state.messages) state.messages = [];
+  state.messages.push({ role: 'user', content: titre, ts: Date.now() });
+  renderMessages();
+
+  const assistantMsg = {
+    role: 'assistant',
+    content: '⏳ Génération des deux évaluations en cours…',
+    streaming: true,
+    ts: Date.now() + 1,
+    modelUsed: 'gemini-3.5-flash',
+    isCorrection: false,
+    isMethode: false
+  };
+  state.messages.push(assistantMsg);
+  renderMessages();
+
+  const _savedAgent = state.agent;
+  state.isGenerating = true;
+  state.selectedWorkflow = null;
+  state.agent = null;
+  state.abortController = new AbortController();
+  const sendBtn = $('#send-btn');
+  if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
+  showTyping('gemini-3.5-flash');
+
+  try {
+    if (!state.geminiApiKey) {
+      throw new Error('Clé API Google Gemini requise. Configurez-la dans Paramètres API.');
+    }
+
+    const userContent = buildEvaluationUserPrompt(cfg);
+    const parts = [{ text: userContent }];
+
+    if (hasPdf && _evalPdfBase64) {
+      parts.unshift({ inlineData: { mimeType: _evalPdfMime || 'application/pdf', data: _evalPdfBase64 } });
+      parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT COURS — RÔLE : SOURCE DU COURS]\nLe document ci-dessus contient le cours à évaluer. Analyse son contenu pour générer les deux évaluations.\n---\n\n' });
+    }
+
+    const geminiPayload = {
+      systemInstruction: { parts: [{ text: EVALUATION_SYSTEM_PROMPT }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.9 }
+    };
+
+    const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
+    const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
+
+    assistantMsg.content = `🔍 L'IA analyse le cours et génère les deux versions de l'évaluation…`;
+    renderMessages();
+
+    const geminiRes = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: state.abortController.signal,
+      body: JSON.stringify(geminiPayload)
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      throw new Error(`Gemini API ${geminiRes.status}: ${errText.slice(0, 500)}`);
+    }
+
+    const geminiData = await geminiRes.json();
+    let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let finishReason = geminiData?.candidates?.[0]?.finishReason || 'STOP';
+
+    // Continuation automatique si MAX_TOKENS
+    let continuationCount = 0;
+    const MAX_CONTINUATIONS = 3;
+    while (finishReason === 'MAX_TOKENS' && continuationCount < MAX_CONTINUATIONS && !state.abortController?.signal?.aborted) {
+      continuationCount++;
+      assistantMsg.content = geminiText + `\n\n*⏳ Continuation automatique (${continuationCount}/${MAX_CONTINUATIONS})…*`;
+      renderMessages(true);
+
+      const lightContents = geminiPayload.contents.map(turn => ({
+        role: turn.role,
+        parts: turn.parts.filter(p => p.text !== undefined)
+      })).filter(turn => turn.parts.length > 0);
+
+      const contPayload = {
+        systemInstruction: geminiPayload.systemInstruction,
+        contents: [
+          ...lightContents,
+          { role: 'model', parts: [{ text: geminiText }] },
+          { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté. Ne recommence pas depuis le début. Poursuis directement la génération de l\'évaluation.' }] }
+        ],
+        generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.9 }
+      };
+
+      try {
+        const contRes = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: state.abortController?.signal,
+          body: JSON.stringify(contPayload)
+        });
+        if (!contRes.ok) break;
+        const contData = await contRes.json();
+        const contText = contData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
+        if (!contText) break;
+        geminiText += contText;
+      } catch(contErr) { console.warn('Continuation failed:', contErr); break; }
+    }
+
+    // Exports
+    if (cfg.exportWord) {
+      try {
+        exportToWord(geminiText, `Evaluation_${cfg.discipline}_DS${cfg.numDevoir}.doc`);
+        toast('📄 Évaluations exportées en Word !', 'success');
+      } catch(e) { console.error('Export Word error:', e); }
+    }
+
+    if (cfg.exportHtml) {
+      try {
+        exportToHtml(geminiText, `Evaluation_${cfg.discipline}_DS${cfg.numDevoir}.html`);
+        toast('🌐 Évaluations exportées en HTML !', 'success');
+      } catch(e) { console.error('Export HTML error:', e); }
+    }
+
+    if (cfg.exportPdf) {
+      try {
+        exportToPdf(geminiText, `Evaluation_${cfg.discipline}_DS${cfg.numDevoir}.pdf`);
+        toast('📕 Évaluations exportées en PDF !', 'success');
+      } catch(e) { console.error('Export PDF error:', e); }
+    }
+
+    assistantMsg.content = geminiText;
+    assistantMsg.streaming = false;
+    renderMessages(true);
+    await saveChat();
+
+  } catch(err) {
+    if (err.name === 'AbortError') {
+      assistantMsg.content = '⏹ Génération annulée.';
+    } else {
+      assistantMsg.content = `❌ Erreur : ${err.message}`;
+      toast(err.message, 'error');
+    }
+    assistantMsg.streaming = false;
+    renderMessages(true);
+  } finally {
+    state.isGenerating = false;
+    state.agent = _savedAgent;
+    state.abortController = null;
+    hideTyping();
+    const btn = $('#send-btn');
+    if (btn) { btn.disabled = false; btn.className = 'send-btn'; btn.innerHTML = '➤'; }
+  }
+};
+
+// ── Wiring des boutons ──
+(() => {
+  const wireEval = () => {
+    const closeBtn = document.getElementById('close-evaluation-modal');
+    if (closeBtn) closeBtn.onclick = closeEvaluationModal;
+    const overlay = document.getElementById('evaluation-modal');
+    if (overlay) overlay.onclick = (e) => { if (e.target === overlay) closeEvaluationModal(); };
+
+    // Import PDF / image / texte
+    const pdfInput = document.getElementById('eval-pdf-upload');
+    if (pdfInput) {
+      pdfInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const badge     = document.getElementById('eval-pdf-badge');
+        const info      = document.getElementById('eval-pdf-info');
+        const removeBtn = document.getElementById('eval-pdf-remove');
+        const coursEl   = document.getElementById('eval-cours');
+        const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
+
+        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
+
+        if (isPdfOrImg) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            _evalPdfBase64 = ev.target.result.split(',')[1];
+            _evalPdfName   = file.name;
+            _evalPdfMime   = file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+            if (badge) { badge.textContent = `📄 ${file.name} (Prêt pour Gemini Vision)`; badge.style.display = 'inline-block'; }
+            if (info) info.style.display = 'block';
+            if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
+            if (coursEl) { coursEl.value = `[COURS EN PIÈCE JOINTE : ${file.name}]\nSera analysé nativement par Gemini Vision.`; }
+            toast(`✅ ${file.name} importé avec succès.`, 'success');
+          };
+          reader.onerror = () => {
+            toast(`❌ Erreur lecture de ${file.name}`, 'error');
+            if (badge) badge.style.display = 'none';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            if (coursEl) { coursEl.value = ev.target.result.trim(); }
+            _evalPdfBase64 = null;
+            _evalPdfName = file.name;
+            if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
+            if (info) info.style.display = 'block';
+            if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
+            toast('✅ Fichier texte importé.', 'success');
+          };
+          reader.readAsText(file, 'UTF-8');
+        }
+        e.target.value = '';
+      };
+    }
+
+    // Supprimer le fichier PDF
+    const removeBtn = document.getElementById('eval-pdf-remove');
+    if (removeBtn) {
+      removeBtn.onclick = () => {
+        _evalPdfBase64 = null; _evalPdfName = ''; _evalPdfMime = 'application/pdf';
+        const coursEl = document.getElementById('eval-cours');
+        if (coursEl) coursEl.value = '';
+        const badge = document.getElementById('eval-pdf-badge');
+        if (badge) badge.style.display = 'none';
+        const info = document.getElementById('eval-pdf-info');
+        if (info) info.style.display = 'none';
+        removeBtn.style.display = 'none';
+        toast('🗑️ Fichier cours supprimé.', 'info');
+      };
+    }
+
+    // Sauvegarde / chargement de configuration
+    document.addEventListener('do-save-eval-config', async () => {
+      const get = (id) => (document.getElementById(id)?.value || '').trim();
+      const discipline = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
+      const cfg = {
+        discipline,
+        niveau:         get('eval-niveau'),
+        filiere:        get('eval-filiere'),
+        semestre:       get('eval-semestre'),
+        numDevoir:      get('eval-num-devoir'),
+        outputLanguage: get('eval-output-lang'),
+        consignes:      get('eval-consignes'),
+        exportWord:  document.getElementById('eval-export-word')?.checked || false,
+        exportHtml:  document.getElementById('eval-export-html')?.checked || false,
+        exportPdf:   document.getElementById('eval-export-pdf')?.checked  || false,
+        savedAt:     new Date().toLocaleString('fr-FR'),
+        name:        discipline ? `${discipline} — ${get('eval-niveau')}` : 'Config sans nom'
+      };
+      try {
+        // Gestion multi-save dans IndexedDB
+        if (typeof db !== 'undefined' && db.put) {
+          const id = `eval_${Date.now()}`;
+          await db.put('settings', { id, ...cfg });
+          toast(`✅ Configuration "${cfg.name}" sauvegardée.`, 'success');
+          await refreshEvalSavedList();
+        } else {
+          localStorage.setItem('evalSavedConfig', JSON.stringify(cfg));
+          toast('✅ Configuration sauvegardée localement.', 'success');
+        }
+      } catch(e) {
+        localStorage.setItem('evalSavedConfig', JSON.stringify(cfg));
+        toast('✅ Configuration sauvegardée.', 'success');
+      }
+    });
+
+    document.addEventListener('do-load-eval-config', async () => {
+      const sel = document.getElementById('eval-saved-list');
+      if (!sel || !sel.value) { toast('Sélectionnez un profil à charger.', 'error'); return; }
+      try {
+        let cfg = null;
+        if (typeof db !== 'undefined') cfg = await db.get('settings', sel.value);
+        if (!cfg) { const raw = localStorage.getItem('evalSavedConfig'); if (raw) cfg = JSON.parse(raw); }
+        if (!cfg) { toast('Profil introuvable.', 'error'); return; }
+        if (cfg.discipline) { const el = $('#eval-discipline'); if (el) el.value = cfg.discipline; }
+        if (cfg.niveau)    { const el = $('#eval-niveau');    if (el) el.value = cfg.niveau; }
+        if (cfg.filiere)   { const el = $('#eval-filiere');   if (el) el.value = cfg.filiere; }
+        if (cfg.semestre)  { const el = $('#eval-semestre');  if (el) el.value = cfg.semestre; }
+        if (cfg.numDevoir) { const el = $('#eval-num-devoir'); if (el) el.value = cfg.numDevoir; }
+        if (cfg.outputLanguage) { const el = $('#eval-output-lang'); if (el) el.value = cfg.outputLanguage; }
+        if (cfg.consignes) { const el = $('#eval-consignes'); if (el) el.value = cfg.consignes; }
+        if ($('#eval-export-word')) $('#eval-export-word').checked = !!cfg.exportWord;
+        if ($('#eval-export-html')) $('#eval-export-html').checked = cfg.exportHtml !== undefined ? !!cfg.exportHtml : true;
+        if ($('#eval-export-pdf'))  $('#eval-export-pdf').checked  = !!cfg.exportPdf;
+        toast('✅ Configuration chargée.', 'success');
+      } catch(e) { toast('Erreur lors du chargement.', 'error'); }
+    });
+
+    document.addEventListener('do-delete-eval-config', async () => {
+      const sel = document.getElementById('eval-saved-list');
+      if (!sel || !sel.value) { toast('Sélectionnez un profil à supprimer.', 'error'); return; }
+      try {
+        if (typeof db !== 'undefined' && db.delete) await db.delete('settings', sel.value);
+        toast('🗑️ Profil supprimé.', 'info');
+        await refreshEvalSavedList();
+      } catch(e) { toast('Erreur suppression.', 'error'); }
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(wireEval, 400));
+  } else {
+    setTimeout(wireEval, 400);
+  }
+})();
+
+// ── Refresh de la liste des profils sauvegardés ──
+async function refreshEvalSavedList() {
+  const sel = document.getElementById('eval-saved-list');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Profils sauvegardés —</option>';
+  try {
+    if (typeof db === 'undefined') return;
+    const all = await db.getAll('settings') || [];
+    const configs = all.filter(s => s.id && s.id.startsWith('eval_') && s.name);
+    configs.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.name}${c.savedAt ? ' — ' + c.savedAt : ''}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+// Expositions globales
+window.openEvaluationModal     = openEvaluationModal;
+window.closeEvaluationModal    = closeEvaluationModal;
+window.evalShowStep            = evalShowStep;
+window.evalValidateStep1       = evalValidateStep1;
+window.evalValidateStep2       = evalValidateStep2;
+window.evalBuildSummary        = evalBuildSummary;
+window.generateEvaluationSheet = generateEvaluationSheet;
+
+// Bouton d'accès direct (optionnel)
+(() => {
+  const wireBtn = () => {
+    if ($('#open-evaluation-modal')) $('#open-evaluation-modal').onclick = openEvaluationModal;
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireBtn);
+  else wireBtn();
+})();
+
+setTimeout(() => refreshEvalSavedList(), 600);
+
 
 
 

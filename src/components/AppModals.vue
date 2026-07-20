@@ -12,6 +12,7 @@
   <CorrectionModal />
   <DidactiqueModal />
   <MethodeModal />
+  <EvaluationModal />
 </template>
 
 <script setup>
@@ -28,5 +29,6 @@ import WebQuizPlayerModal from './modals/WebQuizPlayerModal.vue';
 import CorrectionModal from './modals/CorrectionModal.vue';
 import DidactiqueModal from './modals/DidactiqueModal.vue';
 import MethodeModal from './modals/MethodeModal.vue';
+import EvaluationModal from './modals/EvaluationModal.vue';
 </script>
 
