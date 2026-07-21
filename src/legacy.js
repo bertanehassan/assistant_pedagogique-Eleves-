@@ -13324,10 +13324,8 @@ window.addEventListener('online', () => {
 // OUTIL N°4 — GÉNÉRATEUR D'ÉVALUATIONS DOUBLE VERSION A/B
 // ════════════════════════════════════════════════════════════════════
 
-// ── Variables globales pour le fichier PDF/image du cours ──
-let _evalPdfBase64 = null;
-let _evalPdfName   = '';
-let _evalPdfMime   = 'application/pdf';
+// ── Variables globales pour les fichiers PDF/image du cours ──
+let _evalPdfFiles = []; // tableau de { base64, name, mime }
 
 // ── Prompt système principal ──
 const EVALUATION_SYSTEM_PROMPT = `Tu es un Concepteur Pédagogique expert en toutes les matières scolaires, spécialisé dans la création d'évaluations pour des élèves du système éducatif marocain. Tu es également un expert en didactique.
@@ -13459,8 +13457,8 @@ function evalValidateStep1() {
 }
 
 function evalValidateStep2() {
-  const cours   = (document.getElementById('eval-cours')?.value || '').trim();
-  const hasPdf  = !!_evalPdfBase64;
+  const cours  = (document.getElementById('eval-cours')?.value || '').trim();
+  const hasPdf = _evalPdfFiles.length > 0;
   if (!hasPdf && cours.length < 20) {
     toast('Veuillez coller le contenu du cours ou importer un fichier PDF/image.', 'error');
     return false;
@@ -13470,13 +13468,18 @@ function evalValidateStep2() {
 
 function evalBuildSummary() {
   const get = (id) => (document.getElementById(id)?.value || '').trim();
-  const disc = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
-  const niv      = get('eval-niveau');
-  const filiere  = get('eval-filiere');
-  const sem      = get('eval-semestre');
-  const numDS    = get('eval-num-devoir');
-  const hasPdf   = !!_evalPdfBase64;
+  const disc    = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
+  const niv     = get('eval-niveau');
+  const filiere = get('eval-filiere');
+  const sem     = get('eval-semestre');
+  const numDS   = get('eval-num-devoir');
+  const hasPdf  = _evalPdfFiles.length > 0;
   const coursLen = (get('eval-cours') || '').length;
+  const fileInfo = hasPdf
+    ? ((_evalPdfFiles.length === 1)
+        ? `📎 ${_evalPdfFiles[0].name}`
+        : `📎 ${_evalPdfFiles.length} fichiers : ${_evalPdfFiles.map(f => f.name).join(', ')}`)
+    : (coursLen > 0 ? `${coursLen} caractères` : '—');
   const el = document.getElementById('eval-summary');
   if (!el) return;
   el.innerHTML = `
@@ -13486,7 +13489,7 @@ function evalBuildSummary() {
       <div><span style="color:var(--text-dim)">🏫 Filière :</span> <strong>${filiere || '—'}</strong></div>
       <div><span style="color:var(--text-dim)">📅 Semestre :</span> <strong>${sem}</strong></div>
       <div><span style="color:var(--text-dim)">🔢 N° Devoir :</span> <strong>DS N° ${numDS}</strong></div>
-      <div><span style="color:var(--text-dim)">📄 Cours :</span> <strong>${hasPdf ? `📎 ${_evalPdfName}` : (coursLen > 0 ? `${coursLen} caractères` : '—')}</strong></div>
+      <div><span style="color:var(--text-dim)">📄 Cours :</span> <strong>${fileInfo}</strong></div>
     </div>`;
 }
 
@@ -13523,7 +13526,7 @@ const openEvaluationModal = async () => {
     }
   }
 
-  // Restaurer la config
+  // Restaurer la config depuis localStorage
   try {
     const saved = localStorage.getItem('evalSavedConfig');
     if (saved) {
@@ -13544,18 +13547,25 @@ const openEvaluationModal = async () => {
     }
   } catch(e) {}
 
-  // Badge PDF si fichier en mémoire
-  if (_evalPdfBase64) {
-    const badge = $('#eval-pdf-badge');
-    if (badge) { badge.textContent = `📎 ${_evalPdfName} (Mémoire)`; badge.style.display = 'inline-block'; }
-    const info = $('#eval-pdf-info');
+  // Badge PDF si fichiers en mémoire
+  const badge = $('#eval-pdf-badge');
+  const info  = $('#eval-pdf-info');
+  const rmBtn = $('#eval-pdf-remove');
+  if (_evalPdfFiles.length > 0) {
+    const label = _evalPdfFiles.length === 1
+      ? `📎 ${_evalPdfFiles[0].name} (Mémoire)`
+      : `📎 ${_evalPdfFiles.length} fichiers en mémoire`;
+    if (badge) { badge.textContent = label; badge.style.display = 'inline-block'; }
     if (info) info.style.display = 'block';
+    if (rmBtn) rmBtn.style.cssText = 'display:inline-flex;';
   } else {
-    const badge = $('#eval-pdf-badge');
     if (badge) badge.style.display = 'none';
-    const info = $('#eval-pdf-info');
     if (info) info.style.display = 'none';
+    if (rmBtn) rmBtn.style.display = 'none';
   }
+
+  // Rafraîchir la liste des profils sauvegardés
+  refreshEvalSavedList();
 
   evalShowStep(1);
   const modal = document.getElementById('evaluation-modal');
@@ -13575,7 +13585,10 @@ const generateEvaluationSheet = async () => {
   const discipline = get('eval-discipline') === 'Autre'
     ? (get('eval-custom-discipline') || 'Autre')
     : get('eval-discipline');
-  const hasPdf = !!_evalPdfBase64;
+  const hasPdf = _evalPdfFiles.length > 0;
+  const pdfLabel = hasPdf
+    ? (_evalPdfFiles.length === 1 ? _evalPdfFiles[0].name : `${_evalPdfFiles.length} fichiers`)
+    : '';
 
   const cfg = {
     discipline,
@@ -13584,7 +13597,7 @@ const generateEvaluationSheet = async () => {
     semestre:       get('eval-semestre'),
     numDevoir:      get('eval-num-devoir'),
     outputLanguage: get('eval-output-lang'),
-    cours:          get('eval-cours') || (hasPdf ? `[COURS EN PIÈCE JOINTE : ${_evalPdfName}]` : ''),
+    cours:          get('eval-cours') || (hasPdf ? `[COURS EN PIÈCE(S) JOINTE(S) : ${pdfLabel}]` : ''),
     consignes:      get('eval-consignes'),
     hasPdf,
     exportWord: document.getElementById('eval-export-word')?.checked || false,
@@ -13634,12 +13647,18 @@ const generateEvaluationSheet = async () => {
     }
 
     const userContent = buildEvaluationUserPrompt(cfg);
-    const parts = [{ text: userContent }];
+    const parts = [];
 
-    if (hasPdf && _evalPdfBase64) {
-      parts.unshift({ inlineData: { mimeType: _evalPdfMime || 'application/pdf', data: _evalPdfBase64 } });
-      parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT COURS — RÔLE : SOURCE DU COURS]\nLe document ci-dessus contient le cours à évaluer. Analyse son contenu pour générer les deux évaluations.\n---\n\n' });
+    // Ajouter tous les fichiers PDF/images en tête
+    if (hasPdf && _evalPdfFiles.length > 0) {
+      _evalPdfFiles.forEach((f, i) => {
+        parts.push({ inlineData: { mimeType: f.mime, data: f.base64 } });
+        parts.push({ text: `[DOCUMENT ${i + 1}/${_evalPdfFiles.length} : ${f.name}]\n` });
+      });
+      parts.push({ text: '\n---\n[RÔLE DES DOCUMENTS : Ces documents constituent le cours à évaluer. Analysez leur contenu intégral pour générer les deux évaluations.]\n---\n\n' });
     }
+
+    parts.push({ text: userContent });
 
     const geminiPayload = {
       systemInstruction: { parts: [{ text: EVALUATION_SYSTEM_PROMPT }] },
@@ -13762,59 +13781,79 @@ const generateEvaluationSheet = async () => {
     const overlay = document.getElementById('evaluation-modal');
     if (overlay) overlay.onclick = (e) => { if (e.target === overlay) closeEvaluationModal(); };
 
-    // Import PDF / image / texte
+    // Import PDF / image / texte (MULTIPLE)
     const pdfInput = document.getElementById('eval-pdf-upload');
     if (pdfInput) {
       pdfInput.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
         const badge     = document.getElementById('eval-pdf-badge');
         const info      = document.getElementById('eval-pdf-info');
         const removeBtn = document.getElementById('eval-pdf-remove');
         const coursEl   = document.getElementById('eval-cours');
-        const isPdfOrImg = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') || file.type.startsWith('image/');
 
-        if (badge) { badge.textContent = `⏳ ${file.name} — Lecture en cours…`; badge.style.display = 'inline-block'; }
+        if (badge) { badge.textContent = `⏳ Lecture de ${files.length} fichier(s)…`; badge.style.display = 'inline-block'; }
 
-        if (isPdfOrImg) {
+        // Séparer les binaires (PDF/image) et les textes
+        const binaryFiles = files.filter(f =>
+          f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf') || f.type.startsWith('image/')
+        );
+        const textFiles = files.filter(f => !binaryFiles.includes(f));
+
+        // Lire tous les fichiers binaires
+        const binaryReads = binaryFiles.map(f => new Promise((res, rej) => {
           const reader = new FileReader();
-          reader.onload = (ev) => {
-            _evalPdfBase64 = ev.target.result.split(',')[1];
-            _evalPdfName   = file.name;
-            _evalPdfMime   = file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
-            if (badge) { badge.textContent = `📄 ${file.name} (Prêt pour Gemini Vision)`; badge.style.display = 'inline-block'; }
-            if (info) info.style.display = 'block';
-            if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
-            if (coursEl) { coursEl.value = `[COURS EN PIÈCE JOINTE : ${file.name}]\nSera analysé nativement par Gemini Vision.`; }
-            toast(`✅ ${file.name} importé avec succès.`, 'success');
-          };
-          reader.onerror = () => {
-            toast(`❌ Erreur lecture de ${file.name}`, 'error');
-            if (badge) badge.style.display = 'none';
-          };
-          reader.readAsDataURL(file);
-        } else {
+          reader.onload = (ev) => res({ base64: ev.target.result.split(',')[1], name: f.name, mime: f.type || 'application/pdf' });
+          reader.onerror = rej;
+          reader.readAsDataURL(f);
+        }));
+
+        // Lire tous les fichiers texte
+        const textReads = textFiles.map(f => new Promise((res, rej) => {
           const reader = new FileReader();
-          reader.onload = (ev) => {
-            if (coursEl) { coursEl.value = ev.target.result.trim(); }
-            _evalPdfBase64 = null;
-            _evalPdfName = file.name;
-            if (badge) { badge.textContent = `📝 ${file.name}`; badge.style.display = 'inline-block'; }
-            if (info) info.style.display = 'block';
-            if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
-            toast('✅ Fichier texte importé.', 'success');
-          };
-          reader.readAsText(file, 'UTF-8');
+          reader.onload = (ev) => res({ text: ev.target.result.trim(), name: f.name });
+          reader.onerror = rej;
+          reader.readAsText(f, 'UTF-8');
+        }));
+
+        try {
+          const binaryResults = await Promise.all(binaryReads);
+          const textResults   = await Promise.all(textReads);
+
+          // Accumuler dans _evalPdfFiles
+          _evalPdfFiles.push(...binaryResults);
+
+          // Concaténer les textes dans le textarea
+          if (textResults.length > 0) {
+            const existing = coursEl?.value ? coursEl.value + '\n\n---\n\n' : '';
+            if (coursEl) coursEl.value = existing + textResults.map(r => r.text).join('\n\n---\n\n');
+          } else if (binaryResults.length > 0 && coursEl) {
+            const names = binaryResults.map(r => r.name).join(', ');
+            coursEl.value = `[COURS EN PIÈCE(S) JOINTE(S) : ${names}]\nSera analysé nativement par Gemini Vision.`;
+          }
+
+          // Mettre à jour l'UI
+          const totalFiles = _evalPdfFiles.length + (textResults.length > 0 ? textResults.length : 0);
+          const label = _evalPdfFiles.length === 1 && textResults.length === 0
+            ? `📄 ${_evalPdfFiles[0].name} (Prêt)`
+            : `📄 ${_evalPdfFiles.length} fichier(s) prêt(s) pour Gemini Vision${textResults.length > 0 ? ` + ${textResults.length} texte(s)` : ''}`;
+          if (badge) { badge.textContent = label; badge.style.display = 'inline-block'; }
+          if (info) info.style.display = 'block';
+          if (removeBtn) removeBtn.style.cssText = 'display:inline-flex;';
+          toast(`✅ ${files.length} fichier(s) importé(s) avec succès.`, 'success');
+        } catch(err) {
+          toast('❌ Erreur lors de la lecture de certains fichiers.', 'error');
+          if (badge) badge.style.display = 'none';
         }
         e.target.value = '';
       };
     }
 
-    // Supprimer le fichier PDF
+    // Supprimer tous les fichiers PDF/images
     const removeBtn = document.getElementById('eval-pdf-remove');
     if (removeBtn) {
       removeBtn.onclick = () => {
-        _evalPdfBase64 = null; _evalPdfName = ''; _evalPdfMime = 'application/pdf';
+        _evalPdfFiles = [];
         const coursEl = document.getElementById('eval-cours');
         if (coursEl) coursEl.value = '';
         const badge = document.getElementById('eval-pdf-badge');
@@ -13822,7 +13861,7 @@ const generateEvaluationSheet = async () => {
         const info = document.getElementById('eval-pdf-info');
         if (info) info.style.display = 'none';
         removeBtn.style.display = 'none';
-        toast('🗑️ Fichier cours supprimé.', 'info');
+        toast('🗑️ Fichiers cours supprimés.', 'info');
       };
     }
 
@@ -13831,6 +13870,7 @@ const generateEvaluationSheet = async () => {
       const get = (id) => (document.getElementById(id)?.value || '').trim();
       const discipline = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
       const cfg = {
+        id:            `eval_${Date.now()}`,
         discipline,
         niveau:         get('eval-niveau'),
         filiere:        get('eval-filiere'),
@@ -13845,19 +13885,21 @@ const generateEvaluationSheet = async () => {
         name:        discipline ? `${discipline} — ${get('eval-niveau')}` : 'Config sans nom'
       };
       try {
-        // Gestion multi-save dans IndexedDB
-        if (typeof db !== 'undefined' && db.put) {
-          const id = `eval_${Date.now()}`;
-          await db.put('settings', { id, ...cfg });
-          toast(`✅ Configuration "${cfg.name}" sauvegardée.`, 'success');
-          await refreshEvalSavedList();
-        } else {
-          localStorage.setItem('evalSavedConfig', JSON.stringify(cfg));
-          toast('✅ Configuration sauvegardée localement.', 'success');
-        }
-      } catch(e) {
+        // Sauvegarder dans localStorage (fiable)
+        const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
+        allSaves.push(cfg);
+        localStorage.setItem('evalAllConfigs', JSON.stringify(allSaves));
+        // Sauvegarder aussi la dernière config rapide
         localStorage.setItem('evalSavedConfig', JSON.stringify(cfg));
-        toast('✅ Configuration sauvegardée.', 'success');
+        // Essayer aussi IndexedDB
+        if (typeof db !== 'undefined' && db.conn && db.put) {
+          await db.put('settings', cfg);
+        }
+        toast(`✅ Profil "${cfg.name}" sauvegardé.`, 'success');
+        refreshEvalSavedList();
+      } catch(e) {
+        toast('✅ Profil sauvegardé localement.', 'success');
+        refreshEvalSavedList();
       }
     });
 
@@ -13865,9 +13907,12 @@ const generateEvaluationSheet = async () => {
       const sel = document.getElementById('eval-saved-list');
       if (!sel || !sel.value) { toast('Sélectionnez un profil à charger.', 'error'); return; }
       try {
+        // Chercher dans localStorage d'abord
         let cfg = null;
-        if (typeof db !== 'undefined') cfg = await db.get('settings', sel.value);
-        if (!cfg) { const raw = localStorage.getItem('evalSavedConfig'); if (raw) cfg = JSON.parse(raw); }
+        const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
+        cfg = allSaves.find(c => c.id === sel.value);
+        // Sinon chercher dans IndexedDB
+        if (!cfg && typeof db !== 'undefined' && db.conn) cfg = await db.get('settings', sel.value);
         if (!cfg) { toast('Profil introuvable.', 'error'); return; }
         if (cfg.discipline) { const el = $('#eval-discipline'); if (el) el.value = cfg.discipline; }
         if (cfg.niveau)    { const el = $('#eval-niveau');    if (el) el.value = cfg.niveau; }
@@ -13879,17 +13924,23 @@ const generateEvaluationSheet = async () => {
         if ($('#eval-export-word')) $('#eval-export-word').checked = !!cfg.exportWord;
         if ($('#eval-export-html')) $('#eval-export-html').checked = cfg.exportHtml !== undefined ? !!cfg.exportHtml : true;
         if ($('#eval-export-pdf'))  $('#eval-export-pdf').checked  = !!cfg.exportPdf;
-        toast('✅ Configuration chargée.', 'success');
+        toast('✅ Profil chargé.', 'success');
       } catch(e) { toast('Erreur lors du chargement.', 'error'); }
     });
 
     document.addEventListener('do-delete-eval-config', async () => {
       const sel = document.getElementById('eval-saved-list');
       if (!sel || !sel.value) { toast('Sélectionnez un profil à supprimer.', 'error'); return; }
+      const idToDelete = sel.value;
       try {
-        if (typeof db !== 'undefined' && db.delete) await db.delete('settings', sel.value);
+        // Supprimer de localStorage
+        const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
+        const filtered = allSaves.filter(c => c.id !== idToDelete);
+        localStorage.setItem('evalAllConfigs', JSON.stringify(filtered));
+        // Supprimer aussi d'IndexedDB si disponible
+        if (typeof db !== 'undefined' && db.conn && db.delete) await db.delete('settings', idToDelete);
         toast('🗑️ Profil supprimé.', 'info');
-        await refreshEvalSavedList();
+        refreshEvalSavedList();
       } catch(e) { toast('Erreur suppression.', 'error'); }
     });
   };
@@ -13902,15 +13953,15 @@ const generateEvaluationSheet = async () => {
 })();
 
 // ── Refresh de la liste des profils sauvegardés ──
-async function refreshEvalSavedList() {
+function refreshEvalSavedList() {
   const sel = document.getElementById('eval-saved-list');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Profils sauvegardés —</option>';
   try {
-    if (typeof db === 'undefined') return;
-    const all = await db.getAll('settings') || [];
-    const configs = all.filter(s => s.id && s.id.startsWith('eval_') && s.name);
-    configs.forEach(c => {
+    // Source principale : localStorage
+    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
+    allSaves.forEach(c => {
+      if (!c.id || !c.name) return;
       const opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = `${c.name}${c.savedAt ? ' — ' + c.savedAt : ''}`;

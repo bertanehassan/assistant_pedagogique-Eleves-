@@ -169,11 +169,11 @@ L'IA va :
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="eval-pdf-upload" class="eval-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un fichier (PDF, image ou TXT)
+                Importer fichiers (PDF, image ou TXT — sélection multiple possible)
               </label>
-              <input type="file" id="eval-pdf-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
+              <input type="file" id="eval-pdf-upload" accept=".pdf,.txt,.md,image/*" multiple style="display:none">
               <span id="eval-pdf-badge" style="display:none;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
-              <button id="eval-pdf-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
+              <button id="eval-pdf-remove" class="file-remove-btn" title="Supprimer les fichiers" style="display:none">✕</button>
             </div>
             <div id="eval-pdf-info" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:6px;font-size:11px;color:#f59e0b">
               ✅ Fichier cours chargé en mémoire — Gemini Vision analysera le document nativement.
