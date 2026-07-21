@@ -13865,16 +13865,6 @@ const generateEvaluationSheet = async () => {
       };
     }
 
-    // ── Sauvegarde / Chargement / Suppression de profil ──
-    const saveCfgBtn = document.getElementById('eval-save-btn');
-    if (saveCfgBtn) saveCfgBtn.onclick = () => window.evalSaveConfig?.();
-
-    const loadCfgBtn = document.getElementById('eval-load-btn');
-    if (loadCfgBtn) loadCfgBtn.onclick = () => window.evalLoadConfig?.();
-
-    const delCfgBtn = document.getElementById('eval-delete-save-btn');
-    if (delCfgBtn) delCfgBtn.onclick = () => window.evalDeleteConfig?.();
-
   };
 
   if (document.readyState === 'loading') {
@@ -13970,6 +13960,17 @@ function refreshEvalSavedList() {
     });
   } catch(e) {}
 }
+
+// ── Enregistrement des handlers CustomEvent au niveau module (pattern identique à Methode) ──
+document.removeEventListener('do-save-eval-config',   window._evalSaveHandler);
+document.removeEventListener('do-load-eval-config',   window._evalLoadHandler);
+document.removeEventListener('do-delete-eval-config', window._evalDeleteHandler);
+window._evalSaveHandler   = evalSaveConfig;
+window._evalLoadHandler   = evalLoadConfig;
+window._evalDeleteHandler = evalDeleteConfig;
+document.addEventListener('do-save-eval-config',   window._evalSaveHandler);
+document.addEventListener('do-load-eval-config',   window._evalLoadHandler);
+document.addEventListener('do-delete-eval-config', window._evalDeleteHandler);
 
 // Expositions globales
 window.openEvaluationModal     = openEvaluationModal;
