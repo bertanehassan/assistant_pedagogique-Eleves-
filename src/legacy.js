@@ -13865,6 +13865,16 @@ const generateEvaluationSheet = async () => {
       };
     }
 
+    // ── Sauvegarde / Chargement / Suppression de profil ──
+    const saveCfgBtn = document.getElementById('eval-save-btn');
+    if (saveCfgBtn) saveCfgBtn.onclick = () => window.evalSaveConfig?.();
+
+    const loadCfgBtn = document.getElementById('eval-load-btn');
+    if (loadCfgBtn) loadCfgBtn.onclick = () => window.evalLoadConfig?.();
+
+    const delCfgBtn = document.getElementById('eval-delete-save-btn');
+    if (delCfgBtn) delCfgBtn.onclick = () => window.evalDeleteConfig?.();
+
   };
 
   if (document.readyState === 'loading') {
