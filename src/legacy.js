@@ -13874,88 +13874,91 @@ const generateEvaluationSheet = async () => {
   }
 })();
 
-// ── Sauvegarde / Chargement / Suppression de profil ── (fonctions directes, pas de CustomEvent)
-const evalSaveConfig = () => {
+// ── Sauvegarde / Chargement / Suppression de profil ── (pattern IndexedDB identique à Méthode/Correction)
+const evalSaveConfig = async () => {
   const get = (id) => (document.getElementById(id)?.value || '').trim();
   const discipline = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
-  const cfg = {
-    id:            `eval_${Date.now()}`,
+  const defaultName = discipline ? `${discipline} — ${get('eval-niveau')}` : 'Config sans nom';
+  const name = prompt('Nom du profil \u00e0 sauvegarder :', defaultName);
+  if (!name) return;
+  const configToSave = {
     discipline,
-    niveau:         get('eval-niveau'),
-    filiere:        get('eval-filiere'),
-    semestre:       get('eval-semestre'),
-    numDevoir:      get('eval-num-devoir'),
-    outputLanguage: get('eval-output-lang'),
-    consignes:      get('eval-consignes'),
-    exportWord:  document.getElementById('eval-export-word')?.checked || false,
-    exportHtml:  document.getElementById('eval-export-html')?.checked || false,
-    exportPdf:   document.getElementById('eval-export-pdf')?.checked  || false,
-    savedAt:     new Date().toLocaleString('fr-FR'),
-    name:        discipline ? `${discipline} — ${get('eval-niveau')}` : 'Config sans nom'
+    customDiscipline: get('eval-custom-discipline'),
+    niveau:           get('eval-niveau'),
+    filiere:          get('eval-filiere'),
+    semestre:         get('eval-semestre'),
+    numDevoir:        get('eval-num-devoir'),
+    outputLanguage:   get('eval-output-lang'),
+    consignes:        get('eval-consignes'),
+    exportWord: document.getElementById('eval-export-word')?.checked || false,
+    exportHtml: document.getElementById('eval-export-html')?.checked || false,
+    exportPdf:  document.getElementById('eval-export-pdf')?.checked  || false,
   };
   try {
-    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
-    allSaves.push(cfg);
-    localStorage.setItem('evalAllConfigs', JSON.stringify(allSaves));
-    localStorage.setItem('evalSavedConfig', JSON.stringify(cfg));
-    if (typeof db !== 'undefined' && db.conn && db.put) {
-      db.put('settings', cfg).catch(() => {});
-    }
-    toast(`✅ Profil "${cfg.name}" sauvegardé !`, 'success');
-    refreshEvalSavedList();
-  } catch(e) {
-    toast(`❌ Erreur sauvegarde : ${e.message}`, 'error');
+    const id = 'evalSave_' + Date.now();
+    await db.put('settings', { id, name, data: configToSave });
+    await refreshEvalSavedList();
+    toast(`✅ Profil "${name}" sauvegardé !`, 'success');
+  } catch(err) {
+    console.error('Erreur sauvegarde \u00e9val:', err);
+    toast('Erreur lors de la sauvegarde.', 'error');
   }
 };
 
 const evalLoadConfig = async () => {
-  const sel = document.getElementById('eval-saved-list');
-  if (!sel || !sel.value) { toast('Sélectionnez un profil à charger.', 'error'); return; }
   try {
-    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
-    let cfg = allSaves.find(c => c.id === sel.value);
-    if (!cfg && typeof db !== 'undefined' && db.conn) cfg = await db.get('settings', sel.value);
-    if (!cfg) { toast('Profil introuvable.', 'error'); return; }
-    if (cfg.discipline) { const el = document.getElementById('eval-discipline'); if (el) el.value = cfg.discipline; }
-    if (cfg.niveau)    { const el = document.getElementById('eval-niveau');    if (el) el.value = cfg.niveau; }
-    if (cfg.filiere)   { const el = document.getElementById('eval-filiere');   if (el) el.value = cfg.filiere; }
-    if (cfg.semestre)  { const el = document.getElementById('eval-semestre');  if (el) el.value = cfg.semestre; }
-    if (cfg.numDevoir) { const el = document.getElementById('eval-num-devoir'); if (el) el.value = cfg.numDevoir; }
-    if (cfg.outputLanguage) { const el = document.getElementById('eval-output-lang'); if (el) el.value = cfg.outputLanguage; }
-    if (cfg.consignes) { const el = document.getElementById('eval-consignes'); if (el) el.value = cfg.consignes; }
-    const wordEl = document.getElementById('eval-export-word'); if (wordEl) wordEl.checked = !!cfg.exportWord;
-    const htmlEl = document.getElementById('eval-export-html'); if (htmlEl) htmlEl.checked = cfg.exportHtml !== undefined ? !!cfg.exportHtml : true;
-    const pdfEl  = document.getElementById('eval-export-pdf');  if (pdfEl)  pdfEl.checked  = !!cfg.exportPdf;
-    toast('✅ Profil chargé avec succès.', 'success');
-  } catch(e) { toast('Erreur lors du chargement.', 'error'); }
+    const id = document.getElementById('eval-saved-list')?.value;
+    if (!id) { toast('Veuillez s\u00e9lectionner un profil \u00e0 charger.', 'info'); return; }
+    const record = await db.get('settings', id);
+    if (!record || !record.data) { toast('Profil introuvable.', 'error'); return; }
+    const d = record.data;
+    const set = (elId, val) => { const el = document.getElementById(elId); if (el && val !== undefined) el.value = val; };
+    const chk = (elId, val) => { const el = document.getElementById(elId); if (el) el.checked = !!val; };
+    set('eval-discipline',        d.discipline);
+    set('eval-custom-discipline', d.customDiscipline);
+    set('eval-niveau',            d.niveau);
+    set('eval-filiere',           d.filiere);
+    set('eval-semestre',          d.semestre);
+    set('eval-num-devoir',        d.numDevoir);
+    set('eval-output-lang',       d.outputLanguage);
+    set('eval-consignes',         d.consignes);
+    chk('eval-export-word', d.exportWord);
+    chk('eval-export-html', d.exportHtml !== undefined ? d.exportHtml : true);
+    chk('eval-export-pdf',  d.exportPdf);
+    const customGroup = document.getElementById('eval-custom-discipline-group');
+    if (customGroup) customGroup.style.display = d.discipline === 'Autre' ? 'block' : 'none';
+    toast(`Profil "${record.name}" charg\u00e9 avec succ\u00e8s !`, 'success');
+  } catch(err) {
+    console.error('Erreur chargement \u00e9val:', err);
+    toast('Erreur lors du chargement.', 'error');
+  }
 };
 
 const evalDeleteConfig = async () => {
-  const sel = document.getElementById('eval-saved-list');
-  if (!sel || !sel.value) { toast('Sélectionnez un profil à supprimer.', 'error'); return; }
-  const idToDelete = sel.value;
   try {
-    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
-    localStorage.setItem('evalAllConfigs', JSON.stringify(allSaves.filter(c => c.id !== idToDelete)));
-    if (typeof db !== 'undefined' && db.conn && db.delete) await db.delete('settings', idToDelete);
-    toast('🗑️ Profil supprimé.', 'info');
-    refreshEvalSavedList();
-  } catch(e) { toast('Erreur suppression.', 'error'); }
+    const id = document.getElementById('eval-saved-list')?.value;
+    if (!id) { toast('Veuillez s\u00e9lectionner un profil \u00e0 supprimer.', 'info'); return; }
+    if (!confirm('\u00cates-vous s\u00fbr de vouloir supprimer ce profil ?')) return;
+    await db.delete('settings', id);
+    await refreshEvalSavedList();
+    toast('Profil supprim\u00e9.', 'info');
+  } catch(err) {
+    console.error('Erreur suppression \u00e9val:', err);
+    toast('Erreur lors de la suppression.', 'error');
+  }
 };
 
-// ── Refresh de la liste des profils sauvegardés ──
-function refreshEvalSavedList() {
+// ── Refresh de la liste des profils sauvegardés (IndexedDB, pattern Méthode/Correction) ──
+async function refreshEvalSavedList() {
   const sel = document.getElementById('eval-saved-list');
   if (!sel) return;
-  sel.innerHTML = '<option value="">— Profils sauvegardés —</option>';
+  sel.innerHTML = '<option value="">\u2014 Profils sauvegard\u00e9s \u2014</option>';
   try {
-    // Source principale : localStorage
-    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
-    allSaves.forEach(c => {
-      if (!c.id || !c.name) return;
+    const all = await db.getAll('settings') || [];
+    all.filter(s => s.id && s.id.startsWith('evalSave_') && s.name).forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
-      opt.textContent = `${c.name}${c.savedAt ? ' — ' + c.savedAt : ''}`;
+      opt.textContent = c.name;
       sel.appendChild(opt);
     });
   } catch(e) {}
