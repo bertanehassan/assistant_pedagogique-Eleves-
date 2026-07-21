@@ -13865,84 +13865,6 @@ const generateEvaluationSheet = async () => {
       };
     }
 
-    // Sauvegarde / chargement de configuration
-    document.addEventListener('do-save-eval-config', async () => {
-      const get = (id) => (document.getElementById(id)?.value || '').trim();
-      const discipline = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
-      const cfg = {
-        id:            `eval_${Date.now()}`,
-        discipline,
-        niveau:         get('eval-niveau'),
-        filiere:        get('eval-filiere'),
-        semestre:       get('eval-semestre'),
-        numDevoir:      get('eval-num-devoir'),
-        outputLanguage: get('eval-output-lang'),
-        consignes:      get('eval-consignes'),
-        exportWord:  document.getElementById('eval-export-word')?.checked || false,
-        exportHtml:  document.getElementById('eval-export-html')?.checked || false,
-        exportPdf:   document.getElementById('eval-export-pdf')?.checked  || false,
-        savedAt:     new Date().toLocaleString('fr-FR'),
-        name:        discipline ? `${discipline} — ${get('eval-niveau')}` : 'Config sans nom'
-      };
-      try {
-        // Sauvegarder dans localStorage (fiable)
-        const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
-        allSaves.push(cfg);
-        localStorage.setItem('evalAllConfigs', JSON.stringify(allSaves));
-        // Sauvegarder aussi la dernière config rapide
-        localStorage.setItem('evalSavedConfig', JSON.stringify(cfg));
-        // Essayer aussi IndexedDB
-        if (typeof db !== 'undefined' && db.conn && db.put) {
-          await db.put('settings', cfg);
-        }
-        toast(`✅ Profil "${cfg.name}" sauvegardé.`, 'success');
-        refreshEvalSavedList();
-      } catch(e) {
-        toast('✅ Profil sauvegardé localement.', 'success');
-        refreshEvalSavedList();
-      }
-    });
-
-    document.addEventListener('do-load-eval-config', async () => {
-      const sel = document.getElementById('eval-saved-list');
-      if (!sel || !sel.value) { toast('Sélectionnez un profil à charger.', 'error'); return; }
-      try {
-        // Chercher dans localStorage d'abord
-        let cfg = null;
-        const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
-        cfg = allSaves.find(c => c.id === sel.value);
-        // Sinon chercher dans IndexedDB
-        if (!cfg && typeof db !== 'undefined' && db.conn) cfg = await db.get('settings', sel.value);
-        if (!cfg) { toast('Profil introuvable.', 'error'); return; }
-        if (cfg.discipline) { const el = $('#eval-discipline'); if (el) el.value = cfg.discipline; }
-        if (cfg.niveau)    { const el = $('#eval-niveau');    if (el) el.value = cfg.niveau; }
-        if (cfg.filiere)   { const el = $('#eval-filiere');   if (el) el.value = cfg.filiere; }
-        if (cfg.semestre)  { const el = $('#eval-semestre');  if (el) el.value = cfg.semestre; }
-        if (cfg.numDevoir) { const el = $('#eval-num-devoir'); if (el) el.value = cfg.numDevoir; }
-        if (cfg.outputLanguage) { const el = $('#eval-output-lang'); if (el) el.value = cfg.outputLanguage; }
-        if (cfg.consignes) { const el = $('#eval-consignes'); if (el) el.value = cfg.consignes; }
-        if ($('#eval-export-word')) $('#eval-export-word').checked = !!cfg.exportWord;
-        if ($('#eval-export-html')) $('#eval-export-html').checked = cfg.exportHtml !== undefined ? !!cfg.exportHtml : true;
-        if ($('#eval-export-pdf'))  $('#eval-export-pdf').checked  = !!cfg.exportPdf;
-        toast('✅ Profil chargé.', 'success');
-      } catch(e) { toast('Erreur lors du chargement.', 'error'); }
-    });
-
-    document.addEventListener('do-delete-eval-config', async () => {
-      const sel = document.getElementById('eval-saved-list');
-      if (!sel || !sel.value) { toast('Sélectionnez un profil à supprimer.', 'error'); return; }
-      const idToDelete = sel.value;
-      try {
-        // Supprimer de localStorage
-        const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
-        const filtered = allSaves.filter(c => c.id !== idToDelete);
-        localStorage.setItem('evalAllConfigs', JSON.stringify(filtered));
-        // Supprimer aussi d'IndexedDB si disponible
-        if (typeof db !== 'undefined' && db.conn && db.delete) await db.delete('settings', idToDelete);
-        toast('🗑️ Profil supprimé.', 'info');
-        refreshEvalSavedList();
-      } catch(e) { toast('Erreur suppression.', 'error'); }
-    });
   };
 
   if (document.readyState === 'loading') {
@@ -13951,6 +13873,75 @@ const generateEvaluationSheet = async () => {
     setTimeout(wireEval, 400);
   }
 })();
+
+// ── Sauvegarde / Chargement / Suppression de profil ── (fonctions directes, pas de CustomEvent)
+const evalSaveConfig = () => {
+  const get = (id) => (document.getElementById(id)?.value || '').trim();
+  const discipline = get('eval-discipline') === 'Autre' ? (get('eval-custom-discipline') || 'Autre') : get('eval-discipline');
+  const cfg = {
+    id:            `eval_${Date.now()}`,
+    discipline,
+    niveau:         get('eval-niveau'),
+    filiere:        get('eval-filiere'),
+    semestre:       get('eval-semestre'),
+    numDevoir:      get('eval-num-devoir'),
+    outputLanguage: get('eval-output-lang'),
+    consignes:      get('eval-consignes'),
+    exportWord:  document.getElementById('eval-export-word')?.checked || false,
+    exportHtml:  document.getElementById('eval-export-html')?.checked || false,
+    exportPdf:   document.getElementById('eval-export-pdf')?.checked  || false,
+    savedAt:     new Date().toLocaleString('fr-FR'),
+    name:        discipline ? `${discipline} — ${get('eval-niveau')}` : 'Config sans nom'
+  };
+  try {
+    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
+    allSaves.push(cfg);
+    localStorage.setItem('evalAllConfigs', JSON.stringify(allSaves));
+    localStorage.setItem('evalSavedConfig', JSON.stringify(cfg));
+    if (typeof db !== 'undefined' && db.conn && db.put) {
+      db.put('settings', cfg).catch(() => {});
+    }
+    toast(`✅ Profil "${cfg.name}" sauvegardé !`, 'success');
+    refreshEvalSavedList();
+  } catch(e) {
+    toast(`❌ Erreur sauvegarde : ${e.message}`, 'error');
+  }
+};
+
+const evalLoadConfig = async () => {
+  const sel = document.getElementById('eval-saved-list');
+  if (!sel || !sel.value) { toast('Sélectionnez un profil à charger.', 'error'); return; }
+  try {
+    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
+    let cfg = allSaves.find(c => c.id === sel.value);
+    if (!cfg && typeof db !== 'undefined' && db.conn) cfg = await db.get('settings', sel.value);
+    if (!cfg) { toast('Profil introuvable.', 'error'); return; }
+    if (cfg.discipline) { const el = document.getElementById('eval-discipline'); if (el) el.value = cfg.discipline; }
+    if (cfg.niveau)    { const el = document.getElementById('eval-niveau');    if (el) el.value = cfg.niveau; }
+    if (cfg.filiere)   { const el = document.getElementById('eval-filiere');   if (el) el.value = cfg.filiere; }
+    if (cfg.semestre)  { const el = document.getElementById('eval-semestre');  if (el) el.value = cfg.semestre; }
+    if (cfg.numDevoir) { const el = document.getElementById('eval-num-devoir'); if (el) el.value = cfg.numDevoir; }
+    if (cfg.outputLanguage) { const el = document.getElementById('eval-output-lang'); if (el) el.value = cfg.outputLanguage; }
+    if (cfg.consignes) { const el = document.getElementById('eval-consignes'); if (el) el.value = cfg.consignes; }
+    const wordEl = document.getElementById('eval-export-word'); if (wordEl) wordEl.checked = !!cfg.exportWord;
+    const htmlEl = document.getElementById('eval-export-html'); if (htmlEl) htmlEl.checked = cfg.exportHtml !== undefined ? !!cfg.exportHtml : true;
+    const pdfEl  = document.getElementById('eval-export-pdf');  if (pdfEl)  pdfEl.checked  = !!cfg.exportPdf;
+    toast('✅ Profil chargé avec succès.', 'success');
+  } catch(e) { toast('Erreur lors du chargement.', 'error'); }
+};
+
+const evalDeleteConfig = async () => {
+  const sel = document.getElementById('eval-saved-list');
+  if (!sel || !sel.value) { toast('Sélectionnez un profil à supprimer.', 'error'); return; }
+  const idToDelete = sel.value;
+  try {
+    const allSaves = JSON.parse(localStorage.getItem('evalAllConfigs') || '[]');
+    localStorage.setItem('evalAllConfigs', JSON.stringify(allSaves.filter(c => c.id !== idToDelete)));
+    if (typeof db !== 'undefined' && db.conn && db.delete) await db.delete('settings', idToDelete);
+    toast('🗑️ Profil supprimé.', 'info');
+    refreshEvalSavedList();
+  } catch(e) { toast('Erreur suppression.', 'error'); }
+};
 
 // ── Refresh de la liste des profils sauvegardés ──
 function refreshEvalSavedList() {
@@ -13978,6 +13969,9 @@ window.evalValidateStep1       = evalValidateStep1;
 window.evalValidateStep2       = evalValidateStep2;
 window.evalBuildSummary        = evalBuildSummary;
 window.generateEvaluationSheet = generateEvaluationSheet;
+window.evalSaveConfig          = evalSaveConfig;
+window.evalLoadConfig          = evalLoadConfig;
+window.evalDeleteConfig        = evalDeleteConfig;
 
 // Bouton d'accès direct (optionnel)
 (() => {

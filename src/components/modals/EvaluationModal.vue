@@ -297,15 +297,15 @@ const handleGenerate = () => {
 };
 
 const handleSaveConfig = () => {
-  document.dispatchEvent(new CustomEvent('do-save-eval-config'));
+  window.evalSaveConfig?.();
 };
 
 const handleLoadConfig = () => {
-  document.dispatchEvent(new CustomEvent('do-load-eval-config'));
+  window.evalLoadConfig?.();
 };
 
 const handleDeleteSave = () => {
-  document.dispatchEvent(new CustomEvent('do-delete-eval-config'));
+  window.evalDeleteConfig?.();
 };
 
 // Auto-détection langue selon la discipline choisie
