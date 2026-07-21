@@ -482,7 +482,7 @@ ${pageCss}
   }, 100);
 }
 
-function exportToHtml(text, filename = "Export_IA.html") {
+function getExportHtmlString(text, filename = "Export_IA.html") {
   // On ne remplace plus par des images pour garder le texte éditable, on utilise MathJax
   const parsedHtml = parseMarkdownSafeMath(text);
   
@@ -740,7 +740,11 @@ function exportToHtml(text, filename = "Export_IA.html") {
 </body>
 </html>`;
   }
+  return htmlContent;
+}
 
+function exportToHtml(text, filename = "Export_IA.html") {
+  const htmlContent = getExportHtmlString(text, filename);
   const blob = new Blob(['\ufeff', htmlContent], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -752,108 +756,42 @@ function exportToHtml(text, filename = "Export_IA.html") {
 }
 
 function exportToPdf(text, filename = "Export_IA.pdf") {
-  if (typeof window.html2pdf === 'undefined') {
-    console.error("html2pdf n'est pas chargé.");
-    toast("Erreur : la librairie PDF n'est pas chargée.", "error");
-    return;
-  }
+  const htmlContent = getExportHtmlString(text, filename);
   
-  let htmlText = text;
-
-  // Blocs centrés CodeCogs SVG
-  const blockReplacerSvg = (match, math) => {
-    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
-  };
-  htmlText = htmlText.replace(/\\\[([\s\S]*?)\\\]/g, blockReplacerSvg);
-  htmlText = htmlText.replace(/\$\$([\s\S]*?)\$\$/g, blockReplacerSvg);
-
-  // Blocs en ligne CodeCogs SVG
-  const inlineReplacerSvg = (match, math) => {
-    return `<img style="vertical-align:middle; height:1.2em;" src="https://latex.codecogs.com/svg.image?\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
-  };
-  htmlText = htmlText.replace(/\\\(([\s\S]*?)\\\)/g, inlineReplacerSvg);
-  htmlText = htmlText.replace(/\$((?:[^$\\]|\\.)+)\$/g, inlineReplacerSvg);
-
-  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(htmlText) : htmlText.replace(/\n/g, '<br>');
-  const container = document.createElement('div');
+  // Utilisation d'une iframe invisible pour déclencher l'impression native
+  // Cela garantit un rendu 100% conforme, vectoriel, et respectant le CSS.
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.width = '0px';
+  iframe.style.height = '0px';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
   
-  let cssStyle = '';
-  let orientation = 'landscape';
-  let fontLink = '';
-
-  if (filename.includes('Fiche_Correction')) {
-    fontLink = `<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">`;
-    cssStyle = `
-      body { font-family: 'Dancing Script SemiBold', 'Segoe UI', Arial, sans-serif; font-size: 24px; line-height: 1.6; color: #050472; max-width: 1100px; margin: 0 auto; padding: 10px 20px 20px 20px; }
-      h3 { text-align: center; font-size: 36px; color: #70040499; margin-bottom: 10px; text-decoration: underline; text-decoration-color: #1506b5; }
-      table { border-collapse: collapse; width: 100%; margin: 0 auto 10px auto; }
-      table, th, td { font-family: 'Dancing Script SemiBold', 'Segoe Script', cursive; }
-      th, td { border: 2px solid #470202; padding: 8px; text-align: left; vertical-align: top; }
-      th { background-color: #decaca; text-align: center; font-size: 26px; color: #e71414; }
-      td { text-align: left; font-size: 24px; color: #170bc3cd; }
-      td:first-child { text-align: center; font-size: 26px; color: #e71414; font-weight: bold; vertical-align: middle; }
-      th:nth-child(3), td:nth-child(3), th:nth-child(4), td:nth-child(4) { width: 24%; min-width: 220px; }
-      tr { border-bottom: 2px solid #470202; }
-      p { text-align: left; font-size: 26px; color: #0383298a; margin-bottom: 1px; }
-      li { margin-bottom: 1px; font-size: 26px; color: #140599b0; font-weight: bold; }
-      blockquote { border-left: 4px solid #0a8a37; margin-left: 0; padding-left: 16px; color: #666; }
-      .MathJax, .MathJax span, .MathJax_Display, .mjx-chtml { color: #c90a0a !important; font-size: 1.2em !important; font-family: 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif !important; line-height: 1.35; }
-    `;
-    orientation = 'landscape';
-  } else if (filename.includes('Evaluation_')) {
-    fontLink = `<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">`;
-    cssStyle = `
-      * { box-sizing: border-box; }
-      body { font-family: 'Times New Roman', 'Noto Serif', Georgia, serif; font-size: 14px; line-height: 1.7; color: #1a1a2e; max-width: 900px; margin: 0 auto; padding: 20px 30px 40px 30px; background: #fff; }
-      h1 { text-align:center; font-size:20px; font-weight:900; color:#0d0d6b; margin:0 0 4px 0; text-transform:uppercase; letter-spacing:1px; }
-      h2 { font-size:15px; font-weight:700; color:#0d0d6b; border-bottom:2px solid #0d0d6b; padding-bottom:4px; margin-top:20px; margin-bottom:8px; text-transform:uppercase; }
-      h3 { font-size:14px; font-weight:700; color:#1a1a2e; margin-top:14px; margin-bottom:6px; }
-      h4 { font-size:13px; font-weight:700; color:#444; margin-top:8px; margin-bottom:4px; }
-      .version-a { background:#1a3a8f; color:white; text-align:center; font-size:17px; font-weight:900; padding:10px 20px; border-radius:4px; margin:30px 0 16px 0; letter-spacing:2px; text-transform:uppercase; }
-      .version-b { background:#6b1a1a; color:white; text-align:center; font-size:17px; font-weight:900; padding:10px 20px; border-radius:4px; margin:30px 0 16px 0; letter-spacing:2px; text-transform:uppercase; }
-      .corrige-header { background:#1a6b2e; color:white; text-align:center; font-size:17px; font-weight:900; padding:10px 20px; border-radius:4px; margin:30px 0 16px 0; letter-spacing:2px; text-transform:uppercase; }
-      .exam-header { text-align:center; border:2px solid #0d0d6b; padding:10px 16px; border-radius:4px; margin-bottom:18px; background:#f5f5ff; }
-      .exam-header p { margin:2px 0; font-size:13px; color:#333; }
-      .exam-header .exam-title { font-size:15px; font-weight:900; color:#0d0d6b; text-transform:uppercase; margin:6px 0; }
-      .exam-header .total-pts { font-size:13px; font-weight:700; color:#c00; }
-      .page-break { page-break-before:always; border:none; border-top:3px dashed #aaa; margin:40px 0 30px 0; }
-      table { border-collapse:collapse; width:100%; margin:10px 0 16px 0; font-size:13px; }
-      th { background:#0d0d6b; color:white; padding:7px 12px; text-align:center; font-weight:700; border:1px solid #0d0d6b; }
-      td { border:1px solid #aaa; padding:6px 12px; text-align:left; vertical-align:top; color:#1a1a2e; }
-      tr:nth-child(even) td { background:#fafafa; }
-      ol { margin:8px 0 12px 0; padding-left:22px; }
-      ol li { margin-bottom:8px; color:#1a1a2e; }
-      ul { margin:4px 0; padding-left:20px; }
-      ul li { margin-bottom:4px; color:#333; }
-      .texte-trous { background:#f5f5ff; border:1px solid #c0c0e0; border-radius:4px; padding:12px 16px; font-size:14px; line-height:1.9; color:#1a1a2e; margin:8px 0 10px 0; }
-      .word-list { font-style:italic; color:#444; background:#fffbe6; border:1px solid #e0d0a0; border-radius:4px; padding:6px 12px; font-size:13px; margin:6px 0 12px 0; }
-      .corrige-block { background:#f0fff4; border:1px solid #6ab04c; border-radius:4px; padding:10px 16px; font-size:13px; color:#1a4a1e; margin:6px 0 14px 0; }
-      .corrige-block strong { color:#1a6b2e; }
-      blockquote { border-left:4px solid #0d0d6b; margin-left:0; padding-left:14px; color:#444; }
-    `;
-    orientation = 'portrait';
-  } else {
-    cssStyle = `
-      body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
-      table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-      th { background-color: #f2f2f2; }
-      blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }
-    `;
-    orientation = 'landscape';
-  }
-
-  container.innerHTML = fontLink + '<style>' + cssStyle + '</style><div class="pdf-export-wrapper">' + parsedHtml + '</div>';
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(htmlContent);
+  doc.close();
   
-  const opt = {
-    margin:       [10, 10, 10, 10],
-    filename:     filename,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: orientation }
-  };
+  toast("Génération du PDF en cours...", "info");
   
-  html2pdf().set(opt).from(container).save();
+  // On laisse le temps aux Google Fonts et à MathJax de s'afficher dans l'iframe
+  setTimeout(() => {
+    try {
+      iframe.contentWindow.focus();
+      // Ouvre la boîte de dialogue native du navigateur
+      // L'utilisateur n'a plus qu'à cliquer sur "Enregistrer au format PDF"
+      iframe.contentWindow.print();
+    } catch (e) {
+      console.error("Erreur impression PDF :", e);
+      toast("Erreur lors de la création du PDF.", "error");
+    }
+    // Nettoyage de l'iframe après que la boîte de dialogue soit fermée/gérée
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 10000);
+  }, 2000);
 }
 
 // ════════════════════════════════════════
