@@ -394,7 +394,46 @@ import { db } from './storage.js';
 // ════════════════════════════════════════
 // UTILS: MARKDOWN & MATH
 // ════════════════════════════════════════
-function parseMarkdownSafeMath(rawText) {
+// ════════════════════════════════════════
+// UTILS: MATH & SCIENCE CONTEXT DETECTOR
+// ════════════════════════════════════════
+function isMathScientificContent(text, filename = "", msg = null) {
+  const sciKeywords = ['math', 'svt', 'physique', 'chimie', 'informatique', 'science', 'physiques'];
+  
+  // 1. Check filename
+  const lowerName = filename ? filename.toLowerCase() : "";
+  if (sciKeywords.some(k => lowerName.includes(k))) return true;
+
+  // 2. Check msg object if provided (from chat)
+  if (msg) {
+    if (msg.tags && msg.tags.some(t => sciKeywords.some(k => t.toLowerCase().includes(k)))) return true;
+    if (msg.workflowUsed && sciKeywords.some(k => msg.workflowUsed.toLowerCase().includes(k))) return true;
+  }
+
+  // 3. Check the content for explicit "Matière : SVT" or similar (generators output this)
+  if (text) {
+    const matMatch = text.match(/\*\*Matière\s*:\*\*\s*(.+?)(?:\n|<br>)/i);
+    if (matMatch) {
+      const mat = matMatch[1].toLowerCase();
+      if (sciKeywords.some(k => mat.includes(k))) return true;
+    }
+  }
+
+  // 4. Check global generator discipline fields if they match what we are generating
+  const corrDisc = (typeof get === 'function' && get('corr-discipline')) ? get('corr-discipline').toLowerCase() : '';
+  const didacDisc = (typeof get === 'function' && get('didac-discipline')) ? get('didac-discipline').toLowerCase() : '';
+  const evalDisc = (typeof get === 'function' && get('eval-discipline')) ? get('eval-discipline').toLowerCase() : '';
+  const methDisc = (typeof get === 'function' && get('meth-discipline')) ? get('meth-discipline').toLowerCase() : '';
+  
+  if (lowerName.includes('correction') && sciKeywords.some(k => corrDisc.includes(k))) return true;
+  if (lowerName.includes('didactique') && sciKeywords.some(k => didacDisc.includes(k))) return true;
+  if (lowerName.includes('evaluation') && sciKeywords.some(k => evalDisc.includes(k))) return true;
+  if (lowerName.includes('methode') && sciKeywords.some(k => methDisc.includes(k))) return true;
+
+  return false;
+}
+
+function parseMarkdownSafeMath(rawText, filename = "", msg = null) {
   if (!rawText) return "";
   const blocks = [];
   function stash(content) {
@@ -403,16 +442,22 @@ function parseMarkdownSafeMath(rawText) {
   }
   let text = rawText;
   
-  // Stash math blocks to protect them from marked
-  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (m) => stash(m));
-  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (m) => stash(m));
-  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (m) => stash(m));
-  text = text.replace(/\$((?:[^$\\]|\\.)+)\$/g, (m) => stash(m));
+  const isMathScience = isMathScientificContent(text, filename, msg);
+
+  if (isMathScience) {
+    // Stash math blocks to protect them from marked
+    text = text.replace(/\$\$([\s\S]*?)\$\$/g, (m) => stash(m));
+    text = text.replace(/\\\[([\s\S]*?)\\\]/g, (m) => stash(m));
+    text = text.replace(/\\\(([\s\S]*?)\\\)/g, (m) => stash(m));
+    text = text.replace(/\$((?:[^$\\]|\\.)+)\$/g, (m) => stash(m));
+  }
 
   let html = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
   
-  // Restore math blocks
-  html = html.replace(/@@MATH_BLOCK_(\d+)@@/g, (m, idx) => blocks[parseInt(idx, 10)]);
+  if (isMathScience) {
+    // Restore math blocks
+    html = html.replace(/@@MATH_BLOCK_(\d+)@@/g, (m, idx) => blocks[parseInt(idx, 10)]);
+  }
   return html;
 }
 
