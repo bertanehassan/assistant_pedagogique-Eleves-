@@ -419,23 +419,27 @@ function parseMarkdownSafeMath(rawText) {
 // ════════════════════════════════════════
 // UTILS: WORD EXPORT
 // ════════════════════════════════════════
-function exportToWord(text, filename = "Export_IA.doc") {
+function exportToWord(text, filename = "Export_IA.doc", msg = null) {
   // Convertir les formules LaTeX en images CodeCogs pour MS Word
-  let wordText = text;
+  let wordText = text || "";
+  
+  const isMathScience = isMathScientificContent(text, filename, msg);
 
-  // Blocs centrés
-  const blockReplacer = (match, math) => {
-    return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
-  };
-  wordText = wordText.replace(/\\\[([\s\S]*?)\\\]/g, blockReplacer);
-  wordText = wordText.replace(/\$\$([\s\S]*?)\$\$/g, blockReplacer);
+  if (isMathScience) {
+    // Blocs centrés
+    const blockReplacer = (match, math) => {
+      return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
+    };
+    wordText = wordText.replace(/\\\[([\s\S]*?)\\\]/g, blockReplacer);
+    wordText = wordText.replace(/\$\$([\s\S]*?)\$\$/g, blockReplacer);
 
-  // Blocs en ligne
-  const inlineReplacer = (match, math) => {
-    return `<img style="vertical-align:middle" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
-  };
-  wordText = wordText.replace(/\\\(([\s\S]*?)\\\)/g, inlineReplacer);
-  wordText = wordText.replace(/\$((?:[^$\\]|\\.)+)\$/g, inlineReplacer);
+    // Blocs en ligne
+    const inlineReplacer = (match, math) => {
+      return `<img style="vertical-align:middle" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
+    };
+    wordText = wordText.replace(/\\\(([\s\S]*?)\\\)/g, inlineReplacer);
+    wordText = wordText.replace(/\$((?:[^$\\]|\\.)+)\$/g, inlineReplacer);
+  }
 
   const parsedHtml = typeof marked !== 'undefined' ? marked.parse(wordText) : wordText.replace(/\n/g, '<br>');
   const isEval = filename.includes('Evaluation_');
@@ -7459,7 +7463,7 @@ function exportMessageToWord(msgId) {
       filename = `${prefix}${subject.replace(/\s+/g,'_').slice(0, 50)}`;
     }
 
-    exportToWord(textContent, filename + '.doc');
+    exportToWord(textContent, filename + '.doc', msg);
 }
 
 function exportMessageToPdf(msgId) {
