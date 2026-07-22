@@ -4,7 +4,7 @@
       <span style="font-weight: 600; display: block; margin-bottom: 4px;">Nouvelle version disponible ! 🚀</span>
       Mettez à jour pour profiter des dernières nouveautés.
     </div>
-    <button @click="updateServiceWorker()" class="update-btn">Actualiser</button>
+    <button @click="updateServiceWorker(true)" class="update-btn">Actualiser</button>
     <button @click="close" class="close-btn">Fermer</button>
   </div>
 </template>
