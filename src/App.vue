@@ -2,6 +2,7 @@
   <AppHeader />
   <AppChat />
   <AppModals />
+  <ReloadPrompt />
 </template>
 
 <script setup>
@@ -9,6 +10,7 @@ import { onMounted } from 'vue';
 import AppHeader from './components/AppHeader.vue';
 import AppChat from './components/AppChat.vue';
 import AppModals from './components/AppModals.vue';
+import ReloadPrompt from './components/ReloadPrompt.vue';
 import { mountApp } from './legacy.js';
 
 onMounted(() => {
