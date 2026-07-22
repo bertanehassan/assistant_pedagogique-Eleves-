@@ -66,8 +66,8 @@ export default defineConfig(({ mode }) => ({
         ]
       },
       manifest: {
-        name: 'Mon Assistant IA',
-        short_name: 'Assistant IA',
+        name: 'Mon Assistant Pédagogique',
+        short_name: 'Assistant Pédagogique',
         description: 'Assistant IA de révision et QCM',
         theme_color: '#0d1117',
         background_color: '#0d1117',
