@@ -145,21 +145,18 @@ function autoResize(event) {
 @media (max-width: 767px) {
   .input-footer {
     position: fixed;
-    bottom: 72px; /* Hauteur de MobileBottomNav */
+    bottom: 0; /* Placed at the very bottom now that nav is gone */
     left: 0;
     width: 100%;
     background-color: var(--background, #0b1326);
-    padding-bottom: 12px;
-    padding-top: 12px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    padding-top: 8px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     z-index: 50;
   }
   .chat-main-area {
-    /* Espace pour l'input fixé (~80px) + bottom nav (72px) */
-    padding-bottom: 160px !important;
-  }
-  .mb-bottom-nav {
-    margin-bottom: 0px !important; /* L'espacement est déjà géré par position: fixed */
+    /* Espace juste pour l'input fixé (~80px) */
+    padding-bottom: 80px !important;
   }
 }
 

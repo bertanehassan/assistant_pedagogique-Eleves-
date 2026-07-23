@@ -3730,10 +3730,10 @@ html[dir="rtl"] .message.user::before {
     font-size: 14px;
   }
 
-  /* ── Input area : agrandie pour les doigts ── */
+  /* ── Input area : ajustée ── */
   #input-area {
-    padding: 10px 12px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 8px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
   }
 
   /* ── Scroll to bottom : au-dessus de la bottom nav ── */
