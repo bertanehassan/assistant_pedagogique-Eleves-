@@ -1,12 +1,23 @@
 <template>
-  <div v-if="needRefresh" class="pwa-toast" role="alert">
-    <div class="message">
-      <span style="font-weight: 600; display: block; margin-bottom: 4px;">Nouvelle version disponible ! 🚀</span>
-      Mettez à jour pour profiter des dernières nouveautés.
+  <Teleport to="body">
+    <div v-if="needRefresh" class="pwa-update-overlay" role="dialog" aria-modal="true" aria-label="Mise à jour disponible">
+      <div class="pwa-update-card">
+        <div class="pwa-update-icon">🚀</div>
+        <h3 class="pwa-update-title">Nouvelle version disponible !</h3>
+        <p class="pwa-update-desc">
+          Une mise à jour est prête. Actualisez maintenant pour profiter des dernières nouveautés et corrections.
+        </p>
+        <div class="pwa-update-actions">
+          <button @click="doUpdate" class="pwa-update-btn pwa-update-btn--primary">
+            <span class="pwa-update-btn-icon">⬆️</span> Mettre à jour
+          </button>
+          <button @click="close" class="pwa-update-btn pwa-update-btn--secondary">
+            Plus tard
+          </button>
+        </div>
+      </div>
     </div>
-    <button @click="updateServiceWorker(true)" class="update-btn">Actualiser</button>
-    <button @click="close" class="close-btn">Fermer</button>
-  </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -17,12 +28,16 @@ const {
   updateServiceWorker,
 } = useRegisterSW({
   onRegistered(r) {
-    // Vérifier les mises à jour périodiquement (ex: toutes les 6 heures)
+    // Vérifier les mises à jour périodiquement (toutes les 2 heures)
     r && setInterval(() => {
       r.update()
-    }, 6 * 60 * 60 * 1000)
+    }, 2 * 60 * 60 * 1000)
   }
 })
+
+const doUpdate = () => {
+  updateServiceWorker(true)
+}
 
 const close = async () => {
   needRefresh.value = false
@@ -30,68 +45,120 @@ const close = async () => {
 </script>
 
 <style scoped>
-.pwa-toast {
+.pwa-update-overlay {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-  padding: 16px;
-  border-radius: 8px;
-  z-index: 9999;
-  text-align: left;
-  max-width: 300px;
-  color: var(--on-surface);
-  font-family: var(--font-primary);
-  animation: slide-up 0.3s ease-out;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  padding: 20px;
+  pointer-events: auto;
+  animation: pwa-fade-in 0.25s ease-out;
 }
 
-.pwa-toast .message {
+.pwa-update-card {
+  background: linear-gradient(145deg, #161b22, #0d1117);
+  border: 1px solid rgba(79, 195, 247, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(79, 195, 247, 0.08);
+  border-radius: 16px;
+  padding: 32px 28px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  pointer-events: auto;
+  animation: pwa-slide-up 0.35s ease-out;
+}
+
+.pwa-update-icon {
+  font-size: 48px;
   margin-bottom: 12px;
-  font-size: 0.95rem;
-  line-height: 1.4;
 }
 
-.update-btn {
-  background: var(--primary);
-  color: #000;
+.pwa-update-title {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #e6edf3;
+  margin: 0 0 10px 0;
+}
+
+.pwa-update-desc {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 0.92rem;
+  color: #8b949e;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.pwa-update-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pwa-update-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-right: 8px;
-  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.update-btn:hover {
-  background: var(--cyan);
+.pwa-update-btn--primary {
+  background: linear-gradient(135deg, #4fc3f7, #00bcd4);
+  color: #000;
+  box-shadow: 0 4px 16px rgba(79, 195, 247, 0.35);
 }
 
-.close-btn {
+.pwa-update-btn--primary:hover,
+.pwa-update-btn--primary:active {
+  background: linear-gradient(135deg, #81d4fa, #26c6da);
+  box-shadow: 0 6px 24px rgba(79, 195, 247, 0.5);
+  transform: translateY(-1px);
+}
+
+.pwa-update-btn--secondary {
   background: transparent;
-  color: var(--on-surface-variant);
-  border: 1px solid var(--border);
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: #8b949e;
+  border: 1px solid rgba(139, 148, 158, 0.3);
 }
 
-.close-btn:hover {
-  background: var(--surface-hover);
-  color: var(--on-surface);
+.pwa-update-btn--secondary:hover,
+.pwa-update-btn--secondary:active {
+  background: rgba(139, 148, 158, 0.1);
+  color: #c9d1d9;
 }
 
-@keyframes slide-up {
+.pwa-update-btn-icon {
+  font-size: 1.1rem;
+}
+
+@keyframes pwa-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pwa-slide-up {
   from {
-    transform: translateY(100%);
+    transform: translateY(30px) scale(0.95);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 }
