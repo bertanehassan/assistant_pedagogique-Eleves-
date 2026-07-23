@@ -1040,7 +1040,7 @@ function getLlmApiConfig(modelId) {
         "Content-Type": "application/json"
       }
     };
-  } else if (modelId.includes("deepseek") || modelId.includes("openrouter")) {
+  } else if (modelId.includes("deepseek") || modelId.includes("openrouter") || modelId.includes("/") || modelId.includes(":free")) {
     return {
       provider: "openrouter",
       url: "/api/openrouter/api/v1/chat/completions",
@@ -1886,7 +1886,7 @@ async function _sendMessageOriginal() {
   if (!txt) return;
   const activeModelForCheck = state.model || '';
   const isGeminiModel = activeModelForCheck.includes('gemini');
-  const isOpenRouterModel = activeModelForCheck.includes('deepseek') || activeModelForCheck.includes('openrouter');
+  const isOpenRouterModel = activeModelForCheck.includes('deepseek') || activeModelForCheck.includes('openrouter') || activeModelForCheck.includes('/') || activeModelForCheck.includes(':free');
   if (!state.apiKey && !isGeminiModel && !isOpenRouterModel) {
     toast("Configurez votre clé API d'abord", "error");
     $("#api-modal").classList.add("active");
@@ -9113,12 +9113,22 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
 
     try {
       // ═══════════════════════════════════════════════════════════
-      // EXCLUSIVEMENT : Gemini Vision (PDF/Image) 
+      // EXCLUSIVEMENT : Gemini Vision (PDF/Image)
+      // Gemini est le SEUL modèle capable de lire nativement les PDF
+      // (texte + graphiques + tableaux + images intégrées).
+      // Les autres modèles (Mistral, DeepSeek, Llama...) ne reçoivent
+      // que du texte extrait — ils ne voient PAS les graphiques/schémas.
       // ═══════════════════════════════════════════════════════════
       const GEMINI_MODEL = 'gemini-3.5-flash';
 
       if (!state.geminiApiKey) {
-        throw new Error('Clé API Google Gemini requise pour la reconnaissance de documents. Configurez-la dans Paramètres API (bouton 🔑 API en haut à droite).');
+        throw new Error(
+          '🔑 Clé API Google Gemini requise pour ce générateur.\n\n' +
+          'Gemini est le seul modèle capable de lire nativement les PDF ' +
+          '(texte + graphiques + schémas + tableaux).\n\n' +
+          'Configurez votre clé gratuite sur aistudio.google.com/app/apikey ' +
+          'puis ajoutez-la dans Paramètres API (bouton 🔑 en haut à droite).'
+        );
       }
 
       const userContent = buildCorrectionUserPrompt(cfg);
@@ -12512,26 +12522,9 @@ let wqState = {
 
 // Sélection automatique du modèle d'IA en fonction du contenu de la question
 function autoSelectMistralModel(textContext) {
-  const lower = textContext.toLowerCase();
-  
-  // 1. Mathématiques / Logique complexe
-  // Détection de symboles LaTeX fréquents ou mots-clés
-  if (lower.includes('\\\\') || lower.includes('$') || lower.includes('équation') || 
-      lower.includes('dérivée') || lower.includes('limite') || lower.includes('théorème') || 
-      lower.includes('vecteur') || lower.includes('\\\\frac') || lower.includes('mathématiques')) {
-    return "mistral-large-2512";
-  }
-  
-  // 2. Programmation / Informatique
-  if (lower.includes('javascript') || lower.includes('python') || lower.includes('html') || 
-      lower.includes(' css ') || lower.includes('fonction') || lower.includes('algorithme') || 
-      lower.includes('code') || lower.includes('variable') || lower.includes('</')) {
-    return "codestral-2508";
-  }
-  
-  // 3. Culture générale / Facile
-  // Si rien de spécifique n'est détecté, on privilégie la vitesse et la légèreté
-  return "mistral-small-2603";
+  // Retourne toujours le modèle actuellement sélectionné par l'utilisateur.
+  // Les QCM et explications utilisent le modèle choisi dans la liste principale.
+  return state.model || "mistral-large-2512";
 }
 
 // Fix unbalanced [ ] { } and \left / \right inside a LaTeX expression

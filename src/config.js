@@ -1,28 +1,58 @@
 export const MODELS = [
-  // ── Modèles d'Élite & Raisonnement Complexe (Les plus performants) ──
-  { id:"gemini-3.5-flash",            name:"✨ Gemini 3.5 Flash — Vision & PDF",   badge:"✨ Vision",     desc:"Vision native PDF/images, graphiques, raisonnement avancé, très rapide",   tokens:1000000, ctx:"1M",   temp:0.4, vision:true },
-  { id:"mistral-large-2512",          name:"🔥 Mistral Large 3 — Puissant",        badge:"🔥 Puissant",   desc:"41B actifs / 675B total, multimodal, raisonnement complexe",   tokens:256000, ctx:"256K", temp:0.42, vision:true },
-  { id:"deepseek/deepseek-chat",      name:"🧠 DeepSeek Chat v3",                 badge:"🧠 Intelligent",desc:"Modèle très avancé d'OpenRouter", tokens:64000, ctx:"64K", temp:0.5 },
-  { id:"mistral-medium-2604",         name:"🔥 Mistral Medium 3.5 — Flagship",     badge:"🔥 Flagship",   desc:"Frontier-class 128B, multimodal, agents & code (avr. 2026)",   tokens:256000, ctx:"256K", temp:0.42, vision:true },
-  { id:"magistral-medium-2509",       name:"🔥 MagiCore — Raisonnement",          badge:"🔥 Raisonnement", desc:"Frontier-class multimodal reasoning (sept. 2025)",          tokens:75000,  ctx:"1B",   temp:0.48 },
 
-  // ── Code & Développement Avancé ──
-  { id:"devstral-2512",               name:"💻 DevMind Ultra — Dev Full-Stack",    badge:"💻 Dev",        desc:"Frontier code agents, exploration codebase, multi-fichiers",   tokens:256000, ctx:"256K", temp:0.48 },
-  { id:"codestral-2508",              name:"💻 CodeForge (Codestral) — Code",      badge:"💻 Code",       desc:"Expert génération et optimisation de code, tous langages",     tokens:256000, ctx:"256K", temp:0.48 },
+  // ══════════════════════════════════════════════════
+  // 🔥 MISTRAL AI  (api.mistral.ai)
+  // ══════════════════════════════════════════════════
+  { id:"mistral-large-2512",                            name:"🔥 Mistral Large 3 — Puissant",            badge:"🔥 Puissant",     desc:"41B actifs / 675B total, multimodal, raisonnement complexe",            tokens:256000, ctx:"256K", temp:0.42, vision:true },
+  { id:"mistral-medium-2604",                           name:"🔥 Mistral Medium 3.5 — Flagship",         badge:"🔥 Flagship",     desc:"Frontier-class 128B, multimodal, agents & code (avr. 2026)",           tokens:256000, ctx:"256K", temp:0.42, vision:true },
+  { id:"magistral-medium-2509",                         name:"🔥 MagiCore — Raisonnement",               badge:"🔥 Raisonnement", desc:"Frontier-class multimodal reasoning (sept. 2025)",                      tokens:75000,  ctx:"1B",   temp:0.48 },
+  { id:"devstral-2512",                                 name:"💻 DevMind Ultra — Dev Full-Stack",        badge:"💻 Dev",          desc:"Frontier code agents, exploration codebase, multi-fichiers",            tokens:256000, ctx:"256K", temp:0.48 },
+  { id:"codestral-2508",                                name:"💻 CodeForge (Codestral) — Code",          badge:"💻 Code",         desc:"Expert génération et optimisation de code, tous langages",              tokens:256000, ctx:"256K", temp:0.48 },
+  { id:"mistral-small-2603",                            name:"⚡ Mistral Small 4 — Hybride",             badge:"⚡ Hybride",      desc:"Instruct + reasoning + code unifié, 6.5B actifs (mars 2026)",          tokens:256000, ctx:"256K", temp:0.42, vision:true },
+  { id:"ministral-14b-2512",                            name:"🔥 MiniTitan 14B — Haute Performance",     badge:"🔥 Puissant",     desc:"Best-in-class 14B, texte + vision, performance dense",                  tokens:256000, ctx:"256K", temp:0.42, vision:true },
+  { id:"ministral-8b-2512",                             name:"⚡ MicroGenius 8B — Usage Quotidien",      badge:"⚡ Rapide",       desc:"Compact, rapide, texte + vision, usage quotidien",                      tokens:256000, ctx:"256K", temp:0.42, vision:true },
+  { id:"ministral-3b-2512",                             name:"⚡ NanoMind 3B — Ultra Rapide",            badge:"⚡ Ultra",        desc:"Ultra-rapide, texte + vision, idéal micro-tâches",                      tokens:256000, ctx:"256K", temp:0.42, vision:true },
+  { id:"open-mistral-nemo",                             name:"⚡ Nemo OpenCore — Open Source",           badge:"⚡ Open",         desc:"12B multilingue, polyvalent, open-source, fiable",                      tokens:128000, ctx:"128K", temp:0.42 },
+  { id:"labs-mistral-small-creative",                   name:"✨ CreatiFlow — Créatif (Labs)",           badge:"✨ Créatif",      desc:"Écriture créative, brainstorming, narration (expérimental)",            tokens:256000, ctx:"256K", temp:0.42 },
+  { id:"voxtral-small-2507",                            name:"🎵 Voxtral Sonic — Audio Rapide",          badge:"🎵 Audio",        desc:"Audio rapide, transcription intelligente multi-langues",                tokens:50000,  ctx:"4M",   temp:0.42, audio:true },
+  { id:"voxtral-mini-2507",                             name:"🎵 Voxtral Echo — Audio Léger",            badge:"🎵 Audio",        desc:"Traitement audio, transcription légère et précise",                     tokens:50000,  ctx:"4M",   temp:0.42, audio:true },
+  { id:"mistralai/mistral-small-3.2-24b-instruct:free", name:"🔥 Mistral Small 3.2 24B (Gratuit)",       badge:"🆓 Gratuit",      desc:"Mistral 24B instruct, léger, rapide, multilingue, 100% gratuit",        tokens:128000, ctx:"128K", temp:0.42 },
 
-  // ── Hybrides & Hautes Performances (Moyens/Compact) ──
-  { id:"mistral-small-2603",          name:"⚡ Mistral Small 4 — Hybride",         badge:"⚡ Hybride",    desc:"Instruct + reasoning + code unifié, 6.5B actifs (mars 2026)", tokens:256000, ctx:"256K", temp:0.42, vision:true },
-  { id:"ministral-14b-2512",          name:"🔥 MiniTitan 14B — Haute Performance", badge:"🔥 Puissant",  desc:"Best-in-class 14B, texte + vision, performance dense",         tokens:256000, ctx:"256K", temp:0.42, vision:true },
+  // ══════════════════════════════════════════════════
+  // ✨ GOOGLE  (Gemini API + OpenRouter)
+  // ══════════════════════════════════════════════════
+  { id:"gemini-3.5-flash",                              name:"✨ Gemini 3.5 Flash — Vision & PDF",       badge:"✨ Vision",       desc:"Vision native PDF/images, graphiques, raisonnement avancé, très rapide", tokens:1000000, ctx:"1M",  temp:0.4, vision:true, pdfNative:true },
+  { id:"google/gemma-3-27b-it:free",                    name:"🔷 Gemma 3 27B — Open Source (Gratuit)",   badge:"🆓 Gratuit",      desc:"Open-source Google, 27B paramètres, puissant et gratuit",               tokens:96000,  ctx:"96K",  temp:0.5 },
+  { id:"google/gemma-3-12b-it:free",                    name:"🔷 Gemma 3 12B — Compact (Gratuit)",       badge:"🆓 Gratuit",      desc:"Open-source Google, 12B équilibré, rapide et gratuit",                  tokens:96000,  ctx:"96K",  temp:0.5 },
 
-  // ── Edge / Rapides / Usage Quotidien ──
-  { id:"ministral-8b-2512",           name:"⚡ MicroGenius 8B — Usage Quotidien",  badge:"⚡ Rapide",    desc:"Compact, rapide, texte + vision, usage quotidien",             tokens:256000, ctx:"256K", temp:0.42, vision:true },
-  { id:"ministral-3b-2512",           name:"⚡ NanoMind 3B — Ultra Rapide",        badge:"⚡ Ultra",     desc:"Ultra-rapide, texte + vision, idéal micro-tâches",             tokens:256000, ctx:"256K", temp:0.42, vision:true },
-  { id:"open-mistral-nemo",           name:"⚡ Nemo OpenCore — Open Source",       badge:"⚡ Open",      desc:"12B multilingue, polyvalent, open-source, fiable",             tokens:128000, ctx:"128K", temp:0.42 },
+  // ══════════════════════════════════════════════════
+  // 🧠 DEEPSEEK  (OpenRouter)
+  // ══════════════════════════════════════════════════
+  { id:"deepseek/deepseek-chat",                        name:"🧠 DeepSeek Chat v3",                      badge:"🧠 Intelligent",  desc:"Modèle très avancé DeepSeek via OpenRouter",                            tokens:64000,  ctx:"64K",  temp:0.5 },
+  { id:"deepseek/deepseek-r1:free",                     name:"🧠 DeepSeek R1 — Raisonnement (Gratuit)",  badge:"🆓 Gratuit",      desc:"Raisonnement avancé chain-of-thought, 100% gratuit via OpenRouter",     tokens:64000,  ctx:"64K",  temp:0.5 },
 
-  // ── Créatif & Audio (Spécialisés) ──
-  { id:"labs-mistral-small-creative", name:"✨ CreatiFlow — Créatif (Labs)",        badge:"✨ Créatif",   desc:"Écriture créative, brainstorming, narration (expérimental)",   tokens:256000, ctx:"256K", temp:0.42 },
-  { id:"voxtral-small-2507",          name:"🎵 Voxtral Sonic — Audio Rapide",      badge:"🎵 Audio",     desc:"Audio rapide, transcription intelligente multi-langues",       tokens:50000,  ctx:"4M",   temp:0.42, audio:true },
-  { id:"voxtral-mini-2507",           name:"🎵 Voxtral Echo — Audio Léger",        badge:"🎵 Audio",     desc:"Traitement audio, transcription légère et précise",            tokens:50000,  ctx:"4M",   temp:0.42, audio:true }
+  // ══════════════════════════════════════════════════
+  // 🦙 META  (OpenRouter)
+  // ══════════════════════════════════════════════════
+  { id:"meta-llama/llama-4-maverick:free",              name:"🦙 Llama 4 Maverick — Vision (Gratuit)",   badge:"🆓 Gratuit",      desc:"Meta Llama 4, vision + texte, contexte 1M, 100% gratuit",               tokens:1000000, ctx:"1M", temp:0.5, vision:true },
+  { id:"meta-llama/llama-4-scout:free",                 name:"🦙 Llama 4 Scout — Rapide (Gratuit)",      badge:"🆓 Gratuit",      desc:"Meta Llama 4 Scout, multilingue, très rapide, 100% gratuit",            tokens:512000, ctx:"512K", temp:0.5 },
+
+  // ══════════════════════════════════════════════════
+  // 🌐 ALIBABA / QWEN  (OpenRouter)
+  // ══════════════════════════════════════════════════
+  { id:"qwen/qwen3-235b-a22b:free",                     name:"🌐 Qwen 3 235B — Ultra Grand (Gratuit)",   badge:"🆓 Gratuit",      desc:"Très grand modèle Alibaba, multilingue excellent, gratuit",             tokens:40000,  ctx:"40K",  temp:0.5 },
+  { id:"qwen/qwen3-30b-a3b:free",                       name:"🌐 Qwen 3 30B — Compact (Gratuit)",        badge:"🆓 Gratuit",      desc:"Modèle Alibaba 30B, multilingue, équilibré et gratuit",                 tokens:40000,  ctx:"40K",  temp:0.5 },
+
+  // ══════════════════════════════════════════════════
+  // ⚡ NVIDIA  (OpenRouter)
+  // ══════════════════════════════════════════════════
+  { id:"nvidia/llama-3.1-nemotron-ultra-253b-v1:free",  name:"⚡ Nemotron Ultra 253B — NVIDIA (Gratuit)", badge:"🆓 Gratuit",      desc:"NVIDIA ultra performant, 253B, hautes performances, gratuit",           tokens:128000, ctx:"128K", temp:0.5 },
+
+  // ══════════════════════════════════════════════════
+  // 💡 MICROSOFT  (OpenRouter)
+  // ══════════════════════════════════════════════════
+  { id:"microsoft/phi-4-reasoning:free",                name:"💡 Phi-4 Reasoning — Microsoft (Gratuit)", badge:"🆓 Gratuit",      desc:"Microsoft Phi-4, raisonnement logique avancé, compact, gratuit",       tokens:32000,  ctx:"32K",  temp:0.4 }
+
 ];
 
 export const DB_NAME = "QCM_EDU_MAROC_DB";
