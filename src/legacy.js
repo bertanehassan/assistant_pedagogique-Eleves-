@@ -9213,8 +9213,9 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
     renderMessages();
 
-    const needsMultimodal = !!(_corrPdfBase64 || _corrRefBase64 || _corrExempleBase64);
-    const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+    const targetModel = state.model || 'gemini-3.5-flash';
+    const isGemini = targetModel.includes('gemini');
+    const needsMultimodal = isGemini && !!(_corrPdfBase64 || _corrRefBase64 || _corrExempleBase64);
 
     const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: targetModel, isCorrection: true };
     state.messages.push(assistantMsg);
@@ -10497,8 +10498,9 @@ const generateDidactiqueSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const needsMultimodal = !!(_didacPdfBase64 || _didacRefBase64 || _didacDirectivesBase64 || _didacExempleBase64);
-  const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+  const targetModel = state.model || 'gemini-3.5-flash';
+  const isGemini = targetModel.includes('gemini');
+  const needsMultimodal = isGemini && !!(_didacPdfBase64 || _didacRefBase64 || _didacDirectivesBase64 || _didacExempleBase64);
 
   const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: targetModel, isCorrection: true };
   state.messages.push(assistantMsg);
@@ -11471,8 +11473,9 @@ const generateMethodeSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const needsMultimodal = !!(_methodePdfBase64 || _methodeRefBase64 || _methodeExempleBase64);
-  const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+  const targetModel = state.model || 'gemini-3.5-flash';
+  const isGemini = targetModel.includes('gemini');
+  const needsMultimodal = isGemini && !!(_methodePdfBase64 || _methodeRefBase64 || _methodeExempleBase64);
 
   const assistantMsg = { role: 'assistant', content: '⏳ Génération de la fiche méthode en cours…', streaming: true, ts: Date.now() + 1, modelUsed: targetModel, isCorrection: false, isMethode: true };
   state.messages.push(assistantMsg);
@@ -13569,8 +13572,9 @@ const generateEvaluationSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const needsMultimodal = hasPdf;
-  const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+  const targetModel = state.model || 'gemini-3.5-flash';
+  const isGemini = targetModel.includes('gemini');
+  const needsMultimodal = isGemini && hasPdf;
 
   const assistantMsg = {
     role: 'assistant',
