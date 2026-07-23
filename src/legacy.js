@@ -6548,6 +6548,8 @@ export const mountApp = async () => {
       agentModelPref.appendChild(opt2);
     }
   });
+  // Exposer MODELS globalement pour les sélecteurs locaux des générateurs de fiches
+  window.APP_MODELS = MODELS;
   // Show/hide file upload btn based on model capability
   const updateFileBtn = () => {
     const m = MODELS.find(x => x.id === state.model);
@@ -9022,10 +9024,33 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   document.addEventListener('do-load-correction-config',   window._corrLoadHandler);
   document.addEventListener('do-delete-correction-config', window._corrDeleteHandler);
 
+  // --- HELPER : REMPLISSAGE DES SÉLECTEURS DE MODÈLE DANS LES GÉNÉRATEURS ---
+  // Peuple dynamiquement les menus déroulants de modèle dans chaque modale de fiche
+  // à partir de la liste globale MODELS, avec gemini-3.5-flash comme valeur par défaut.
+  function populateGeneratorModels(selectId, defaultModel = 'gemini-3.5-flash') {
+    const sel = $(`#${selectId}`);
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '';
+    (window.APP_MODELS || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      sel.appendChild(opt);
+    });
+    // Réappliquer la valeur courante si elle existe, sinon mettre gemini par défaut
+    if (currentVal && [...sel.options].some(o => o.value === currentVal)) {
+      sel.value = currentVal;
+    } else {
+      sel.value = defaultModel;
+    }
+  }
+
   // --- NOUVEAU HELPER UNIFIÉ POUR LES GÉNÉRATEURS DE FICHES ---
   // Permet de router intelligemment :
   // - Si PDF/Image (multimodal) -> Force Gemini Vision
   // - Si Texte seul -> Utilise le modèle actuellement sélectionné par l'utilisateur
+
   async function fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, geminiPayloadParts, maxTokens = 65536) {
     if (needsMultimodal) {
       if (!state.geminiApiKey) {
@@ -9213,7 +9238,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
     renderMessages();
 
-    const targetModel = state.model || 'gemini-3.5-flash';
+    const targetModel = ($('#corr-model-select')?.value) || state.model || 'gemini-3.5-flash';
     const isGemini = targetModel.includes('gemini');
     const needsMultimodal = isGemini && !!(_corrPdfBase64 || _corrRefBase64 || _corrExempleBase64);
 
@@ -10000,6 +10025,8 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
 
     corrShowStep(1);
     corrFillCompetences();
+    // Peupler le sélecteur de modèle local avec Gemini par défaut
+    populateGeneratorModels('corr-model-select', 'gemini-3.5-flash');
     $('#correction-modal').classList.add('active');
   };
   const closeCorrectionModal = () => $('#correction-modal').classList.remove('active');
@@ -10446,6 +10473,8 @@ const openDidactiqueModal = async () => {
   }
 
   didactiqueShowStep(1);
+  // Peupler le sélecteur de modèle local avec Gemini par défaut
+  populateGeneratorModels('didac-model-select', 'gemini-3.5-flash');
   $('#didactique-modal').classList.add('active');
 };
 const closeDidactiqueModal = () => $('#didactique-modal').classList.remove('active');
@@ -10498,7 +10527,7 @@ const generateDidactiqueSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const targetModel = state.model || 'gemini-3.5-flash';
+  const targetModel = ($('#didac-model-select')?.value) || state.model || 'gemini-3.5-flash';
   const isGemini = targetModel.includes('gemini');
   const needsMultimodal = isGemini && !!(_didacPdfBase64 || _didacRefBase64 || _didacDirectivesBase64 || _didacExempleBase64);
 
@@ -11415,6 +11444,8 @@ const openMethodeModal = async () => {
   }
 
   methodeShowStep(1);
+  // Peupler le sélecteur de modèle local avec Gemini par défaut
+  populateGeneratorModels('methode-model-select', 'gemini-3.5-flash');
   $('#methode-modal').classList.add('active');
 
   // Injection différée du rôle par défaut (après rendu Vue)
@@ -11473,7 +11504,7 @@ const generateMethodeSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const targetModel = state.model || 'gemini-3.5-flash';
+  const targetModel = ($('#methode-model-select')?.value) || state.model || 'gemini-3.5-flash';
   const isGemini = targetModel.includes('gemini');
   const needsMultimodal = isGemini && !!(_methodePdfBase64 || _methodeRefBase64 || _methodeExempleBase64);
 
@@ -13520,6 +13551,8 @@ const openEvaluationModal = async () => {
   refreshEvalSavedList();
 
   evalShowStep(1);
+  // Peupler le sélecteur de modèle local avec Gemini par défaut
+  populateGeneratorModels('eval-model-select', 'gemini-3.5-flash');
   const modal = document.getElementById('evaluation-modal');
   if (modal) modal.classList.add('active');
 };
@@ -13572,7 +13605,7 @@ const generateEvaluationSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const targetModel = state.model || 'gemini-3.5-flash';
+  const targetModel = ($('#eval-model-select')?.value) || state.model || 'gemini-3.5-flash';
   const isGemini = targetModel.includes('gemini');
   const needsMultimodal = isGemini && hasPdf;
 

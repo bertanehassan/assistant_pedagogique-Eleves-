@@ -126,6 +126,17 @@
             </div>
           </div>
 
+          <!-- Modèle IA à utiliser -->
+          <div class="field-group" style="margin-top:12px">
+            <label class="field-label">🤖 Modèle IA à utiliser</label>
+            <select class="field-input field-select" id="methode-model-select">
+              <option value="gemini-3.5-flash" selected>✨ Gemini 3.5 Flash — Vision & PDF (par défaut)</option>
+            </select>
+            <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
+              ✨ Gemini 3.5 Flash recommandé pour lire les PDF natifs (graphiques inclus). Les autres modèles liront le texte extrait du PDF.
+            </div>
+          </div>
+
           <!-- Rôle & expertise IA -->
           <div class="field-group">
             <label class="field-label">🤖 Rôle et expertise de l'IA <span style="color:var(--danger)">*</span></label>
@@ -138,6 +149,7 @@
             <button class="btn-primary" id="methode-next-1" @click="handleNext1">Suivant →</button>
           </div>
         </div>
+
 
         <!-- ══════════════════════════════════════════
              ÉTAPE 2 — L'Exercice / Problème
