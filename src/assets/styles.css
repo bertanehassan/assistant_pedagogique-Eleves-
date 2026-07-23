@@ -3685,21 +3685,15 @@ html[dir="rtl"] .message.user::before {
    📱 MOBILE UX IMPROVEMENTS — Hassan Bertane Design
    ═══════════════════════════════════════════════════ */
 
-/* ── Floating Actions : desktop uniquement ── */
+/* ── Floating Actions ── */
 .floating-actions-desktop {
-  display: none; /* caché par défaut (mobile first) */
-}
-
-@media (min-width: 768px) {
-  .floating-actions-desktop {
-    display: flex;
-    position: fixed;
-    top: 96px;
-    right: 16px;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 30;
-  }
+  display: flex;
+  position: fixed;
+  top: 96px;
+  right: 16px;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 30;
 }
 
 .floating-fab {
@@ -3722,12 +3716,8 @@ html[dir="rtl"] .message.user::before {
   box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 
-/* ── Chat container : laisser de la place à la bottom nav sur mobile ── */
+/* ── Chat container ── */
 @media (max-width: 767px) {
-  #chat-container {
-    padding-bottom: 80px; /* hauteur de la bottom nav */
-  }
-
   /* ── Messages : meilleure lisibilité mobile ── */
   .message {
     max-width: 93%;
@@ -3752,10 +3742,9 @@ html[dir="rtl"] .message.user::before {
     right: 16px;
   }
 
-  /* ── Memory panel : au-dessus de la bottom nav ── */
+  /* ── Memory panel ── */
   #memory-toggle {
-    /* Sur mobile : géré par la bottom nav, on masque le bouton fixe */
-    display: none !important;
+    display: flex;
   }
 
   #memory-panel {
@@ -3770,14 +3759,14 @@ html[dir="rtl"] .message.user::before {
   #profile-panel {
     /* Panels en plein écran sur mobile avec top sécurisé */
     top: 56px; /* hauteur du header */
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px)); /* au-dessus de la bottom nav */
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     height: auto;
     border-radius: 16px 16px 0 0;
   }
 
-  /* ── Sidebar : utilise toute la hauteur minus bottom nav ── */
+  /* ── Sidebar ── */
   .sidebar-panel {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   /* ── Topbar selects: masqués sur mobile (dans sidebar) ── */

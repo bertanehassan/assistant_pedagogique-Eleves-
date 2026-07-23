@@ -31,7 +31,7 @@
         </button>
       </div>
       
-      <div id="token-counter" class="text-center text-xs text-on-surface-variant pb-1 mb-bottom-nav"></div>
+      <div id="token-counter" class="text-center text-xs text-on-surface-variant pb-1"></div>
     </div>
   </footer>
 
@@ -115,13 +115,10 @@
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════ MOBILE BOTTOM NAV ════════════════════════════════════════ -->
-  <MobileBottomNav />
 </template>
 
 <script setup>
 import { t } from '../i18n.js';
-import MobileBottomNav from './MobileBottomNav.vue';
 
 function autoResize(event) {
   const el = event.target;
@@ -143,10 +140,6 @@ function autoResize(event) {
   padding-bottom: 4px;
 }
 
-/* ── Spacer for bottom nav ── */
-.mb-bottom-nav {
-  margin-bottom: 72px; /* height of bottom nav */
-}
 
 /* ── MOBILE FIX: Force Input Area to be visible ── */
 @media (max-width: 767px) {

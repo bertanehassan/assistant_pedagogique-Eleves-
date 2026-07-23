@@ -34,20 +34,20 @@
       <div class="flex items-center gap-1 ml-0 md:ml-2">
         <button id="clear-chat" class="topbar-btn" :title="t('title_clear_chat')">
           <span class="material-symbols-outlined" style="font-size:16px">delete_sweep</span>
-          <span class="hidden md:inline ml-1 text-xs font-semibold">{{ t('btn_clear') }}</span>
+          <span class="ml-1 text-xs font-semibold">{{ t('btn_clear') }}</span>
         </button>
         <button id="new-chat" class="topbar-btn primary" :title="t('title_new_chat')">
           <span class="material-symbols-outlined" style="font-size:16px">add_comment</span>
-          <span class="hidden md:inline ml-1 text-xs font-semibold">{{ t('btn_new') }}</span>
+          <span class="ml-1 text-xs font-semibold">{{ t('btn_new') }}</span>
         </button>
         <input type="file" id="import-quiz-json-input" accept=".json" style="display: none;" />
         <button id="import-quiz-json-btn" class="topbar-btn" :title="t('title_play_quiz')" style="color: #d4af37; border-color: rgba(212,175,55,0.4);">
           <span class="material-symbols-outlined" style="font-size:16px">play_circle</span>
-          <span class="hidden md:inline ml-1 text-xs font-semibold">{{ t('btn_play_quiz') }}</span>
+          <span class="ml-1 text-xs font-semibold">{{ t('btn_play_quiz') }}</span>
         </button>
         <button id="quizzes-btn" onclick="if(window.openQuizzesPanel) window.openQuizzesPanel();" class="topbar-btn" title="Mes Quiz Sauvegardés" style="color: #d4af37; border-color: rgba(212,175,55,0.4);">
           <span class="material-symbols-outlined" style="font-size:16px">quiz</span>
-          <span class="hidden md:inline ml-1 text-xs font-semibold">Mes Quiz</span>
+          <span class="ml-1 text-xs font-semibold">Mes Quiz</span>
         </button>
       </div>
 
