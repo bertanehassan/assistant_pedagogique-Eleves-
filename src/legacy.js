@@ -9022,6 +9022,122 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   document.addEventListener('do-load-correction-config',   window._corrLoadHandler);
   document.addEventListener('do-delete-correction-config', window._corrDeleteHandler);
 
+  // --- NOUVEAU HELPER UNIFIÉ POUR LES GÉNÉRATEURS DE FICHES ---
+  // Permet de router intelligemment :
+  // - Si PDF/Image (multimodal) -> Force Gemini Vision
+  // - Si Texte seul -> Utilise le modèle actuellement sélectionné par l'utilisateur
+  async function fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, geminiPayloadParts, maxTokens = 65536) {
+    if (needsMultimodal) {
+      if (!state.geminiApiKey) {
+        throw new Error(
+          '🔑 Clé API Google Gemini requise pour ce générateur lorsqu\'un document est inclus.\n\n' +
+          'Configurez votre clé gratuite sur aistudio.google.com/app/apikey ' +
+          'puis ajoutez-la dans Paramètres API (bouton 🔑 en haut à droite).'
+        );
+      }
+      const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
+      const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
+  
+      const payload = {
+        systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
+        contents: [{ role: 'user', parts: geminiPayloadParts }],
+        generationConfig: { temperature: 0.35, maxOutputTokens: maxTokens, topP: 0.95 }
+      };
+      
+      assistantMsg.modelUsed = 'gemini-3.5-flash';
+      assistantMsg.content = `🔍 Gemini 3.5 Flash analyse votre demande et lit le(s) document(s) natif(s)…`;
+      renderMessages();
+  
+      const res = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: state.abortController?.signal,
+        body: JSON.stringify(payload)
+      });
+  
+      if (!res.ok) {
+        const errText = await res.text();
+        let errMsg = errText.slice(0, 500);
+        try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
+        throw new Error(`Gemini API 503: ${errMsg}`);
+      }
+  
+      const data = await res.json();
+      let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      let finishReason = data?.candidates?.[0]?.finishReason || 'STOP';
+      let continuationCount = 0;
+      while (finishReason === 'MAX_TOKENS' && continuationCount < 3 && !state.abortController?.signal?.aborted) {
+        continuationCount++;
+        assistantMsg.content = text + `\n\n*⏳ Continuation automatique (${continuationCount}/3)…*`;
+        renderMessages(true);
+        
+        const lightContents = payload.contents.map(turn => ({
+          role: turn.role,
+          parts: turn.parts.filter(p => p.text !== undefined)
+        })).filter(turn => turn.parts.length > 0);
+        
+        const contPayload = {
+          systemInstruction: payload.systemInstruction,
+          contents: [
+            ...lightContents,
+            { role: 'model', parts: [{ text }] },
+            { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté.' }] }
+          ],
+          generationConfig: { temperature: 0.35, maxOutputTokens: maxTokens, topP: 0.95 }
+        };
+        
+        const contRes = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: state.abortController?.signal,
+          body: JSON.stringify(contPayload)
+        });
+        if (!contRes.ok) break;
+        const contData = await contRes.json();
+        const nextText = contData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (nextText) text += nextText;
+        finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
+      }
+      return text;
+  
+    } else {
+      const targetModel = state.model || "mistral-large-2512";
+      assistantMsg.modelUsed = targetModel;
+      assistantMsg.content = `⏳ ${targetModel} génère votre document…`;
+      renderMessages();
+  
+      const _apiConf = getLlmApiConfig(targetModel);
+      const fullUserText = geminiPayloadParts.filter(p => p.text).map(p => p.text).join('\n');
+  
+      const res = await fetchWithRetry(_apiConf.url, {
+        method: "POST",
+        headers: _apiConf.headers,
+        signal: state.abortController?.signal,
+        body: JSON.stringify({
+          model: targetModel,
+          messages: [
+            { role: "system", content: effectiveSystemPrompt },
+            { role: "user", content: fullUserText }
+          ],
+          temperature: 0.35,
+          max_tokens: Math.min(maxTokens, 8192),
+          top_p: 0.95
+        })
+      });
+  
+      if (!res.ok) {
+        const errText = await res.text();
+        let errMsg = errText.slice(0, 500);
+        try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
+        throw new Error(`API ${targetModel} Erreur: ${errMsg}`);
+      }
+  
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || "";
+    }
+  }
+
   const generateCorrectionSheet = async () => {
     if (state.isGenerating) {
       console.warn("Génération déjà en cours, annulation du deuxième appel.");
@@ -9112,31 +9228,12 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     showTyping("gemini-3.5-flash");
 
     try {
-      // ═══════════════════════════════════════════════════════════
-      // EXCLUSIVEMENT : Gemini Vision (PDF/Image)
-      // Gemini est le SEUL modèle capable de lire nativement les PDF
-      // (texte + graphiques + tableaux + images intégrées).
-      // Les autres modèles (Mistral, DeepSeek, Llama...) ne reçoivent
-      // que du texte extrait — ils ne voient PAS les graphiques/schémas.
-      // ═══════════════════════════════════════════════════════════
-      const GEMINI_MODEL = 'gemini-3.5-flash';
-
-      if (!state.geminiApiKey) {
-        throw new Error(
-          '🔑 Clé API Google Gemini requise pour ce générateur.\n\n' +
-          'Gemini est le seul modèle capable de lire nativement les PDF ' +
-          '(texte + graphiques + schémas + tableaux).\n\n' +
-          'Configurez votre clé gratuite sur aistudio.google.com/app/apikey ' +
-          'puis ajoutez-la dans Paramètres API (bouton 🔑 en haut à droite).'
-        );
-      }
-
+      const needsMultimodal = !!(_corrPdfBase64 || _corrRefBase64 || _corrExempleBase64);
       const userContent = buildCorrectionUserPrompt(cfg);
 
-      // Construire les parts Gemini
+      // Construire les parts pour Gemini ou pour extraction textuelle
       const parts = [{ text: userContent }];
 
-      // Si document sujet chargé : l'envoyer en inlineData pour vision native
       if (hasPdf && _corrPdfBase64) {
         parts.unshift({
           inlineData: {
@@ -9147,9 +9244,6 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT SUJET - LECTURE OBLIGATOIRE]\nLe document PDF/image ci-dessus contient le sujet complet de l\'évaluation. Tu DOIS analyser intégralement son contenu (questions, textes, données, schémas, tableaux, graphiques, images) avec ta vision native. Base TOUTE ta fiche de correction sur ce document joint et son contenu réel. Ne commence pas la fiche avant d\'avoir tout lu.\n---\n\n' });
       }
 
-      // Si cadre de référence PDF importé : l'envoyer aussi en inlineData pour vision native
-      
-      // Si exemple de correction importé (PDF)
       if (_corrExempleBase64) {
         parts.push({
           inlineData: {
@@ -9159,7 +9253,8 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         });
         parts.push({ text: `\n\n---\n[FICHE MODÈLE - DOCUMENT JOINT : ${_corrExempleName}]\nLe document ci-dessus est la fiche de correction d'EXEMPLE que l'enseignant te donne pour le style.\n---\n\n` });
       }
-if (_corrRefBase64) {
+
+      if (_corrRefBase64) {
         parts.push({
           inlineData: {
             mimeType: _corrRefMime || 'application/pdf',
@@ -9175,7 +9270,6 @@ if (_corrRefBase64) {
           '2ème année du baccalauréat, filière Sciences Physiques (SP), option internationale (enseignement en français).',
           `${cfg.niveau} ${cfg.filiere && !cfg.filiere.includes('Aucune') ? ', filière ' + cfg.filiere : ''} ${cfg.option && !cfg.option.includes('Générale') ? ', option ' + cfg.option : ''}`.replace(/\s+/g, ' ').trim()
         );
-        // Si un cadre de référence a été importé (texte), il enrichit/remplace le référentiel SVT codé en dur
         if (_corrRefText && !_corrRefBase64) {
           baseSystemPrompt = baseSystemPrompt.replace(
             '</referentiel_pedagogique>',
@@ -9184,61 +9278,26 @@ if (_corrRefBase64) {
         }
       }
 
-      // Si cadre de référence texte importé (toutes disciplines) : l'injecter dans le system prompt
       if (_corrRefText && !_corrRefBase64 && cfg.discipline !== 'SVT') {
         baseSystemPrompt = baseSystemPrompt.replace(
           '</system_instructions>',
           `\n  <cadre_reference_importe>\n    L'enseignant a fourni le cadre de référence pédagogique officiel suivant. Utilise OBLIGATOIREMENT la terminologie et les compétences exactes de ce document pour remplir la colonne "Compétence évaluée". Ce cadre est prioritaire sur toute proposition générique :\n    ${_corrRefText}\n  </cadre_reference_importe>\n\n</system_instructions>`
         );
       }
-
       
-      // Inject CLONING rule if example is present (Text or Base64)
       if (_corrExempleBase64 || cfg.exemple.length > 20) {
         const cloningRule = `\n\n## ⚠️ RÈGLE ABSOLUE — CLONAGE STRICT DE LA FICHE EXEMPLE (PRIORITÉ MAXIMALE)\n\nSi une fiche exemple de correction est fournie (en PDF ou en texte collé), cette règle **ANNULE ET REMPLACE** le format de tableau de correction par défaut.\n\n**ÉTAPE A — ANALYSE EXHAUSTIVE (avant d'écrire quoi que ce soit) :**\n- Compte et copie EXACTEMENT les intitulés et l'ordre des colonnes de la correction modèle.\n- Analyse le style : tableaux, listes à puces, numérotations, présence de barèmes dans les colonnes ou à côté.\n\n**ÉTAPE B — REPRODUCTION STRICTE DU SQUELETTE :**\n- ❌ NE PAS utiliser le format à 4 colonnes de base si l'exemple est différent.\n- ❌ NE PAS changer le nom des colonnes par rapport à l'exemple.\n- ✅ La grille de correction générée doit être visuellement et structurellement IDENTIQUE à l'exemple.\n- ✅ Seul le CONTENU (réponses spécifiques à ce sujet) change. La FORME est clonée à l'identique.\n\n**ÉTAPE C — RAPPORT DE FORMAT** (insérer en haut de ta réponse) :\nIndique le format détecté (colonnes, structure) que tu as cloné.`;
-        
         baseSystemPrompt = baseSystemPrompt.replace('</system_instructions>', cloningRule + '\n</system_instructions>');
       }
-const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
+
+      const effectiveSystemPrompt = hasPdf || _corrRefBase64 || _corrExempleBase64
         ? baseSystemPrompt + `\n\nREMARQUE CRITIQUE (MODE DOCUMENT) : Un ou plusieurs documents ont été joints à ce message. Tu dois IMPÉRATIVEMENT lire et analyser le contenu RÉEL de chaque document joint avant de générer quoi que ce soit. Si tu ne lis pas les documents, ta réponse sera inutilisable.`
         : baseSystemPrompt;
 
-      const geminiPayload = {
-        systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
-        contents: [{ role: 'user', parts }],
-        generationConfig: {
-          temperature: 0.35,
-          maxOutputTokens: 8192,
-          topP: 0.95
-        }
-      };
-
-      const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-      const geminiUrl = `/api/gemini/v1beta/models/${GEMINI_MODEL}:generateContent?key=${cleanGeminiKey}`;
-
-      assistantMsg.content = `🔍 Gemini analyse votre demande${hasPdf ? ' et lit le document natif' : ''}…`;
-      renderMessages();
-
-      const geminiRes = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: state.abortController.signal,
-        body: JSON.stringify(geminiPayload)
-      });
-
-      if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
-        let errMsg = errText.slice(0, 500);
-        try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
-        throw new Error(`Gemini API ${geminiRes.status}: ${errMsg}`);
-      }
-
-      const geminiData = await geminiRes.json();
-      let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      let geminiText = await fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, parts, 8192);
 
       if (!geminiText) {
-        const finishReason = geminiData?.candidates?.[0]?.finishReason;
-        throw new Error(`Gemini n'a pas généré de texte. Raison : ${finishReason || 'inconnue'}`);
+        throw new Error(`Aucun texte n'a été généré par le modèle.`);
       }
 
       // Extraction du titre SVT genere (si applicable)
@@ -10475,9 +10534,7 @@ const generateDidactiqueSheet = async () => {
   showTyping("gemini-3.5-flash");
 
   try {
-    if (!state.geminiApiKey) {
-      throw new Error('Clé API Google Gemini requise. Configurez-la dans Paramètres API.');
-    }
+    const needsMultimodal = !!(_didacPdfBase64 || _didacRefBase64 || _didacDirectivesBase64 || _didacExempleBase64);
 
     let userContent = `# USER PROMPT
 
@@ -10500,12 +10557,10 @@ const generateDidactiqueSheet = async () => {
       parts.unshift({
         inlineData: { mimeType: _didacPdfMime || 'application/pdf', data: _didacPdfBase64 }
       });
-      // PDF is BEFORE this text (unshifted at index 0), so "ci-dessus" is correct
       parts.splice(1, 0, { text: '\n\n---\n[DOCUMENT DE COURS — RÔLE : CONTENU PÉDAGOGIQUE SOURCE]\nLe document PDF ci-dessus contient le cours/l\'activité. Tu DOIS l\'analyser intégralement (texte, images, graphiques) pour construire la fiche.\n---\n\n' });
     }
 
     if (_didacRefBase64) {
-      // Text label BEFORE the PDF (push order: text then PDF = ci-dessous is correct)
       parts.push({ text: `\n\n---\n[CADRE DE RÉFÉRENCE PÉDAGOGIQUE — RÔLE : RÉFÉRENTIEL DES COMPÉTENCES]\nLe document PDF ci-dessous est le cadre de référence officiel fourni par l'enseignant. Tu DOIS utiliser EXCLUSIVEMENT ses compétences, habiletés et sa terminologie exacte pour chaque évaluation de la fiche. Il remplace tout référentiel générique.\n---\n\n` });
       parts.push({
         inlineData: { mimeType: _didacRefMime || 'application/pdf', data: _didacRefBase64 }
@@ -10513,7 +10568,6 @@ const generateDidactiqueSheet = async () => {
     }
 
     if (_didacDirectivesBase64) {
-      // Text label BEFORE the PDF (ci-dessous is correct)
       parts.push({ text: `\n\n---\n[DIRECTIVES PÉDAGOGIQUES & DIDACTIQUES — RÔLE : CONTRAINTES OBLIGATOIRES]\nLe document PDF ci-dessous contient les directives pédagogiques officielles de l'enseignant. Tu DOIS les respecter strictement dans chaque phase, chaque tâche et chaque remédiation de la fiche.\n---\n\n` });
       parts.push({
         inlineData: { mimeType: _didacDirectivesMime || 'application/pdf', data: _didacDirectivesBase64 }
@@ -10533,17 +10587,13 @@ const generateDidactiqueSheet = async () => {
       sysPrompt = langInstruction + '\n\n' + sysPrompt;
     }
 
-    // Inject CLONING rule if example is present
     if (_didacExempleBase64 || (cfg.exemple && cfg.exemple.length > 20)) {
       const startTag = '## (R) Format de R\u00E9ponse';
       const endTag = 'R\u00E8gles Intangibles';
       const startIndex = sysPrompt.indexOf(startTag);
       const endIndex = sysPrompt.indexOf(endTag);
       if (startIndex !== -1 && endIndex !== -1) {
-        const strictCloningRule = `## (R) Format de R\u00E9ponse \u2014 CLONAGE STRICT
-Une fiche exemple a \u00E9t\u00E9 fournie. Tu DOIS ABSOLUMENT cloner son format (nombre de colonnes, titres, style, disposition, phases) et IGNORER ton format par d\u00E9faut \u00E0 8 colonnes. Le squelette de la fiche g\u00E9n\u00E9r\u00E9e doit \u00EAtre visuellement et structurellement IDENTIQUE \u00E0 l'exemple. Seul le contenu p\u00E9dagogique change.
-Ta r\u00E9ponse FINALE DOIT \u00CAtre PLAC\u00C9E UNIQUEMENT DANS LA BALISE <reponse_finale>. Ne g\u00E9n\u00E8re RIEN en dehors de cette balise.
-Avant la balise <reponse_finale>, g\u00E9n\u00E8re imp\u00E9rativement une balise [FORMAT D\u00C9TECT\u00C9 : ...] r\u00E9sumant le format de l'exemple que tu vas cloner.\n\n`;
+        const strictCloningRule = `## (R) Format de R\u00E9ponse \u2014 CLONAGE STRICT\nUne fiche exemple a \u00E9t\u00E9 fournie. Tu DOIS ABSOLUMENT cloner son format (nombre de colonnes, titres, style, disposition, phases) et IGNORER ton format par d\u00E9faut \u00E0 8 colonnes. Le squelette de la fiche g\u00E9n\u00E9r\u00E9e doit \u00EAtre visuellement et structurellement IDENTIQUE \u00E0 l'exemple. Seul le contenu p\u00E9dagogique change.\nTa r\u00E9ponse FINALE DOIT \u00CAtre PLAC\u00C9E UNIQUEMENT DANS LA BALISE <reponse_finale>. Ne g\u00E9n\u00E8re RIEN en dehors de cette balise.\nAvant la balise <reponse_finale>, g\u00E9n\u00E8re imp\u00E9rativement une balise [FORMAT D\u00C9TECT\u00C9 : ...] r\u00E9sumant le format de l'exemple que tu vas cloner.\n\n`;
         sysPrompt = sysPrompt.substring(0, startIndex) + strictCloningRule + sysPrompt.substring(endIndex);
       }
     }
@@ -10560,75 +10610,9 @@ Avant la balise <reponse_finale>, g\u00E9n\u00E8re imp\u00E9rativement une balis
       sysPrompt += `\n\n<objectifs_fournis_par_enseignant>\nVoici les objectifs spécifiques pour cette séquence, intégre-les dans ta production :\n${cfg.objectifs}\n</objectifs_fournis_par_enseignant>`;
     }
 
-    const geminiPayload = {
-      systemInstruction: { parts: [{ text: sysPrompt }] },
-      contents: [{ role: 'user', parts }],
-      generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.95 }
-    };
-
-    const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-    const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
-
-    assistantMsg.content = `🔍 Gemini analyse l'activité pour la fiche didactique...`;
-    renderMessages();
-
-    const geminiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: state.abortController.signal,
-      body: JSON.stringify(geminiPayload)
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Gemini API ${geminiRes.status}: ${errText.slice(0, 500)}`);
-    }
-
-    const geminiData = await geminiRes.json();
-    let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    let finishReason = geminiData?.candidates?.[0]?.finishReason || 'STOP';
-
-    // Auto-continuation if generation was cut off (MAX_TOKENS)
-    let continuationCount = 0;
-    const MAX_CONTINUATIONS = 3;
-    while (finishReason === 'MAX_TOKENS' && continuationCount < MAX_CONTINUATIONS && !state.abortController?.signal?.aborted) {
-      continuationCount++;
-      assistantMsg.content = geminiText + `\n\n*⏳ Continuation automatique (${continuationCount}/${MAX_CONTINUATIONS})…*`;
-      renderMessages(true);
-
-      // Strip heavy inlineData (PDFs/images) from continuation — only keep text parts
-      const lightContents = geminiPayload.contents.map(turn => ({
-        role: turn.role,
-        parts: turn.parts.filter(p => p.text !== undefined)
-      })).filter(turn => turn.parts.length > 0);
-
-      const contPayload = {
-        systemInstruction: geminiPayload.systemInstruction,
-        contents: [
-          ...lightContents,
-          { role: 'model', parts: [{ text: geminiText }] },
-          { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté. Ne recommence pas depuis le début. Ne répète pas ce qui a déjà été écrit. Poursuis directement la fiche.' }] }
-        ],
-        generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.95 }
-      };
-
-      try {
-        const contRes = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: state.abortController?.signal,
-          body: JSON.stringify(contPayload)
-        });
-        if (!contRes.ok) break;
-        const contData = await contRes.json();
-        const contText = contData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
-        if (!contText) break;
-        geminiText += contText;
-      } catch(contErr) {
-        console.warn('Continuation failed:', contErr);
-        break;
-      }
+    let geminiText = await fetchGeneratorModel(assistantMsg, sysPrompt, userContent, needsMultimodal, parts, 65536);
+    if (!geminiText) {
+      throw new Error(`Aucun texte n'a été généré par le modèle.`);
     }
 
     // Extract what's inside <reponse_finale> if present
@@ -11531,9 +11515,7 @@ const generateMethodeSheet = async () => {
   showTyping("gemini-3.5-flash");
 
   try {
-    if (!state.geminiApiKey) {
-      throw new Error('Clé API Google Gemini requise. Configurez-la dans Paramètres API.');
-    }
+    const needsMultimodal = !!(_methodePdfBase64 || _methodeRefBase64 || _methodeExempleBase64);
 
     const userContent = buildMethodeUserPrompt(cfg);
     const parts = [{ text: userContent }];
@@ -11565,74 +11547,9 @@ const generateMethodeSheet = async () => {
       sysPrompt += `\n\n<cadre_reference_importe>\n${_methodeRefText}\n</cadre_reference_importe>`;
     }
 
-    const geminiPayload = {
-      systemInstruction: { parts: [{ text: sysPrompt }] },
-      contents: [{ role: 'user', parts }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 65536, topP: 0.85 }
-    };
-
-    const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-    const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
-
-    assistantMsg.content = `🔍 L'IA analyse votre exercice pour élaborer la fiche méthode...`;
-    renderMessages();
-
-    const geminiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: state.abortController.signal,
-      body: JSON.stringify(geminiPayload)
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Gemini API ${geminiRes.status}: ${errText.slice(0, 500)}`);
-    }
-
-    const geminiData = await geminiRes.json();
-    let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    let finishReason = geminiData?.candidates?.[0]?.finishReason || 'STOP';
-
-    // Continuation
-    let continuationCount = 0;
-    const MAX_CONTINUATIONS = 3;
-    while (finishReason === 'MAX_TOKENS' && continuationCount < MAX_CONTINUATIONS && !state.abortController?.signal?.aborted) {
-      continuationCount++;
-      assistantMsg.content = geminiText + `\n\n*⏳ Continuation automatique (${continuationCount}/${MAX_CONTINUATIONS})…*`;
-      renderMessages(true);
-
-      const lightContents = geminiPayload.contents.map(turn => ({
-        role: turn.role,
-        parts: turn.parts.filter(p => p.text !== undefined)
-      })).filter(turn => turn.parts.length > 0);
-
-      const contPayload = {
-        systemInstruction: geminiPayload.systemInstruction,
-        contents: [
-          ...lightContents,
-          { role: 'model', parts: [{ text: geminiText }] },
-          { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté. Ne recommence pas depuis le début. Ne répète pas ce qui a déjà été écrit. Poursuis directement la fiche en XML.' }] }
-        ],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 65536, topP: 0.85 }
-      };
-
-      try {
-        const contRes = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: state.abortController?.signal,
-          body: JSON.stringify(contPayload)
-        });
-        if (!contRes.ok) break;
-        const contData = await contRes.json();
-        const contText = contData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
-        if (!contText) break;
-        geminiText += contText;
-      } catch(contErr) {
-        console.warn('Continuation failed:', contErr);
-        break;
-      }
+    let geminiText = await fetchGeneratorModel(assistantMsg, sysPrompt, userContent, needsMultimodal, parts, 65536);
+    if (!geminiText) {
+      throw new Error(`Aucun texte n'a été généré par le modèle.`);
     }
 
     // Extraction XML et formatage en bloc de code
@@ -13714,10 +13631,6 @@ const generateEvaluationSheet = async () => {
   showTyping('gemini-3.5-flash');
 
   try {
-    if (!state.geminiApiKey) {
-      throw new Error('Clé API Google Gemini requise. Configurez-la dans Paramètres API.');
-    }
-
     const userContent = buildEvaluationUserPrompt(cfg);
     const parts = [];
 
@@ -13732,71 +13645,11 @@ const generateEvaluationSheet = async () => {
 
     parts.push({ text: userContent });
 
-    const geminiPayload = {
-      systemInstruction: { parts: [{ text: EVALUATION_SYSTEM_PROMPT }] },
-      contents: [{ role: 'user', parts }],
-      generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.9 }
-    };
+    const effectiveSystemPrompt = EVALUATION_SYSTEM_PROMPT;
 
-    const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-    const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
-
-    assistantMsg.content = `🔍 L'IA analyse le cours et génère les deux versions de l'évaluation…`;
-    renderMessages();
-
-    const geminiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: state.abortController.signal,
-      body: JSON.stringify(geminiPayload)
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Gemini API ${geminiRes.status}: ${errText.slice(0, 500)}`);
-    }
-
-    const geminiData = await geminiRes.json();
-    let geminiText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    let finishReason = geminiData?.candidates?.[0]?.finishReason || 'STOP';
-
-    // Continuation automatique si MAX_TOKENS
-    let continuationCount = 0;
-    const MAX_CONTINUATIONS = 3;
-    while (finishReason === 'MAX_TOKENS' && continuationCount < MAX_CONTINUATIONS && !state.abortController?.signal?.aborted) {
-      continuationCount++;
-      assistantMsg.content = geminiText + `\n\n*⏳ Continuation automatique (${continuationCount}/${MAX_CONTINUATIONS})…*`;
-      renderMessages(true);
-
-      const lightContents = geminiPayload.contents.map(turn => ({
-        role: turn.role,
-        parts: turn.parts.filter(p => p.text !== undefined)
-      })).filter(turn => turn.parts.length > 0);
-
-      const contPayload = {
-        systemInstruction: geminiPayload.systemInstruction,
-        contents: [
-          ...lightContents,
-          { role: 'model', parts: [{ text: geminiText }] },
-          { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté. Ne recommence pas depuis le début. Poursuis directement la génération de l\'évaluation.' }] }
-        ],
-        generationConfig: { temperature: 0.35, maxOutputTokens: 65536, topP: 0.9 }
-      };
-
-      try {
-        const contRes = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: state.abortController?.signal,
-          body: JSON.stringify(contPayload)
-        });
-        if (!contRes.ok) break;
-        const contData = await contRes.json();
-        const contText = contData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
-        if (!contText) break;
-        geminiText += contText;
-      } catch(contErr) { console.warn('Continuation failed:', contErr); break; }
+    let geminiText = await fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, hasPdf, parts, 65536);
+    if (!geminiText) {
+      throw new Error(`Aucun texte n'a été généré par le modèle.`);
     }
 
     // Exports
