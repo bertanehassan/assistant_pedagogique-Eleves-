@@ -9051,7 +9051,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   // - Si PDF/Image (multimodal) -> Force Gemini Vision
   // - Si Texte seul -> Utilise le modèle actuellement sélectionné par l'utilisateur
 
-  async function fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, geminiPayloadParts, maxTokens = 65536) {
+  async function fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, geminiPayloadParts, maxTokens = 65536, chosenModel = null) {
     if (needsMultimodal) {
       if (!state.geminiApiKey) {
         throw new Error(
@@ -9127,7 +9127,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       return text;
   
     } else {
-      const targetModel = state.model || "mistral-large-2512";
+      const targetModel = chosenModel || state.model || "mistral-large-2512";
       assistantMsg.modelUsed = targetModel;
       assistantMsg.content = `⏳ ${targetModel} génère votre document…`;
       renderMessages();
@@ -9322,7 +9322,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         ? baseSystemPrompt + `\n\nREMARQUE CRITIQUE (MODE DOCUMENT) : Un ou plusieurs documents ont été joints à ce message. Tu dois IMPÉRATIVEMENT lire et analyser le contenu RÉEL de chaque document joint avant de générer quoi que ce soit. Si tu ne lis pas les documents, ta réponse sera inutilisable.`
         : baseSystemPrompt;
 
-      let geminiText = await fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, parts, 8192);
+      let geminiText = await fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, parts, 8192, targetModel);
 
       if (!geminiText) {
         throw new Error(`Aucun texte n'a été généré par le modèle.`);
@@ -10620,7 +10620,7 @@ const generateDidactiqueSheet = async () => {
       sysPrompt += `\n\n<objectifs_fournis_par_enseignant>\nVoici les objectifs spécifiques pour cette séquence, intégre-les dans ta production :\n${cfg.objectifs}\n</objectifs_fournis_par_enseignant>`;
     }
 
-    let geminiText = await fetchGeneratorModel(assistantMsg, sysPrompt, userContent, needsMultimodal, parts, 65536);
+    let geminiText = await fetchGeneratorModel(assistantMsg, sysPrompt, userContent, needsMultimodal, parts, 65536, targetModel);
     if (!geminiText) {
       throw new Error(`Aucun texte n'a été généré par le modèle.`);
     }
@@ -11553,7 +11553,7 @@ const generateMethodeSheet = async () => {
       sysPrompt += `\n\n<cadre_reference_importe>\n${_methodeRefText}\n</cadre_reference_importe>`;
     }
 
-    let geminiText = await fetchGeneratorModel(assistantMsg, sysPrompt, userContent, needsMultimodal, parts, 65536);
+    let geminiText = await fetchGeneratorModel(assistantMsg, sysPrompt, userContent, needsMultimodal, parts, 65536, targetModel);
     if (!geminiText) {
       throw new Error(`Aucun texte n'a été généré par le modèle.`);
     }
@@ -13647,7 +13647,7 @@ const generateEvaluationSheet = async () => {
 
     const effectiveSystemPrompt = EVALUATION_SYSTEM_PROMPT;
 
-    let geminiText = await fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, hasPdf, parts, 65536);
+    let geminiText = await fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, hasPdf, parts, 65536, targetModel);
     if (!geminiText) {
       throw new Error(`Aucun texte n'a été généré par le modèle.`);
     }
