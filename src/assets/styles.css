@@ -3769,10 +3769,6 @@ html[dir="rtl"] .message.user::before {
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* ── Topbar selects: masqués sur mobile (dans sidebar) ── */
-  .topbar-select {
-    display: none;
-  }
 
   /* ── Agrandir les éléments cliquables dans la sidebar ── */
   .sb-btn {
