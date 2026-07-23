@@ -9027,7 +9027,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   // --- HELPER : REMPLISSAGE DES SÉLECTEURS DE MODÈLE DANS LES GÉNÉRATEURS ---
   // Peuple dynamiquement les menus déroulants de modèle dans chaque modale de fiche
   // à partir de la liste globale MODELS, avec gemini-3.5-flash comme valeur par défaut.
-  function populateGeneratorModels(selectId, defaultModel = 'gemini-3.5-flash') {
+  window.populateGeneratorModels = function(selectId, defaultModel = 'gemini-3.5-flash') {
     const sel = $(`#${selectId}`);
     if (!sel) return;
     const currentVal = sel.value;
@@ -9044,7 +9044,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     } else {
       sel.value = defaultModel;
     }
-  }
+  };
 
   // --- NOUVEAU HELPER UNIFIÉ POUR LES GÉNÉRATEURS DE FICHES ---
   // Permet de router intelligemment :
@@ -10026,7 +10026,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     corrShowStep(1);
     corrFillCompetences();
     // Peupler le sélecteur de modèle local avec Gemini par défaut
-    populateGeneratorModels('corr-model-select', 'gemini-3.5-flash');
+    if (window.populateGeneratorModels) window.populateGeneratorModels('corr-model-select', 'gemini-3.5-flash');
     $('#correction-modal').classList.add('active');
   };
   const closeCorrectionModal = () => $('#correction-modal').classList.remove('active');
@@ -10474,7 +10474,7 @@ const openDidactiqueModal = async () => {
 
   didactiqueShowStep(1);
   // Peupler le sélecteur de modèle local avec Gemini par défaut
-  populateGeneratorModels('didac-model-select', 'gemini-3.5-flash');
+  if (window.populateGeneratorModels) window.populateGeneratorModels('didac-model-select', 'gemini-3.5-flash');
   $('#didactique-modal').classList.add('active');
 };
 const closeDidactiqueModal = () => $('#didactique-modal').classList.remove('active');
@@ -11445,7 +11445,7 @@ const openMethodeModal = async () => {
 
   methodeShowStep(1);
   // Peupler le sélecteur de modèle local avec Gemini par défaut
-  populateGeneratorModels('methode-model-select', 'gemini-3.5-flash');
+  if (window.populateGeneratorModels) window.populateGeneratorModels('methode-model-select', 'gemini-3.5-flash');
   $('#methode-modal').classList.add('active');
 
   // Injection différée du rôle par défaut (après rendu Vue)
@@ -13552,7 +13552,7 @@ const openEvaluationModal = async () => {
 
   evalShowStep(1);
   // Peupler le sélecteur de modèle local avec Gemini par défaut
-  populateGeneratorModels('eval-model-select', 'gemini-3.5-flash');
+  if (window.populateGeneratorModels) window.populateGeneratorModels('eval-model-select', 'gemini-3.5-flash');
   const modal = document.getElementById('evaluation-modal');
   if (modal) modal.classList.add('active');
 };
