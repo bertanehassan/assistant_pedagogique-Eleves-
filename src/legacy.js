@@ -9956,19 +9956,6 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
 
   // ── Ouvrir / Fermer la modale ──────────────────────────────────────────
   const openCorrectionModal = async () => {
-    // Forcer le modèle Gemini car la fiche de correction l'exige
-    const geminiId = "gemini-3.5-flash";
-    if (state.model !== geminiId) {
-      state.model = geminiId;
-      if ($('#model-select')) $('#model-select').value = geminiId;
-      if (typeof db !== 'undefined' && db.put) {
-        db.put('settings', { id: 'model', value: state.model }).catch(() => {});
-      }
-      if (typeof toast !== 'undefined') {
-        toast('Le modèle Gemini a été sélectionné (requis pour cet outil).', 'info');
-      }
-    }
-
     // Refresh multi-save list
     await refreshCorrectionSavedList();
     
@@ -10413,18 +10400,6 @@ const didactiqueBuildSummary = () => {
   if (summaryEl) summaryEl.innerHTML = html;
 };
 const openDidactiqueModal = async () => {
-  const geminiId = "gemini-3.5-flash";
-  if (state.model !== geminiId) {
-    state.model = geminiId;
-    if ($('#model-select')) $('#model-select').value = geminiId;
-    if (typeof db !== 'undefined' && db.put) {
-      db.put('settings', { id: 'model', value: state.model }).catch(() => {});
-    }
-    if (typeof toast !== 'undefined') {
-      toast('Le modèle Gemini a été sélectionné (requis pour la structuration de tableau complexe).', 'info');
-    }
-  }
-
   // Restaurer la config
   try {
     const saved = localStorage.getItem('didacSavedConfig');
@@ -11388,15 +11363,6 @@ const methodeBuildSummary = () => {
 const DEFAULT_METHODE_ROLE = `Tu es un expert pédagogique spécialisé dans la conception de fiches méthode pour les élèves du collège et du lycée marocain (de la 1AC au 2BAC), toutes disciplines confondues — Sciences, Mathématiques, Lettres, Langues, Histoire-Géographie, Philosophie et Économie. Ton rôle est de produire des fiches méthode rigoureuses, concrètes et immédiatement utilisables : tu corriges les erreurs identifiées, tu déconstruis la démarche attendue étape par étape, et tu fournis un modèle de travail explicite et reproductible que l'élève peut appliquer de façon autonome à tout exercice similaire. Tu ne te contentes pas d'expliquer — tu montres exactement ce qu'il faut faire, dans quel ordre et pourquoi, avec des exemples rédigés et des formulations modèles prêtes à réutiliser.`;
 
 const openMethodeModal = async () => {
-  const geminiId = "gemini-3.5-flash";
-  if (state.model !== geminiId) {
-    state.model = geminiId;
-    if ($('#model-select')) $('#model-select').value = geminiId;
-    if (typeof db !== 'undefined' && db.put) {
-      db.put('settings', { id: 'model', value: state.model }).catch(() => {});
-    }
-  }
-
   // Restaurer la config
   try {
     const saved = localStorage.getItem('methodeSavedConfig');
@@ -13503,18 +13469,6 @@ Génère maintenant les deux évaluations (Version A et Version B) en respectant
 
 // ── Ouverture de la modale ──
 const openEvaluationModal = async () => {
-  const geminiId = 'gemini-3.5-flash';
-  if (state.model !== geminiId) {
-    state.model = geminiId;
-    if ($('#model-select')) $('#model-select').value = geminiId;
-    if (typeof db !== 'undefined' && db.put) {
-      db.put('settings', { id: 'model', value: state.model }).catch(() => {});
-    }
-    if (typeof toast !== 'undefined') {
-      toast('Le modèle Gemini a été sélectionné (requis pour cet outil).', 'info');
-    }
-  }
-
   // Restaurer la config depuis localStorage
   try {
     const saved = localStorage.getItem('evalSavedConfig');
