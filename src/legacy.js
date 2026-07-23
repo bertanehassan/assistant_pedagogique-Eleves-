@@ -9213,7 +9213,10 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
     renderMessages();
 
-    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-3.5-flash', isCorrection: true };
+    const needsMultimodal = !!(_corrPdfBase64 || _corrRefBase64 || _corrExempleBase64);
+    const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+
+    const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: targetModel, isCorrection: true };
     state.messages.push(assistantMsg);
     renderMessages();
 
@@ -9225,10 +9228,9 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     state.abortController = new AbortController();
     const sendBtn = $('#send-btn');
     if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
-    showTyping("gemini-3.5-flash");
+    showTyping(targetModel);
 
     try {
-      const needsMultimodal = !!(_corrPdfBase64 || _corrRefBase64 || _corrExempleBase64);
       const userContent = buildCorrectionUserPrompt(cfg);
 
       // Construire les parts pour Gemini ou pour extraction textuelle
@@ -10495,7 +10497,10 @@ const generateDidactiqueSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-3.5-flash', isCorrection: true };
+  const needsMultimodal = !!(_didacPdfBase64 || _didacRefBase64 || _didacDirectivesBase64 || _didacExempleBase64);
+  const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+
+  const assistantMsg = { role: 'assistant', content: '⏳ Génération en cours…', streaming: true, ts: Date.now() + 1, modelUsed: targetModel, isCorrection: true };
   state.messages.push(assistantMsg);
   renderMessages();
 
@@ -10506,10 +10511,9 @@ const generateDidactiqueSheet = async () => {
   state.abortController = new AbortController();
   const sendBtn = $('#send-btn');
   if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
-  showTyping("gemini-3.5-flash");
+  showTyping(targetModel);
 
   try {
-    const needsMultimodal = !!(_didacPdfBase64 || _didacRefBase64 || _didacDirectivesBase64 || _didacExempleBase64);
 
     let userContent = `# USER PROMPT
 
@@ -11467,7 +11471,10 @@ const generateMethodeSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const assistantMsg = { role: 'assistant', content: '⏳ Génération de la fiche méthode en cours…', streaming: true, ts: Date.now() + 1, modelUsed: 'gemini-3.5-flash', isCorrection: false, isMethode: true };
+  const needsMultimodal = !!(_methodePdfBase64 || _methodeRefBase64 || _methodeExempleBase64);
+  const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+
+  const assistantMsg = { role: 'assistant', content: '⏳ Génération de la fiche méthode en cours…', streaming: true, ts: Date.now() + 1, modelUsed: targetModel, isCorrection: false, isMethode: true };
   state.messages.push(assistantMsg);
   renderMessages();
 
@@ -11478,10 +11485,9 @@ const generateMethodeSheet = async () => {
   state.abortController = new AbortController();
   const sendBtn = $('#send-btn');
   if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
-  showTyping("gemini-3.5-flash");
+  showTyping(targetModel);
 
   try {
-    const needsMultimodal = !!(_methodePdfBase64 || _methodeRefBase64 || _methodeExempleBase64);
 
     const userContent = buildMethodeUserPrompt(cfg);
     const parts = [{ text: userContent }];
@@ -13563,12 +13569,15 @@ const generateEvaluationSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
+  const needsMultimodal = hasPdf;
+  const targetModel = needsMultimodal ? 'gemini-3.5-flash' : (state.model || 'mistral-large-2512');
+
   const assistantMsg = {
     role: 'assistant',
     content: '⏳ Génération des deux évaluations en cours…',
     streaming: true,
     ts: Date.now() + 1,
-    modelUsed: 'gemini-3.5-flash',
+    modelUsed: targetModel,
     isCorrection: false,
     isMethode: false
   };
@@ -13582,7 +13591,7 @@ const generateEvaluationSheet = async () => {
   state.abortController = new AbortController();
   const sendBtn = $('#send-btn');
   if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'stop-btn'; sendBtn.innerHTML = '⏹ ARRÊTER'; }
-  showTyping('gemini-3.5-flash');
+  showTyping(targetModel);
 
   try {
     const userContent = buildEvaluationUserPrompt(cfg);
