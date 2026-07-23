@@ -9048,7 +9048,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       assistantMsg.content = `🔍 Gemini 3.5 Flash analyse votre demande et lit le(s) document(s) natif(s)…`;
       renderMessages();
   
-      const res = await fetch(geminiUrl, {
+      const res = await fetchWithRetry(geminiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: state.abortController?.signal,
@@ -9087,7 +9087,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
           generationConfig: { temperature: 0.35, maxOutputTokens: maxTokens, topP: 0.95 }
         };
         
-        const contRes = await fetch(geminiUrl, {
+        const contRes = await fetchWithRetry(geminiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: state.abortController?.signal,
