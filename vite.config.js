@@ -88,7 +88,7 @@ export default defineConfig(({ mode }) => ({
         stringArray: true,
         stringArrayEncoding: ['base64'],
         stringArrayThreshold: 0.85,
-        stringArrayWrappersCount: 3,
+        stringArrayWrappersCount: 1,
         stringArrayWrappersType: 'variable',
         stringArrayIndexShift: true,
         stringArrayRotate: true,
@@ -96,11 +96,11 @@ export default defineConfig(({ mode }) => ({
 
         // ── Aplatissement du flux de contrôle (rend la logique illisible) ──
         controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 0.7,
+        controlFlowFlatteningThreshold: 0.4,
 
         // ── Injection de code mort (leurres) ──
         deadCodeInjection: true,
-        deadCodeInjectionThreshold: 0.3,
+        deadCodeInjectionThreshold: 0.1,
 
         // ── Renommage des identifiants ──
         identifierNamesGenerator: 'hexadecimal',

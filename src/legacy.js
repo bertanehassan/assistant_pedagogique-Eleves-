@@ -2961,7 +2961,6 @@ async function renderWfSteps() {
   // Get agents for the select options - always reload fresh from DB
   const freshAgents = await db.getAll('agents') || [];
   window.__allAgents = freshAgents;
-  console.log('[DEBUG renderWfSteps] agents:', freshAgents.length, 'steps:', wfSteps.length, 'step0 agentId:', wfSteps[0]?.agentId);
   const agentOpts = freshAgents.map(a => ({
     id: a.id, name: a.name
   }));
@@ -4637,7 +4636,6 @@ Pour chaque requête, suivre obligatoirement ce workflow :
     // Unconditionally update both the agent and workflow to ensure the prompt applies even for existing users
     await db.put('agents', agentVF);
     await db.put('workflows', workflowVF);
-    console.log('[INIT] Workflow Vrai/Faux mis à jour avec succès.');
   } catch(e) {
     console.error('[INIT] Erreur lors de la mise à jour du workflow Vrai/Faux :', e);
   }
@@ -4738,7 +4736,6 @@ Génère TOUTES les questions originales sans jamais tronquer.`,
     };
 
     await db.put('workflows', workflow);
-    console.log('[INIT] Workflow Audit créé avec succès.');
   } catch (e) {
     console.error('[INIT] Erreur Audit:', e);
   }
@@ -5125,7 +5122,6 @@ For each request, you MUST follow this workflow:
     await db.put('workflows', workflowEn2);
 
 
-    console.log('[INIT] Workflows FlashCards mis à jour avec succès.');
   } catch (e) {
     console.error('[INIT] Erreur FlashCards:', e);
   }
@@ -5439,7 +5435,6 @@ d- [خيار]
       await db.put('workflows', wfMegaAr);
     }
 
-    console.log('[INIT] Méga-Chaînes (FR+EN+AR) créées avec succès.');
   } catch(e) {
     console.error('[INIT] Erreur Méga-Chaînes:', e);
   }
@@ -6099,7 +6094,6 @@ d- Option
       true
     );
 
-    console.log('[INIT] Workflows QCM (FR/AR/EN) created successfully.');
   } catch(e) {
     console.error('[INIT] Error creating QCM workflows:', e);
   }
@@ -6256,7 +6250,6 @@ For **every request**, you **MUST** follow this workflow:
     };
 
     await db.put('agents', defaultAgent);
-    console.log('[INIT] Default EN agent created successfully.');
   } catch(e) { console.error("Error init EN default agent:", e); }
 }
 
@@ -6414,7 +6407,6 @@ Via ⚙️ > "🔑 Clés API" :
     };
 
     await db.put('agents', guideAgent);
-    console.log('[INIT] Guide agent created successfully.');
   } catch(e) { console.error('Error init Guide agent:', e); }
 }
 
@@ -6527,7 +6519,6 @@ For each request, you MUST follow this workflow:
 
     await db.put('agents', agentVF);
     await db.put('workflows', workflowVF);
-    console.log('[INIT] Workflow True/False EN created successfully.');
   } catch(e) {
     console.error('[INIT] Error updating True/False EN workflow:', e);
   }
@@ -6627,7 +6618,6 @@ Generate ALL original questions without ever truncating.`,
     };
 
     await db.put('workflows', workflow);
-    console.log('[INIT] Audit EN Workflow created successfully.');
   } catch (e) {
     console.error('[INIT] Error Audit EN:', e);
   }
@@ -6727,7 +6717,6 @@ d- [خيار أصلي أو مصحح]
     };
 
     await db.put('workflows', workflow);
-    console.log('[INIT] Audit AR Workflow created successfully.');
   } catch (e) {
     console.error('[INIT] Error Audit AR:', e);
   }
@@ -7254,7 +7243,6 @@ export const mountApp = async () => {
           if (ag && ag.name !== expectedNames[i-1]) {
             ag.name = expectedNames[i-1];
             await db.put('agents', ag);
-            console.log(`[MIGRATE] Fixed: wf-${ch.prefix}-agent${i} → ${ag.name}`);
           }
         } catch(e) {}
       }
@@ -8476,7 +8464,6 @@ function bindEvents() {
   };
 
   window.saveCurrentQuiz = function() {
-    console.log("saveCurrentQuiz() appelée !");
     const btn = document.getElementById('wq-score-save');
     if (btn) btn.innerText = "⏳ Préparation...";
 
@@ -13425,7 +13412,6 @@ function showFinalScoreScreen() {
 // ─── Délégation globale bouton Sauvegarder Quiz ────────────────────────────
 document.addEventListener('click', (e) => {
   if (e.target.closest('#wq-score-save')) {
-    console.log("Clic détecté sur #wq-score-save par délégation globale.");
     e.stopImmediatePropagation();
     if (window.saveCurrentQuiz) {
       window.saveCurrentQuiz();
