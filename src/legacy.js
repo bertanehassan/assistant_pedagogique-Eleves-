@@ -1289,7 +1289,7 @@ function getLlmApiConfig(modelId) {
   if (modelId.includes("gemini")) {
     return {
       provider: "gemini",
-      url: `/api/gemini/v1beta/models/${modelId}:streamGenerateContent?alt=sse&key=${state.geminiApiKey || ""}`,
+      url: `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse&key=${state.geminiApiKey || ""}`,
       headers: {
         "Content-Type": "application/json"
       }
@@ -1297,7 +1297,7 @@ function getLlmApiConfig(modelId) {
   } else if (modelId.includes("deepseek") || modelId.includes("openrouter") || modelId.includes("/") || modelId.includes(":free")) {
     return {
       provider: "openrouter",
-      url: "/api/openrouter/api/v1/chat/completions",
+      url: "https://openrouter.ai/api/v1/chat/completions",
       headers: {
         "Authorization": `Bearer ${state.openRouterApiKey || ""}`,
         "Content-Type": "application/json",
@@ -9318,7 +9318,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         );
       }
       const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-      const geminiUrl = `/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
   
       const payload = {
         systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
@@ -9955,10 +9955,10 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       try {
         const cleanKey = gK.replace(/[\r\n\s]+/g, '');
         // Test 1: Simple GET (pour tester le réseau/CORS)
-        await fetch(`/api/gemini/v1beta/models?key=${cleanKey}`);
+        await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
         
         // Test 2: POST (génération réelle)
-        const res = await fetch(`/api/gemini/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanKey}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -9994,7 +9994,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       
       try {
         const cleanKey = oK.replace(/[\r\n\s]+/g, '');
-        const res = await fetch(`/api/openrouter/api/v1/chat/completions`, {
+        const res = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
