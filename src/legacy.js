@@ -8007,23 +8007,23 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
     det.style.cssText = 'position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,0.95);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;overflow-y:auto;';
     const esc = (s) => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
     det.innerHTML = `
-      <div style="width:100%;max-width:850px;">
+      <div style="width:100%;max-width:1400px;padding: 0 4vw;">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
           <button id="fc-detail-back" style="padding:8px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#e2e8f0;cursor:pointer;font-size:13px;">${isArabic ? 'عودة ◀' : (isEnglish ? '◀ Back' : '◀ Retour')}</button>
           <span style="color:#f59e0b;font-size:13px;font-weight:700;letter-spacing:2px;">${isArabic ? '💡 التفاصيل — بطاقة' : (isEnglish ? '💡 DETAIL — CARD' : '💡 DÉTAIL — CARTE')} ${card.id}</span>
         </div>
         <div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(15,23,42,0.95));border:1.5px solid rgba(245,158,11,0.25);border-radius:20px;padding:28px;margin-bottom:16px;">
           <div style="color:#f59e0b;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:10px;">${isArabic ? '❓ السؤال' : (isEnglish ? '❓ QUESTION' : '❓ QUESTION')}</div>
-          <div style="color:#e2e8f0;font-size:18px;line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.question)}</div>
+          <div style="color:#e2e8f0;font-size:clamp(20px, 4vw, 28px);line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.question)}</div>
         </div>
         <div style="background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(15,23,42,0.95));border:1.5px solid rgba(34,197,94,0.25);border-radius:20px;padding:28px;margin-bottom:16px;">
           <div style="color:#22c55e;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:10px;">${isArabic ? '✅ الجواب' : (isEnglish ? '✅ ANSWER' : '✅ RÉPONSE')}</div>
-          <div style="color:#e2e8f0;font-size:18px;line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.reponse || "—")}</div>
+          <div style="color:#e2e8f0;font-size:clamp(20px, 4vw, 28px);line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.reponse || "—")}</div>
         </div>
         ${card.explication ? `
         <div style="background:rgba(59,130,246,0.08);border:1.5px solid rgba(59,130,246,0.25);border-radius:20px;padding:24px;margin-bottom:16px;">
           <div style="color:#3b82f6;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:10px;">${isArabic ? '💡 الشرح' : (isEnglish ? '💡 EXPLANATION' : '💡 EXPLICATION')}</div>
-          <div style="color:#cbd5e1;font-size:15px;line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.explication)}</div>
+          <div style="color:#cbd5e1;font-size:clamp(16px, 3.5vw, 22px);line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.explication)}</div>
         </div>` : ''}
         ${card.pour_aller_plus_loin ? `
         <div style="background:rgba(99,102,241,0.08);border:1.5px solid rgba(99,102,241,0.25);border-radius:20px;padding:20px;">
@@ -8051,21 +8051,21 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
           ${metadata.auteur ? `<span>✍️ ${metadata.auteur}</span>` : ''}
         </div>` : ''}
       </div>
-      <div style="width:100%;max-width:850px;height:12px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden;">
+      <div style="width:98%;max-width:none;height:12px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden;">
         <div style="height:100%;width:${Math.round(((idx+1)/cards.length)*100)}%;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:99px;transition:width 0.4s;"></div>
       </div>
-      <div id="fc-card" style="width:100%;max-width:850px;min-height:360px;cursor:pointer;perspective:1000px;" onclick="document.getElementById('fc-card-inner').style.transform = document.getElementById('fc-card-inner').style.transform === 'rotateY(180deg)' ? 'rotateY(0deg)' : 'rotateY(180deg)'; document.getElementById('fc-flip-hint').style.display='none';">
-        <div id="fc-card-inner" style="position:relative;width:100%;min-height:360px;transition:transform 0.5s;transform-style:preserve-3d;">
+      <div id="fc-card" style="width:98%;max-width:none;min-height:clamp(400px, 75vh, 800px);cursor:pointer;perspective:1200px;" onclick="document.getElementById('fc-card-inner').style.transform = document.getElementById('fc-card-inner').style.transform === 'rotateY(180deg)' ? 'rotateY(0deg)' : 'rotateY(180deg)'; document.getElementById('fc-flip-hint').style.display='none';">
+        <div id="fc-card-inner" style="position:relative;width:100%;min-height:clamp(400px, 75vh, 800px);transition:transform 0.5s;transform-style:preserve-3d;">
           <!-- RECTO -->
           <div style="position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid rgba(245,158,11,0.4);border-radius:20px;padding:32px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
             <div style="color:#f59e0b;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:16px;">${isArabic ? '❓ السؤال' : (isEnglish ? '❓ QUESTION' : '❓ QUESTION')}</div>
-            <div style="color:#e2e8f0;font-size:18px;line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.question)}</div>
+            <div style="color:#e2e8f0;font-size:clamp(24px, 5vw, 48px);line-height:1.6;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.question)}</div>
             <div id="fc-flip-hint" style="margin-top:24px;color:#64748b;font-size:12px;">${isArabic ? '👆 انقر لرؤية الجواب' : (isEnglish ? '👆 Click to see the answer' : '👆 Cliquez pour voir la réponse')}</div>
           </div>
           <!-- VERSO (réponse + bouton Détail comme Flutter explanation_screen) -->
           <div style="position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(135deg,#052e16,#0f172a);border:2px solid rgba(34,197,94,0.4);border-radius:20px;padding:28px;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;">
             <div style="color:#22c55e;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:12px;">${isArabic ? '✅ الجواب' : (isEnglish ? '✅ ANSWER' : '✅ RÉPONSE')}</div>
-            <div style="color:#e2e8f0;font-size:16px;line-height:1.7;margin-bottom:20px;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.reponse || '—')}</div>
+            <div style="color:#e2e8f0;font-size:clamp(20px, 4.5vw, 42px);line-height:1.6;margin-bottom:20px;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.reponse || '—')}</div>
             <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
               <button onclick="event.stopPropagation();window.__fcDetail&&window.__fcDetail()" style="padding:9px 20px;border-radius:12px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.12);color:#f59e0b;cursor:pointer;font-size:13px;font-weight:700;">${isArabic ? '💡 عرض التفاصيل' : (isEnglish ? '💡 View details' : '💡 Voir le détail')}</button>
               <button id="btn-ask-ai-back" onclick="event.stopPropagation();window.__fcAskAI&&window.__fcAskAI()" style="padding:9px 20px;border-radius:12px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.12);color:#c4b5fd;cursor:pointer;font-size:13px;font-weight:700;">${isArabic ? '🤖 طلب الشرح' : (isEnglish ? '🤖 Explain (AI)' : '🤖 Expliquer (IA)')}</button>
@@ -8080,6 +8080,7 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
         ${msgId ? `<button onclick="exportMessageToWord('${msgId}')" style="padding:10px 22px;border-radius:12px;border:1px solid rgba(79,195,247,0.4);background:rgba(79,195,247,0.1);color:#4fc3f7;cursor:pointer;font-size:14px;font-weight:700;">📄 DOCX</button>` : ''}
         ${msgId ? `<button onclick="exportFcAsJson('${msgId}')" style="padding:10px 22px;border-radius:12px;border:1px solid rgba(0,255,157,0.4);background:rgba(0,255,157,0.1);color:var(--neon);cursor:pointer;font-size:14px;font-weight:700;">⬇️ JSON</button>` : ''}
         <button onclick="window.__fcNext && window.__fcNext()" ${idx===cards.length-1?'disabled':''} style="padding:10px 22px;border-radius:12px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:14px;font-weight:700;${idx===cards.length-1?'opacity:0.4;':''}">${isArabic ? 'التالي ▶' : (isEnglish ? 'Next ▶' : 'Suivant ▶')}</button>
+        <button onclick="window.toggleFCFullscreen && window.toggleFCFullscreen()" style="padding:10px 22px;border-radius:12px;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;font-size:14px;font-weight:700;">${isArabic ? '⛶ ملء الشاشة' : (isEnglish ? '⛶ Fullscreen' : '⛶ Plein écran')}</button>
         <button onclick="document.getElementById('fc-player-overlay').remove()" style="padding:10px 22px;border-radius:12px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:14px;">${isArabic ? '✕ إغلاق' : (isEnglish ? '✕ Close' : '✕ Fermer')}</button>
       </div>`;
     window.__fcDetail = () => showDetailScreen(cards[idx]);
@@ -8105,7 +8106,7 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
     aiScreen.style.cssText = 'position:fixed;inset:0;z-index:99997;background:rgba(0,0,0,0.97);backdrop-filter:blur(24px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 24px;overflow-y:auto;';
 
     aiScreen.innerHTML = `
-      <div style="width:100%;max-width:900px;">
+      <div style="width:100%;max-width:1400px;padding: 0 4vw;">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap;">
           <button id="fc-ai-back-btn" style="padding:9px 20px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#e2e8f0;cursor:pointer;font-size:14px;">${isArabic ? '◀ عودة' : '◀ Retour'}</button>
           <span style="color:#c4b5fd;font-size:14px;font-weight:700;letter-spacing:2px;">🤖 ${isArabic ? 'الشرح بالذكاء الاصطناعي — بطاقة' : 'EXPLICATION IA — CARTE'} ${card.id || idx + 1}</span>
@@ -8113,17 +8114,17 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
 
         <div style="background:linear-gradient(135deg,rgba(245,158,11,0.07),rgba(15,23,42,0.95));border:1.5px solid rgba(245,158,11,0.2);border-radius:18px;padding:22px;margin-bottom:20px;">
           <div style="color:#f59e0b;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:10px;">${isArabic ? '❓ السؤال' : (isEnglish ? '❓ QUESTION' : '❓ QUESTION')}</div>
-          <div style="color:#e2e8f0;font-size:16px;line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.question)}</div>
+          <div style="color:#e2e8f0;font-size:clamp(18px, 4vw, 24px);line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.question)}</div>
         </div>
 
         <div style="background:linear-gradient(135deg,rgba(34,197,94,0.07),rgba(15,23,42,0.95));border:1.5px solid rgba(34,197,94,0.2);border-radius:18px;padding:22px;margin-bottom:20px;">
           <div style="color:#22c55e;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:10px;">${isArabic ? '✅ الجواب' : (isEnglish ? '✅ ANSWER' : '✅ RÉPONSE')}</div>
-          <div style="color:#e2e8f0;font-size:16px;line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.reponse || '—')}</div>
+          <div style="color:#e2e8f0;font-size:clamp(18px, 4vw, 24px);line-height:1.7;text-align:center;"${isArabic ? ' dir="rtl"' : ''}>${renderWithLatex(card.reponse || '—')}</div>
         </div>
 
         <div style="background:linear-gradient(135deg,rgba(139,92,246,0.1),rgba(15,23,42,0.95));border:1.5px solid rgba(139,92,246,0.3);border-radius:18px;padding:26px;">
           <div style="color:#c4b5fd;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:16px;">🤖 ${isArabic ? 'الشرح بالذكاء الاصطناعي' : 'EXPLICATION IA'}</div>
-          <div id="fc-ai-explain-text" style="color:#e2e8f0;font-size:16px;line-height:1.85;"${isArabic ? ' dir="rtl"' : ''}>
+          <div id="fc-ai-explain-text" style="color:#e2e8f0;font-size:clamp(16px, 3.5vw, 22px);line-height:1.85;"${isArabic ? ' dir="rtl"' : ''}>
             <span style="color:#64748b;">${isArabic ? '⏳ جارٍ التوليد...' : '⏳ Génération en cours...'}</span>
           </div>
         </div>
@@ -12661,6 +12662,28 @@ function askQuizMode(callback) {
   document.getElementById('qmd-cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 }
+
+window.toggleFCFullscreen = function() {
+  const container = document.getElementById('fc-player-overlay');
+  if (!container) return;
+  if (!document.fullscreenElement) {
+    if (container.requestFullscreen) {
+      container.requestFullscreen();
+    } else if (container.webkitRequestFullscreen) {
+      container.webkitRequestFullscreen();
+    } else if (container.msRequestFullscreen) {
+      container.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+};
 
 window.toggleWebQuizFullscreen = function() {
   const container = document.getElementById('web-quiz-player-modal');

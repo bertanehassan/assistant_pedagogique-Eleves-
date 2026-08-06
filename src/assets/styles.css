@@ -3008,7 +3008,7 @@ option, optgroup {
 }
 
 .wq-question-text {
-  font-size: 20px;
+  font-size: clamp(20px, 3.5vw, 36px);
   font-weight: 600;
   color: var(--text-bright);
   line-height: 1.5;
@@ -3067,16 +3067,15 @@ option, optgroup {
 }
 
 .wq-choice-letter {
-  width: 36px;
-  height: 36px;
+  width: clamp(28px, 4vw, 40px);
+  height: clamp(28px, 4vw, 40px);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: clamp(14px, 2vw, 18px);
   flex-shrink: 0;
   transition: all 0.2s;
 }
@@ -3101,7 +3100,7 @@ option, optgroup {
 
 .wq-choice-text {
   flex: 1;
-  font-size: 17px;
+  font-size: clamp(16px, 2.5vw, 24px);
   line-height: 1.5;
 }
 
@@ -3120,13 +3119,13 @@ option, optgroup {
   font-weight: 700;
   color: var(--cyan);
   margin-bottom: 10px;
-  font-size: 15px;
+  font-size: clamp(16px, 2.5vw, 22px);
   letter-spacing: 0.3px;
 }
 
 .wq-feedback-text {
   color: var(--text-bright);
-  font-size: 14px;
+  font-size: clamp(14px, 2.5vw, 20px);
   line-height: 1.7;
 }
 
