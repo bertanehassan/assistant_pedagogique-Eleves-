@@ -433,6 +433,214 @@ function isMathScientificContent(text, filename = "", msg = null) {
   return false;
 }
 
+// ════════════════════════════════════════
+// UTILS: NAKED LATEX AUTO-FIXER
+// ════════════════════════════════════════
+const KNOWN_LATEX_CMDS = new Set([
+  'frac','sqrt','overline','underline','vec','hat','bar','tilde','dot','ddot',
+  'widehat','widetilde','left','right','cdot','times','pm','mp',
+  'leq','geq','neq','approx','equiv','infty','iff','implies','to',
+  'rightarrow','leftarrow','leftrightarrow','Rightarrow','Leftarrow','longrightarrow',
+  'alpha','beta','gamma','delta','epsilon','theta','lambda','mu','nu','pi',
+  'sigma','tau','omega','Omega','Delta','Sigma','Pi',
+  'int','sum','prod','lim','log','ln','sin','cos','tan','arg','pmod','mod','binom',
+  'text','mathrm','mathbf','mathit','begin','end','lvert','rvert','lVert','rVert',
+  'quad','qquad','forall','exists','partial','nabla',
+  'in','notin','subset','subseteq','cup','cap','otimes','oplus'
+]);
+
+const LATEX_STOP_WORDS = new Set([
+  'et','ou','de','du','le','la','les','un','une','des','en','au','aux',
+  'ce','sa','se','si','ne','ni','on','il','je','tu','me','te','ma','ta',
+  'par','car','est','que','qui','sur','son','ses','nos','vos','pas','peu',
+  'the','and','for','are','was','has','had','its','but','not','you','all',
+  'can','her','him','his','how','may','new','now','old','our','out','own',
+  'Calcul','calcul','module','Module','argument','Argument','forme','Forme',
+  'soit','Soit','donc','Donc','avec','Avec','pour','Pour',
+  'dans','Dans','sous','Sous','ici','Ici','voir','Voir',
+  'valeur','Valeur','vaut','Vaut','Passage','passage','aux','Aux',
+  'Conclusion','conclusion','ensemble','Ensemble','points','Points','Or','or'
+]);
+
+function isNaturalLanguageWord(word) {
+  if (!word || word.length === 0) return false;
+  if (KNOWN_LATEX_CMDS.has(word)) return false;
+  if (LATEX_STOP_WORDS.has(word)) return true;
+  if (word.length === 1) return false;
+  if (word.length >= 3) return true;
+  return false;
+}
+
+function scanBackwardMath(t, pos) {
+  let i = pos - 1;
+  while (i >= 0 && t[i] === ' ') i--;
+  while (i >= 0) {
+    const ch = t[i];
+    if (ch === '\x00' || ch === '\n') return i + 1;
+    if (ch === '>' || ch === '<') return i + 1;
+    if (ch === '*' && i > 0 && t[i-1] === '*') return i;
+    if (ch === '|') {
+      const isMathPipe = (i > 0 && t[i-1] === '\\') ||
+                         (i < t.length - 1 && /[0-9a-zA-Z_\-+=\\/()\[\]]/.test(t[i+1] || ''));
+      if (!isMathPipe) return i + 1;
+    }
+    if (/[a-zA-Zéèêëàâäùûüîïôöçœæ]/.test(ch)) {
+      let wordStart = i;
+      while (wordStart > 0 && /[a-zA-Zéèêëàâäùûüîïôöçœæ]/.test(t[wordStart - 1])) {
+        wordStart--;
+      }
+      const word = t.substring(wordStart, i + 1);
+      if (isNaturalLanguageWord(word)) {
+        return i + 1;
+      }
+      i = wordStart - 1;
+      while (i >= 0 && t[i] === ' ') i--;
+      continue;
+    }
+    if (/[0-9_^+\-=*/.,(){}\\|]/.test(ch)) {
+      i--;
+      continue;
+    }
+    if (ch === "'") return i + 1;
+    if (ch === ' ') {
+      i--;
+      continue;
+    }
+    return i + 1;
+  }
+  return 0;
+}
+
+function scanForwardMath(t, pos) {
+  let j = pos;
+  let braceDepth = 0;
+  while (j < t.length) {
+    if (t[j] === '\x00') break;
+    if (t[j] === '\n' && braceDepth === 0) break;
+    if (t[j] === '<' && braceDepth === 0) break;
+    if (t[j] === '*' && t[j+1] === '*' && braceDepth === 0) break;
+    
+    if (t[j] === '|' && braceDepth === 0) {
+      const isMathPipe = (j > 0 && t[j-1] === '\\') || 
+                         (j > 4 && t.substring(j-5, j) === '\\left') ||
+                         (j > 5 && t.substring(j-6, j) === '\\right') ||
+                         (/[0-9a-zA-Z_\-+=\\/()\[\]]/.test(t[j-1] || '')) ||
+                         (/[0-9a-zA-Z_\-+=\\/()\[\]]/.test(t[j+1] || ''));
+      if (!isMathPipe) break;
+    }
+    
+    if (t[j] === '{') { braceDepth++; j++; continue; }
+    if (t[j] === '}') { braceDepth = Math.max(0, braceDepth - 1); j++; continue; }
+    if (t[j] === '\\') {
+      const nextCmd = t.substring(j + 1).match(/^([a-zA-Z]+)/);
+      if (nextCmd && KNOWN_LATEX_CMDS.has(nextCmd[1])) {
+        j += 1 + nextCmd[1].length;
+        continue;
+      }
+      j++;
+      if (j < t.length && !/[a-zA-Z]/.test(t[j])) j++;
+      continue;
+    }
+    if (braceDepth > 0) { j++; continue; }
+    if (/[a-zA-Zéèêëàâäùûüîïôöçœæ]/.test(t[j])) {
+      const wordMatch = t.substring(j).match(/^([a-zA-Zéèêëàâäùûüîïôöçœæ]+)/);
+      if (wordMatch && isNaturalLanguageWord(wordMatch[1])) {
+        break;
+      }
+      j += (wordMatch ? wordMatch[1].length : 1);
+      continue;
+    }
+    if (/[0-9_^+\-=*/.,;:()[\] |]/.test(t[j])) {
+      j++;
+      continue;
+    }
+    break;
+  }
+  while (j > pos && t[j-1] === ' ') j--;
+  return j;
+}
+
+function wrapNakedLatex(text) {
+  if (!text) return text;
+  const saved = [];
+  let t = text;
+  t = t.replace(/\$\$([\s\S]*?)\$\$/g, (m) => { saved.push(m); return `\x00M${saved.length - 1}\x00`; });
+  t = t.replace(/\\\[([\s\S]*?)\\\]/g, (m) => { saved.push(m); return `\x00M${saved.length - 1}\x00`; });
+  t = t.replace(/\\\(([\s\S]*?)\\\)/g, (m) => { saved.push(m); return `\x00M${saved.length - 1}\x00`; });
+  t = t.replace(/\$((?:[^$\\]|\\.)+)\$/g, (m) => { saved.push(m); return `\x00M${saved.length - 1}\x00`; });
+  
+  const cmdPositions = [];
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] === '\x00') {
+      const end = t.indexOf('\x00', i + 1);
+      if (end !== -1) i = end;
+      continue;
+    }
+    if (t[i] === '\\') {
+      const cmdMatch = t.substring(i + 1).match(/^([a-zA-Z]+)/);
+      if (cmdMatch && KNOWN_LATEX_CMDS.has(cmdMatch[1])) {
+        cmdPositions.push(i);
+      }
+    }
+  }
+  
+  if (cmdPositions.length === 0) {
+    return t.replace(/\x00M(\d+)\x00/g, (m, idx) => saved[parseInt(idx, 10)]);
+  }
+  
+  const regions = [];
+  for (const cmdPos of cmdPositions) {
+    const start = scanBackwardMath(t, cmdPos);
+    const end = scanForwardMath(t, cmdPos);
+    
+    if (regions.length > 0 && start <= regions[regions.length - 1].end) {
+      regions[regions.length - 1].end = Math.max(regions[regions.length - 1].end, end);
+    } else {
+      regions.push({ start, end });
+    }
+  }
+  
+  let result = '';
+  let lastEnd = 0;
+  for (const region of regions) {
+    result += t.substring(lastEnd, region.start);
+    const mathExpr = t.substring(region.start, region.end).trim();
+    if (mathExpr.length > 2) {
+      const lastChar = result.length > 0 ? result[result.length - 1] : '';
+      if (lastChar && lastChar !== ' ' && lastChar !== '|' && lastChar !== '\n' && lastChar !== '>') {
+        result += ' ';
+      }
+      result += '$' + mathExpr + '$';
+      if (region.end < t.length && t[region.end] !== ' ' && t[region.end] !== '\n' && 
+          t[region.end] !== '|' && t[region.end] !== '<' && t[region.end] !== '*') {
+        result += ' ';
+      }
+    } else {
+      result += mathExpr;
+    }
+    lastEnd = region.end;
+  }
+  result += t.substring(lastEnd);
+  return result.replace(/\x00M(\d+)\x00/g, (m, idx) => saved[parseInt(idx, 10)]);
+}
+
+/**
+ * Pre-processes AI-generated text before rendering or exporting.
+ * Fixes common AI output issues:
+ * - Malformed HTML tags with spaces: < br >, < br/>, etc. -> <br>
+ * - Double asterisks as Markdown bold in cells
+ * - Stray spaces inside HTML entities
+ */
+function normalizeAiOutput(text) {
+  if (!text) return text;
+  // Fix < br > with spaces (and variants: < br/>, < BR >, etc.)
+  text = text.replace(/<\s*br\s*\/?\s*>/gi, '<br>');
+  // Fix \n followed by - or * at the start of a list item in a table cell
+  // (These become literal \n in exported HTML instead of line breaks)
+  text = text.replace(/\\n/g, '<br>');
+  return text;
+}
+
 function parseMarkdownSafeMath(rawText, filename = "", msg = null) {
   if (!rawText) return "";
   const blocks = [];
@@ -441,10 +649,21 @@ function parseMarkdownSafeMath(rawText, filename = "", msg = null) {
     return `@@MATH_BLOCK_${blocks.length - 1}@@`;
   }
   let text = rawText;
-  
-  const isMathScience = isMathScientificContent(text, filename, msg);
+
+  // Fix malformed AI output before any processing
+  text = normalizeAiOutput(text);
+
+  // Detect if math/science content - broaden to detect naked LaTeX anywhere
+  const hasNakedLatex = /\\(?:frac|sqrt|left|right|times|cdot|overline|leq|geq|iff|Rightarrow|alpha|beta|pi|omega|theta|Delta|Sigma|vec|hat|text|mathrm|begin)/.test(text);
+  const isMathScience =
+    hasNakedLatex ||
+    (filename && (filename.toLowerCase().includes('correction') || filename.toLowerCase().includes('evaluation') || filename.toLowerCase().includes('methode'))) ||
+    isMathScientificContent(text, filename, msg);
 
   if (isMathScience) {
+    // Auto-fix any naked LaTeX commands output by AI
+    text = wrapNakedLatex(text);
+
     // Stash math blocks to protect them from marked
     text = text.replace(/\$\$([\s\S]*?)\$\$/g, (m) => stash(m));
     text = text.replace(/\\\[([\s\S]*?)\\\]/g, (m) => stash(m));
@@ -465,28 +684,63 @@ function parseMarkdownSafeMath(rawText, filename = "", msg = null) {
 // UTILS: WORD EXPORT
 // ════════════════════════════════════════
 function exportToWord(text, filename = "Export_IA.doc", msg = null) {
-  // Convertir les formules LaTeX en images CodeCogs pour MS Word
+  // ── Étape 0 : Détection math/science ──────────────────────────────────────
+  // Bug fix : isMathScientificContent() échouait pour les fiches de correction
+  // car get() dans ce contexte est le sélecteur DOM global, pas la fonction locale.
+  // On force isMathScience=true directement pour tous les fichiers de correction.
+  const isMathScience =
+    filename.toLowerCase().includes('fiche_correction') ||
+    filename.toLowerCase().includes('correction') ||
+    isMathScientificContent(text, filename, msg);
+
   let wordText = text || "";
-  
-  const isMathScience = isMathScientificContent(text, filename, msg);
+
+  // Fix malformed AI output before any processing
+  wordText = normalizeAiOutput(wordText);
 
   if (isMathScience) {
-    // Blocs centrés
+    // Auto-fix any naked LaTeX commands output by AI
+    wordText = wrapNakedLatex(wordText);
+
+    // ── Étape 2 : Convertir les blocs LaTeX centrés en images CodeCogs ───────
     const blockReplacer = (match, math) => {
-      return `<br><div style="text-align:center"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" /></div><br>`;
+      // CodeCogs ne supporte pas bien les sauts de ligne (%0A) dans l'URL.
+      const cleanMath = math.replace(/\n/g, ' ').trim();
+      const encoded = encodeURIComponent(cleanMath);
+      return `<br><div style="text-align:center;margin:8px 0"><img src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encoded}" alt="formule mathématique" style="max-width:100%" /></div><br>`;
     };
     wordText = wordText.replace(/\\\[([\s\S]*?)\\\]/g, blockReplacer);
     wordText = wordText.replace(/\$\$([\s\S]*?)\$\$/g, blockReplacer);
 
-    // Blocs en ligne
+    // ── Étape 3 : Convertir les blocs LaTeX en ligne en images CodeCogs ──────
     const inlineReplacer = (match, math) => {
-      return `<img style="vertical-align:middle" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encodeURIComponent(math.trim())}" alt="formule mathématique" />`;
+      const cleanMath = math.replace(/\n/g, ' ').trim();
+      const encoded = encodeURIComponent(cleanMath);
+      return `<img style="vertical-align:middle;margin:0 2px" src="https://latex.codecogs.com/png.image?\\dpi{150}\\bg{white}${encoded}" alt="formule mathématique" />`;
     };
     wordText = wordText.replace(/\\\(([\s\S]*?)\\\)/g, inlineReplacer);
     wordText = wordText.replace(/\$((?:[^$\\]|\\.)+)\$/g, inlineReplacer);
   }
 
-  const parsedHtml = typeof marked !== 'undefined' ? marked.parse(wordText) : wordText.replace(/\n/g, '<br>');
+  // ── Étape 4 : Parser le Markdown sans le plugin markedKatex ─────────────
+  // markedKatex (configuré avec output:'mathml') convertirait les $...$ restants
+  // en MathML que Word ne sait pas afficher. On utilise un parseur marked
+  // temporaire sans plugin, uniquement pour cet export Word.
+  let parsedHtml;
+  if (typeof marked !== 'undefined') {
+    try {
+      // Créer une instance marked "propre" sans plugins pour l'export Word
+      const markedClean = new marked.Marked();
+      markedClean.setOptions({ breaks: true });
+      parsedHtml = markedClean.parse(wordText);
+    } catch(e) {
+      // Fallback : utiliser marked global (peut avoir markedKatex, mais c'est mieux que rien)
+      parsedHtml = marked.parse(wordText);
+    }
+  } else {
+    parsedHtml = wordText.replace(/\n/g, '<br>');
+  }
+
   const isEval = filename.includes('Evaluation_');
   const pageCss = isEval ? `
         @page WordSection1 {
@@ -8748,7 +9002,7 @@ function bindEvents() {
       - Strict : Utilise uniquement les informations du sujet et du barème fournis.
       - Si un document est manquant, dis-le.
       - Scientific_formatting_directives :
-        1. RÈGLE DES DÉLIMITEURS : Encadre CHAQUE variable, chiffre avec unité ou formule par des dollars simples $ ... $. Texte français à l'extérieur. Exemple : "La quantité d'ADN passe de $q$ à $2q$."
+        1. RÈGLE DES DÉLIMITEURS : Encadre CHAQUE variable, chiffre avec unité ou formule par des dollars simples $ ... $. Texte français à l'extérieur. Il est STRICTEMENT INTERDIT d'écrire des commandes LaTeX nues (comme \\frac, \\sqrt, \\overline, \\vec, etc.) sans les encadrer de $...$, même dans les cellules d'un tableau. Exemple correct : "L'affixe vaut $z = -\\frac{\\sqrt{3}}{2}$".
         2. SYMBOLES : INTERDICTION des symboles Unicode (→, ⇌, ×, ≤, ≥, ∈, ∞, ², ₃, ⁺). Utilise LaTeX : \\rightarrow, \\rightleftharpoons, \\times, \\leq, \\geq, \\in, \\infty
         3. CHIMIE : Regroupe la molécule entière dans un seul bloc $. Exemple : $C_{6}H_{12}O_{6}$. Utilise TOUJOURS les accolades pour les indices/exposants : $H_{3}O^{+}$.
         4. UNITÉS : Utilise le tilde ~ pour l'espace insécable : $0{,}25~mol \\cdot L^{-1}$ ou $10~nm$.
@@ -8819,6 +9073,9 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   <instruction>
     Applique rigoureusement les System Instructions.
     Génère la fiche complète au format demandé.
+    <regles_mathematiques>
+      Règle ABSOLUE pour les mathématiques : TOUTES les formules, équations, variables (ex: z_A) ou commandes LaTeX (ex: \\frac) DOIVENT IMPÉRATIVEMENT être encadrées par $...$ (inline) ou $$...$$ (bloc centré). N'écris JAMAIS de texte mathématique ou de commandes LaTeX nues, MÊME DANS LES TABLEAUX OU LES LISTES. Si tu as besoin d'un saut de ligne dans une cellule de tableau, utilise strictement la balise <br> (sans espaces).
+    </regles_mathematiques>
     ${cfg.exportWord ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_WORD] sur une ligne seule." : ''}
     ${cfg.exportHtml ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_HTML] sur une ligne seule." : ''}
     ${cfg.exportPdf ? "À la toute fin de ta réponse, ajoute le marqueur [EXPORT_PDF] sur une ligne seule." : ''}
@@ -9124,6 +9381,11 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         if (nextText) text += nextText;
         finishReason = contData?.candidates?.[0]?.finishReason || 'STOP';
       }
+      
+      text = normalizeAiOutput(text);
+      if (text.includes('\\')) {
+        text = wrapNakedLatex(text);
+      }
       return text;
   
     } else {
@@ -9159,7 +9421,12 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       }
   
       const data = await res.json();
-      return data.choices?.[0]?.message?.content || "";
+      let text = data.choices?.[0]?.message?.content || "";
+      text = normalizeAiOutput(text);
+      if (text.includes('\\')) {
+        text = wrapNakedLatex(text);
+      }
+      return text;
     }
   }
 
