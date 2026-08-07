@@ -1712,10 +1712,13 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
     for (const m of reqBody.messages) {
       if (m.role === "system") {
         systemText += m.content + "\n";
-        const role = m.role === "assistant" ? "model" : "user";
-        
-        let parts = [];
-        if (Array.isArray(m.content)) {
+        continue;
+      }
+      
+      const role = m.role === "assistant" ? "model" : "user";
+      
+      let parts = [];
+      if (Array.isArray(m.content)) {
           parts = m.content.map(p => {
             if (p.type === "text") return { text: p.text };
             if (p.type === "image_url") {
@@ -1744,8 +1747,7 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
           }
         }
 
-        geminiPayload.contents.push({ role, parts });
-      }
+      geminiPayload.contents.push({ role, parts });
     }
     
     if (systemText) {
@@ -8156,23 +8158,15 @@ function _showFlashCardPlayer(cards, metadata = {}, msgId = null, isArabic = fal
 
     try {
       const abortController = new AbortController();
-      const res = await fetchWithRetry(_apiConf.url, {
-        method: "POST",
-        headers: _apiConf.headers,
-        signal: abortController.signal,
-        body: JSON.stringify(reqBody)
-      });
-      if (!res.ok) throw new Error(`API ${res.status}`);
-
       let finalResult = "";
-      await handleStreamingResponse(res, (chunk) => {
+      await universalFetchLlmStream(reqBody, abortController.signal, (chunk) => {
         finalResult = chunk;
         textEl.innerHTML = renderWithLatex(finalResult);
       }, () => {
         if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
           try { window.MathJax.typesetPromise([aiScreen]).catch(e => {}); } catch(e){}
         }
-      }, abortController.signal);
+      });
     } catch(err) {
       textEl.innerHTML = `<div style="color:#ef4444;background:rgba(239,68,68,0.1);padding:16px;border-radius:12px;border:1px solid rgba(239,68,68,0.3);">Erreur: ${err.message}</div>`;
     }
@@ -13216,34 +13210,25 @@ RAPPEL CRUCIAL : RÉPONDS EXCLUSIVEMENT DANS LA LANGUE DE LA QUESTION.`;
       stream: true
     };
 
-    const _apiConf = getLlmApiConfig(reqBody.model);
-
-    fetchWithRetry(_apiConf.url, {
-      method: "POST",
-      headers: _apiConf.headers,
-      body: JSON.stringify(reqBody)
-    }).then(async res => {
-      if (!res.ok) throw new Error("API " + res.status);
-      let content = "";
-      await handleStreamingResponse(res, (chunk) => {
-        content = chunk;
-        aiContent.innerHTML = renderWithLatex(content);
-        
-        // Auto RTL pour l'Arabe
-        if (/[\u0600-\u06FF]/.test(content)) {
-          aiContent.setAttribute("dir", "rtl");
-          aiContent.style.textAlign = "right";
-        } else {
-          aiContent.setAttribute("dir", "ltr");
-          aiContent.style.textAlign = "left";
-        }
-      }, () => {
-        aiBtn.disabled = false;
-        // Trigger MathJax after full render
-        if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
-          window.MathJax.typesetPromise([aiContent]).catch(err => console.log(err));
-        }
-      });
+    let content = "";
+    universalFetchLlmStream(reqBody, null, (chunk) => {
+      content = chunk;
+      aiContent.innerHTML = renderWithLatex(content);
+      
+      // Auto RTL pour l'Arabe
+      if (/[\u0600-\u06FF]/.test(content)) {
+        aiContent.setAttribute("dir", "rtl");
+        aiContent.style.textAlign = "right";
+      } else {
+        aiContent.setAttribute("dir", "ltr");
+        aiContent.style.textAlign = "left";
+      }
+    }, () => {
+      aiBtn.disabled = false;
+      // Trigger MathJax after full render
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        window.MathJax.typesetPromise([aiContent]).catch(err => console.log(err));
+      }
     }).catch(err => {
       aiContent.innerHTML = `<span style="color:var(--neon-red)">${t('msg_ai_error')}</span>`;
       aiBtn.disabled = false;
@@ -13486,7 +13471,6 @@ document.addEventListener('change', (e) => {
           wqState.metadata = json;
           askQuizMode((mode) => { startWebQuizFromData(questions, mode); });
         }
-        if (json.type === 'QR') { _showFlashCardPlayer(questions, json); } else { wqState.metadata = json; startWebQuizFromData(questions, mode); }
       } catch (err) {
         console.error(err);
         alert(t('msg_json_load_error'));
