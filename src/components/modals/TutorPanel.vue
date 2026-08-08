@@ -1,5 +1,5 @@
 <template>
-  <div id="tutor-panel" class="fixed md:absolute top-14 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[400px] h-[calc(100vh-56px)] md:h-[600px] md:max-h-[80vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
+  <div id="tutor-panel" class="fixed md:absolute top-14 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[600px] h-[calc(100vh-56px)] md:h-[600px] md:max-h-[80vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
     
     <!-- HEADER -->
     <div class="flex justify-between items-center p-4 border-b border-white/10 bg-gradient-to-r from-cyan/20 to-transparent md:rounded-t-2xl">
@@ -31,7 +31,35 @@
       <div id="tutor-welcome-banner" class="welcome-banner text-center opacity-80 mt-10">
         <div class="text-4xl mb-3">👋</div>
         <div class="text-cyan font-bold mb-2">Bonjour !</div>
-        <div class="text-on-surface-variant text-xs px-4">Je suis votre Tuteur. Posez-moi des questions sur vos exercices, demandez-moi de l'aide pour comprendre une notion, mais ne vous attendez pas à ce que je vous donne les réponses toutes faites ! 😉</div>
+        <div class="text-on-surface-variant text-xs px-4 mb-4">Je suis votre Tuteur. Posez-moi des questions sur vos exercices, demandez-moi de l'aide pour comprendre une notion, mais ne vous attendez pas à ce que je vous donne les réponses toutes faites ! 😉</div>
+        
+        <div class="flex flex-col gap-3 text-left px-6 mt-6 max-w-sm mx-auto">
+          <div>
+            <label class="block text-xs text-on-surface-variant mb-1">Niveau scolaire</label>
+            <select id="tutor-niveau" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-cyan">
+              <option value="">Non précisé</option>
+              <option value="Primaire">Primaire</option>
+              <option value="Collège">Collège</option>
+              <option value="Lycée">Lycée</option>
+              <option value="Supérieur">Supérieur</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-on-surface-variant mb-1">Domaine / Matière</label>
+            <select id="tutor-domaine" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-cyan">
+              <option value="">Non précisé</option>
+              <option value="Mathématiques">Mathématiques</option>
+              <option value="Physique-Chimie">Physique-Chimie</option>
+              <option value="SVT">SVT</option>
+              <option value="Français">Français</option>
+              <option value="Anglais">Anglais</option>
+              <option value="Histoire-Géographie">Histoire-Géographie</option>
+              <option value="Philosophie">Philosophie</option>
+              <option value="Informatique">Informatique</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
     

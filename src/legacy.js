@@ -14309,6 +14309,19 @@ window.sendTutorMessage = async function() {
   const tutorAgent = (state.agents || []).find(a => a.id === 'tutor-agent');
   if (tutorAgent && tutorAgent.system_prompt) systemMsg = tutorAgent.system_prompt;
 
+  const niveauEl = document.getElementById('tutor-niveau');
+  const domaineEl = document.getElementById('tutor-domaine');
+  if (niveauEl && domaineEl) {
+    const niv = niveauEl.value;
+    const dom = domaineEl.value;
+    if (niv || dom) {
+      systemMsg += `\n\nContexte de l'élève :\n`;
+      if (niv) systemMsg += `- Niveau scolaire : ${niv}\n`;
+      if (dom) systemMsg += `- Domaine / Matière : ${dom}\n`;
+      systemMsg += `Adapte ton discours, ton vocabulaire et ton niveau d'exigence à ce contexte.`;
+    }
+  }
+
   const messagesToSend = [
     { role: 'system', content: systemMsg },
     ...state.tutorMessages.map(m => ({ role: m.role, content: m.content }))
