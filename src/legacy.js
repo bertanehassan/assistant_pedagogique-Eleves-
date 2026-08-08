@@ -14318,21 +14318,12 @@ window.sendTutorMessage = async function() {
   container.scrollTop = container.scrollHeight;
 
   try {
+    // getLlmApiConfig retourne { provider, url, headers }
     const aiConfig = getLlmApiConfig(state.model || 'mistral-large-2512');
-    const activeModel = aiConfig.actualModel || state.model || 'mistral-large-2512';
-    const reqBody = {
-      model: activeModel,
-      messages: messagesToSend,
-      stream: true,
-      temperature: 0.7
-    };
-
-    let ep = 'https://api.mistral.ai/v1/chat/completions';
-    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiConfig.apiKey}` };
+    const activeModel = state.model || 'mistral-large-2512';
 
     if (aiConfig.provider === 'gemini') {
-      ep = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:streamGenerateContent?alt=sse&key=${aiConfig.apiKey}`;
-      delete headers['Authorization'];
+      // Gemini : format différent (contents + systemInstruction)
       const geminiBody = {
         contents: messagesToSend
           .filter(m => m.role !== 'system')
@@ -14340,8 +14331,12 @@ window.sendTutorMessage = async function() {
         systemInstruction: { parts: [{ text: systemMsg }] },
         generationConfig: { temperature: 0.7 }
       };
-      const resGemini = await fetch(ep, { method: 'POST', headers, body: JSON.stringify(geminiBody) });
-      if (!resGemini.ok) throw new Error('API Error ' + resGemini.status);
+      const resGemini = await fetch(aiConfig.url, {
+        method: 'POST',
+        headers: aiConfig.headers,
+        body: JSON.stringify(geminiBody)
+      });
+      if (!resGemini.ok) throw new Error('Gemini API Error ' + resGemini.status);
       const reader = resGemini.body.getReader();
       const decoder = new TextDecoder();
       let fullResponse = '';
@@ -14359,15 +14354,23 @@ window.sendTutorMessage = async function() {
           }
         }
       }
-    } else if (aiConfig.provider === 'openrouter') {
-      ep = 'https://openrouter.ai/api/v1/chat/completions';
-      headers['Authorization'] = `Bearer ${aiConfig.apiKey}`;
-      const res = await fetch(ep, { method: 'POST', headers, body: JSON.stringify(reqBody) });
-      if (!res.ok) throw new Error('API Error');
-      await handleStreamingResponse(res, updateTutorLiveMessage, () => {}, null);
     } else {
-      const res = await fetch(ep, { method: 'POST', headers, body: JSON.stringify(reqBody) });
-      if (!res.ok) throw new Error('API Error');
+      // Mistral ou OpenRouter : format messages standard
+      const reqBody = {
+        model: activeModel,
+        messages: messagesToSend,
+        stream: true,
+        temperature: 0.7
+      };
+      const res = await fetch(aiConfig.url, {
+        method: 'POST',
+        headers: aiConfig.headers,
+        body: JSON.stringify(reqBody)
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error('API Error ' + res.status + ' : ' + errText.slice(0, 200));
+      }
       await handleStreamingResponse(res, updateTutorLiveMessage, () => {}, null);
     }
 
@@ -14376,7 +14379,8 @@ window.sendTutorMessage = async function() {
     }
   } catch (error) {
     const span = aiDiv.querySelector('.tutor-response-content');
-    if (span) span.innerHTML = '<span style="color:red">Erreur de connexion au Tuteur. Vérifiez votre clé API.</span>';
+    if (span) span.innerHTML = '<span style="color:var(--danger)">Erreur : ' + escapeHtml(error.message || 'Connexion impossible') + '</span>';
+    console.error('[Tuteur] Erreur API:', error);
   }
 };
 
