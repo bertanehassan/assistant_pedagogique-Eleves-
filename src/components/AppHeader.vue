@@ -7,9 +7,16 @@
       <!-- Hexagon logo — visible sur tous les écrans -->
       <div class="w-9 h-9 rounded-full border border-white/20 ring-2 ring-primary/20 flex items-center justify-center bg-primary/10 flex-shrink-0">
         <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6">
-          <polygon points="18,2 34,12 34,24 18,34 2,24 2,12" stroke="#00e5ff" stroke-width="1.5" fill="none" opacity="0.6"/>
-          <polygon points="18,7 29,13 29,23 18,29 7,23 7,13"  stroke="#00e5ff" stroke-width="1"   fill="none" opacity="0.3"/>
-          <circle cx="18" cy="18" r="4" fill="#00e5ff" opacity="0.9"/>
+          <!-- Open Book Pages -->
+          <path d="M18,28 C18,28 10,28 4,24 L4,8 C10,12 18,12 18,12 C18,12 26,12 32,8 L32,24 C26,28 18,28 18,28 Z" stroke="#00e5ff" stroke-width="1.5" fill="none" opacity="0.8"/>
+          <path d="M18,12 L18,28" stroke="#00e5ff" stroke-width="1.5" fill="none" opacity="0.5"/>
+          <!-- Secondary Pages for depth -->
+          <path d="M18,25 C18,25 11,25 6,21" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.3"/>
+          <path d="M18,25 C18,25 25,25 30,21" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.3"/>
+          <!-- AI Core / Spark (Knowledge) -->
+          <circle cx="18" cy="6" r="3" fill="#00e5ff" opacity="0.9"/>
+          <!-- Sparks -->
+          <path d="M18,0 L18,2 M18,10 L18,12 M12,6 L14,6 M22,6 L24,6 M14,2 L15,3 M22,2 L21,3" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
         </svg>
       </div>
       <!-- Title — visible sur tous les écrans -->

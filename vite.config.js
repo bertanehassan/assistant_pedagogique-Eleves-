@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig(({ mode }) => ({
   server: {
     port: 5174,
-    strictPort: true,
+    strictPort: false,
     proxy: {
       '/api/gemini': {
         target: 'https://generativelanguage.googleapis.com',
