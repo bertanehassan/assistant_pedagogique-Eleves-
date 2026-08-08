@@ -9411,6 +9411,8 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       return text;
     }
   }
+  // Exposer fetchGeneratorModel globalement pour que les générateurs hors portée (ex: A/B) puissent l'utiliser
+  window.fetchGeneratorModel = fetchGeneratorModel;
 
   const generateCorrectionSheet = async () => {
     if (state.isGenerating) {
@@ -13907,7 +13909,7 @@ const generateEvaluationSheet = async () => {
 
     const effectiveSystemPrompt = EVALUATION_SYSTEM_PROMPT;
 
-    let geminiText = await fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, hasPdf, parts, 65536, targetModel);
+    let geminiText = await window.fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, hasPdf, parts, 65536, targetModel);
     if (!geminiText) {
       throw new Error(`Aucun texte n'a été généré par le modèle.`);
     }
