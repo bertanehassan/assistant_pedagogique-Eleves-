@@ -44,21 +44,6 @@
               <option value="Supérieur">Supérieur</option>
             </select>
           </div>
-          <div>
-            <label class="block text-xs text-on-surface-variant mb-1">Domaine / Matière</label>
-            <select id="tutor-domaine" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-cyan">
-              <option value="">Non précisé</option>
-              <option value="Mathématiques">Mathématiques</option>
-              <option value="Physique-Chimie">Physique-Chimie</option>
-              <option value="SVT">SVT</option>
-              <option value="Français">Français</option>
-              <option value="Anglais">Anglais</option>
-              <option value="Histoire-Géographie">Histoire-Géographie</option>
-              <option value="Philosophie">Philosophie</option>
-              <option value="Informatique">Informatique</option>
-              <option value="Autre">Autre</option>
-            </select>
-          </div>
         </div>
       </div>
     </div>
