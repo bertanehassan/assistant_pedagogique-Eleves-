@@ -28,7 +28,7 @@
     <!-- CHAT AREA -->
     <div id="tutor-chat-container" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar text-sm">
       <!-- Les messages seront injectés ici par legacy.js -->
-      <div id="tutor-welcome-banner" class="welcome-banner text-center opacity-80 mt-10 flex-shrink-0 pb-10">
+      <div id="tutor-welcome-banner" class="welcome-banner text-center opacity-80 mt-10 mb-16 flex-shrink-0">
         <div class="text-4xl mb-3">👋</div>
         <div class="text-cyan font-bold mb-2">Bonjour !</div>
         <div class="text-on-surface-variant text-xs px-4 mb-4">Je suis votre Tuteur. Posez-moi des questions sur vos exercices, demandez-moi de l'aide pour comprendre une notion, mais ne vous attendez pas à ce que je vous donne les réponses toutes faites ! 😉</div>
