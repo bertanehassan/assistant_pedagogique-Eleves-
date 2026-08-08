@@ -12,10 +12,18 @@
           <div class="text-[10px] text-cyan font-mono tracking-widest uppercase opacity-80">Assistance Pédagogique</div>
         </div>
       </div>
-      <button class="panel-close-btn" onclick="closeTutorPanel()">
-        <span class="material-symbols-outlined">close</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <!-- Badge modèle actif -->
+        <div id="tutor-model-badge" class="flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-[10px] font-mono text-on-surface-variant whitespace-nowrap max-w-[130px] overflow-hidden text-ellipsis" title="Modèle actif">
+          <span style="font-size:10px;">🤖</span>
+          <span id="tutor-model-name">—</span>
+        </div>
+        <button class="panel-close-btn" onclick="closeTutorPanel()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
     </div>
+
     
     <!-- CHAT AREA -->
     <div id="tutor-chat-container" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar text-sm">

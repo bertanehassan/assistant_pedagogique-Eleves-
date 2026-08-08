@@ -14248,6 +14248,9 @@ window.openTutorPanel = function() {
   if (panel) {
     panel.style.display = 'flex';
     setTimeout(() => panel.classList.remove('translate-x-full'), 10);
+    // Mettre à jour le badge du modèle
+    const badgeEl = document.getElementById('tutor-model-name');
+    if (badgeEl) badgeEl.textContent = state.model || 'mistral-large-2512';
   }
 };
 
@@ -14290,6 +14293,9 @@ window.sendTutorMessage = async function() {
   const container = document.getElementById('tutor-chat-container');
   const banner = document.getElementById('tutor-welcome-banner');
   if (banner) banner.style.display = 'none';
+  // Rafraîchir le badge modèle à chaque envoi
+  const badgeEl = document.getElementById('tutor-model-name');
+  if (badgeEl) badgeEl.textContent = state.model || 'mistral-large-2512';
 
   state.tutorMessages.push({ role: 'user', content });
 
