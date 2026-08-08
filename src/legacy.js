@@ -14387,8 +14387,9 @@ window.sendTutorMessage = async function() {
   state.tutorMessages.push({ role: 'user', content: fullUserContent });
 
   const userDiv = document.createElement('div');
+  userDiv.setAttribute('dir', 'auto');
   userDiv.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
-  let userHtml = '<b style="color:var(--neon)">Vous :</b> ' + escapeHtml(content);
+  let userHtml = '<b style="color:var(--neon)">Vous :</b> <span dir="auto">' + escapeHtml(content) + '</span>';
   if (files.length > 0) {
     userHtml += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">' +
       files.map(f => {
@@ -14431,8 +14432,9 @@ window.sendTutorMessage = async function() {
 
   const aiDiv = document.createElement('div');
   aiDiv.className = 'tutor-message assistant';
+  aiDiv.setAttribute('dir', 'auto');
   aiDiv.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;max-width:90%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
-  aiDiv.innerHTML = '<b style="color:var(--cyan)">🎓 Tuteur :</b> <span class="tutor-response-content"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
+  aiDiv.innerHTML = '<b style="color:var(--cyan)">🎓 Tuteur :</b> <span class="tutor-response-content" dir="auto"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
   container.appendChild(aiDiv);
   container.scrollTop = container.scrollHeight;
 

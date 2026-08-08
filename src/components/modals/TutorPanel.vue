@@ -86,6 +86,7 @@
                     class="bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant/50 w-full font-body-md resize-none py-1 px-1 focus:outline-none text-sm" 
                     placeholder="Posez votre question... (joignez un document si besoin)"
                     rows="1"
+                    dir="auto"
                     oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';"
                     onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendTutorMessage(); }"></textarea>
         </div>
