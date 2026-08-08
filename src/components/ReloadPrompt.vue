@@ -2,7 +2,6 @@
   <Teleport to="body">
     <div v-if="needRefresh" class="pwa-update-overlay" role="dialog" aria-modal="true" aria-label="Mise à jour disponible">
       <div class="pwa-update-card">
-        <div class="pwa-update-icon">🚀</div>
         <h3 class="pwa-update-title">Nouvelle version disponible !</h3>
         <p class="pwa-update-desc">
           Une mise à jour est prête. Actualisez maintenant pour profiter des dernières nouveautés et corrections.
