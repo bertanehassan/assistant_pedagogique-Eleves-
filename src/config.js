@@ -51,7 +51,7 @@ export const MODELS = [
   // ══════════════════════════════════════════════════
   // 💡 MICROSOFT  (OpenRouter)
   // ══════════════════════════════════════════════════
-  { id:"microsoft/phi-4-reasoning:free",                name:"💡 Phi-4 Reasoning — Microsoft (Gratuit)", badge:"🆓 Gratuit",      desc:"Microsoft Phi-4, raisonnement logique avancé, compact, gratuit",       tokens:32000,  ctx:"32K",  temp:0.4 }
+  { id:"microsoft/phi-4",                                 name:"💡 Phi-4 — Microsoft", badge:"💡 Rapide",      desc:"Microsoft Phi-4, raisonnement logique avancé, compact",       tokens:32000,  ctx:"32K",  temp:0.4 }
 
 ];
 
