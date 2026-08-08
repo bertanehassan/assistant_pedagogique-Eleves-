@@ -6788,7 +6788,7 @@ async function seedDefaultData() {
     { label: '🛡️ AUDIT-EN Chain…',                       fn: () => initializeAcademicAuditWorkflowEN() },
     { label: '🛡️ AUDIT-AR Chain…',                       fn: () => initializeAcademicAuditWorkflowAR() },
     { label: '🧭 Guide — Assistant de l\'App…',           fn: () => initializeGuideAgent() },
-    { label: '🎓 Tuteur Pédagogique Expert…',           fn: () => initializeTutorAgent() },
+    // Agent Tuteur supprimé — panneau tuteur indépendant utilisé à la place
   ];
   for (const step of steps) {
     toast(step.label, 'info');
@@ -6957,7 +6957,8 @@ export const mountApp = async () => {
   await initializeVraiFauxWorkflow();
   await initializeAuditWorkflow();
   await initializeGuideAgent();
-  await initializeTutorAgent();
+  // Supprimer l'agent tuteur de la liste si encore présent en DB
+  try { await db.delete('agents', 'default-tutor-agent'); } catch(e) {}
 
   if (!isFirstRun) {
     // One-time patch: delete bugged Arabic workflows so they get recreated with the fix
@@ -7267,7 +7268,6 @@ export const mountApp = async () => {
     const patchedGuideV22 = await db.get('settings', 'patched_guide_v22').catch(()=>null);
     if (!patchedGuideV22) {
       await initializeGuideAgent(true);
-      await initializeTutorAgent(true);
       await db.put('settings', { id: 'patched_guide_v22', value: true }).catch(()=>{});
     }
   }
@@ -14243,6 +14243,9 @@ setTimeout(() => refreshEvalSavedList(), 600);
 // ════════════════════════════════════════
 state.tutorMessages = [];
 
+// Stockage des fichiers attachés au tuteur
+state.tutorAttachedFiles = state.tutorAttachedFiles || [];
+
 window.openTutorPanel = function() {
   const panel = document.getElementById('tutor-panel');
   if (panel) {
@@ -14253,6 +14256,80 @@ window.openTutorPanel = function() {
     if (badgeEl) badgeEl.textContent = state.model || 'mistral-large-2512';
   }
 };
+
+// ── Gestion des fichiers attachés du tuteur ──
+window.tutorHandleFiles = async function(files) {
+  for (const file of files) {
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    const isText = file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv');
+    const isDocx = file.type.includes('wordprocessingml') || file.name.endsWith('.docx');
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        state.tutorAttachedFiles.push({ type: 'image', data: ev.target.result, name: file.name, mimeType: file.type });
+        updateTutorFilePreview();
+        toast(`🖼 ${file.name} ajouté`, 'success');
+      };
+      reader.readAsDataURL(file);
+    } else if (isPdf) {
+      toast(`📄 Extraction de ${file.name}…`, 'info');
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const rawBase64 = ev.target.result.split(',')[1];
+        extractTextFromPdf(file, (msg) => toast(msg, 'info'))
+          .then(({ text, pages }) => {
+            state.tutorAttachedFiles.push({ type: 'document', data: text, name: file.name, mimeType: file.type, rawBase64 });
+            updateTutorFilePreview();
+            toast(`✅ ${file.name} lu (${pages} page(s), ${text.length} cars.)`, 'success');
+          })
+          .catch((err) => toast(`❌ Erreur : ${err.message}`, 'error'));
+      };
+      reader.readAsDataURL(file);
+    } else if (isText) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        state.tutorAttachedFiles.push({ type: 'document', data: ev.target.result.trim(), name: file.name, mimeType: file.type });
+        updateTutorFilePreview();
+        toast(`✅ ${file.name} lu`, 'success');
+      };
+      reader.readAsText(file);
+    } else if (isDocx) {
+      toast(`Extraction de ${file.name}...`, 'info');
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const result = await window.mammoth.extractRawText({ arrayBuffer: ev.target.result });
+          state.tutorAttachedFiles.push({ type: 'document', data: result.value.trim(), name: file.name, mimeType: file.type });
+          updateTutorFilePreview();
+          toast(`✅ ${file.name} lu`, 'success');
+        } catch(err) { toast(`❌ Erreur : ${err.message}`, 'error'); }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      toast(`Format non supporté : ${file.name}`, 'error');
+    }
+  }
+};
+
+function updateTutorFilePreview() {
+  const bar = document.getElementById('tutor-file-preview-bar');
+  if (!bar) return;
+  if (!state.tutorAttachedFiles || state.tutorAttachedFiles.length === 0) {
+    bar.innerHTML = '';
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = state.tutorAttachedFiles.map((f, i) => {
+    const icon = f.type === 'image' ? '🖼' : '📄';
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(76,215,246,0.08);border:1px solid rgba(76,215,246,0.2);border-radius:8px;font-size:11px;color:var(--neon);">
+      ${icon} <b>${escapeHtml(f.name)}</b>
+      <button onclick="state.tutorAttachedFiles.splice(${i},1);updateTutorFilePreview();" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:0 2px;">✕</button>
+    </span>`;
+  }).join('');
+}
 
 window.closeTutorPanel = function() {
   const panel = document.getElementById('tutor-panel');
@@ -14285,7 +14362,8 @@ window.sendTutorMessage = async function() {
   const input = document.getElementById('tutor-user-input');
   if (!input) return;
   const content = input.value.trim();
-  if (!content) return;
+  const files = state.tutorAttachedFiles || [];
+  if (!content && files.length === 0) return;
 
   input.value = '';
   input.style.height = '';
@@ -14297,17 +14375,36 @@ window.sendTutorMessage = async function() {
   const badgeEl = document.getElementById('tutor-model-name');
   if (badgeEl) badgeEl.textContent = state.model || 'mistral-large-2512';
 
-  state.tutorMessages.push({ role: 'user', content });
+  // ── Construire le contenu utilisateur enrichi avec les fichiers documents ──
+  let fullUserContent = content;
+  if (files.length > 0) {
+    const docParts = files.filter(f => f.type === 'document').map(f =>
+      `\n\n---\n📄 Fichier : ${f.name}\n\`\`\`\n${f.data.slice(0, 8000)}\n\`\`\``
+    ).join('');
+    if (docParts) fullUserContent = content + docParts;
+  }
+
+  state.tutorMessages.push({ role: 'user', content: fullUserContent });
 
   const userDiv = document.createElement('div');
   userDiv.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
-  userDiv.innerHTML = '<b style="color:var(--neon)">Vous :</b> ' + escapeHtml(content);
+  let userHtml = '<b style="color:var(--neon)">Vous :</b> ' + escapeHtml(content);
+  if (files.length > 0) {
+    userHtml += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">' +
+      files.map(f => {
+        if (f.type === 'image') return `<img src="${f.data}" alt="${escapeHtml(f.name)}" style="max-height:80px;border-radius:6px;border:1px solid rgba(76,215,246,0.3);">`;
+        return `<span style="font-size:11px;padding:2px 8px;background:rgba(76,215,246,0.08);border:1px solid rgba(76,215,246,0.2);border-radius:6px;color:var(--neon);">\ud83d\udcc4 ${escapeHtml(f.name)}</span>`;
+      }).join('') + '</div>';
+  }
+  userDiv.innerHTML = userHtml;
   container.appendChild(userDiv);
   container.scrollTop = container.scrollHeight;
 
-  let systemMsg = "Tu es un Tuteur Pédagogique Expert bienveillant. Utilise la maïeutique pour guider l'élève.";
-  const tutorAgent = (state.agents || []).find(a => a.id === 'tutor-agent');
-  if (tutorAgent && tutorAgent.system_prompt) systemMsg = tutorAgent.system_prompt;
+  // Vider les fichiers après envoi
+  state.tutorAttachedFiles = [];
+  updateTutorFilePreview();
+
+  let systemMsg = "Tu es un Tuteur Pédagogique Expert bienveillant. Utilise la maïeeutique pour guider l'élève. Ne donne jamais les réponses directement.";
 
   const niveauEl = document.getElementById('tutor-niveau');
   const domaineEl = document.getElementById('tutor-domaine');
@@ -14321,6 +14418,9 @@ window.sendTutorMessage = async function() {
       systemMsg += `Adapte ton discours, ton vocabulaire et ton niveau d'exigence à ce contexte.`;
     }
   }
+
+  // Ajouter les images dans le système pour Gemini
+  const imageFiles = files.filter(f => f.type === 'image');
 
   const messagesToSend = [
     { role: 'system', content: systemMsg },

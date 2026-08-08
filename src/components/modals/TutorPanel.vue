@@ -62,17 +62,29 @@
         <div class="text-4xl mb-3">👋</div>
         <div class="text-cyan font-bold mb-2">Bonjour !</div>
         <div class="text-on-surface-variant text-xs px-4">Je suis votre Tuteur. Posez-moi des questions sur vos exercices, demandez-moi de l'aide pour comprendre une notion, mais ne vous attendez pas à ce que je vous donne les réponses toutes faites ! 😉</div>
-        <div class="text-on-surface-variant/50 text-[10px] mt-4">Sélectionnez votre niveau et matière ci-dessus, puis posez votre question.</div>
+        <div class="text-on-surface-variant/50 text-[10px] mt-3">Sélectionnez votre niveau et matière ci-dessus, puis posez votre question. Vous pouvez aussi joindre un PDF, une image ou un texte 📎</div>
       </div>
     </div>
+
+    <!-- FILE PREVIEW BAR -->
+    <div id="tutor-file-preview-bar" class="flex-shrink-0 px-3 pt-2 flex-wrap gap-2" style="display:none;"></div>
     
     <!-- INPUT AREA -->
-    <div class="p-3 border-t border-white/10 bg-black/40 md:rounded-b-2xl flex-shrink-0">
+    <div class="flex-shrink-0 p-3 border-t border-white/10 bg-black/40 md:rounded-b-2xl">
+      <!-- Input fichier caché -->
+      <input type="file" id="tutor-file-input" accept="image/*,.pdf,.txt,.md,.csv,.docx" multiple style="display:none;"
+             onchange="tutorHandleFiles(Array.from(this.files)); this.value='';">
       <div class="flex items-end gap-2">
+        <!-- Bouton pièce jointe -->
+        <button onclick="document.getElementById('tutor-file-input').click()"
+                class="w-10 h-10 min-w-[40px] rounded-xl flex items-center justify-center bg-white/5 text-on-surface-variant border border-white/10 hover:bg-cyan/10 hover:text-cyan hover:border-cyan/30 transition-colors"
+                title="Joindre un fichier (PDF, image, texte)">
+          <span class="material-symbols-outlined" style="font-size:20px">attach_file</span>
+        </button>
         <div class="flex-1 bg-white/5 border border-white/10 rounded-xl flex items-center px-3 py-2 min-h-[44px]">
           <textarea id="tutor-user-input"
                     class="bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant/50 w-full font-body-md resize-none py-1 px-1 focus:outline-none text-sm" 
-                    placeholder="Posez votre question..."
+                    placeholder="Posez votre question... (joignez un document si besoin)"
                     rows="1"
                     oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';"
                     onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendTutorMessage(); }"></textarea>
