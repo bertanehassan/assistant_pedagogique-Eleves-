@@ -21,7 +21,7 @@
       </div>
       <!-- Title — visible sur tous les écrans -->
       <div class="flex flex-col leading-tight">
-        <span class="text-sm font-bold text-on-surface tracking-wide">Mon Assistant Pédagogique</span>
+        <span class="text-sm font-bold text-on-surface tracking-wide">Mon Assistant Pédagogique - Élèves-</span>
         <span class="text-[10px] text-[#FFD700] font-bold opacity-100 hidden sm:block">Développé par Hassan Bertane</span>
       </div>
     </div>

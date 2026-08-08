@@ -1580,7 +1580,7 @@ function renderMessages(forceFull = false) {
   if (!msgs.length) {
     c.innerHTML = `
       <div class="welcome-banner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; min-height:50vh; text-align:center; opacity:0.9; padding:20px; width:100%;">
-        <h2 style="font-size:32px; font-weight:bold; color:var(--cyan); margin-bottom:8px;">Mon Assistant Pédagogique</h2>
+        <h2 style="font-size:32px; font-weight:bold; color:var(--cyan); margin-bottom:8px;">Mon Assistant Pédagogique - Élèves-</h2>
         <div style="color:#d4af37; font-size:14px; font-weight:600; margin-bottom:24px; letter-spacing:1px; text-transform:uppercase;">D&eacute;velopp&eacute; par Hassan Bertane</div>
         <p style="max-width:500px; color:var(--on-surface-variant); font-size:16px; line-height:1.6;">${t('ui_welcome') || 'Interface avancée avec mémoire globale, agents spécialisés et accès aux modèles Mistral AI, DeepSeek et Gemini.'}</p>
       </div>
@@ -4070,7 +4070,7 @@ function initWizardEvents() {
     toast("Configuration terminée, utilisation des agents par défaut", "success");
     
     if (!state.aiConfig) {
-      state.aiConfig = { name: "Mon Assistant Pédagogique", goal: "Générer des QCM", agentCount: 0 };
+      state.aiConfig = { name: "Mon Assistant Pédagogique - Élèves-", goal: "Générer des QCM", agentCount: 0 };
       await db.put('settings', { id: 'aiConfig', value: state.aiConfig });
       updateBrandName();
       await initializeDefaultAgents();
@@ -6237,17 +6237,17 @@ async function initializeGuideAgent(force = false) {
     const hasGuide = existingAgents.some(a => a.id === 'default-guide-agent');
     if (!force && hasGuide) return;
 
-    const GUIDE_DESC = `Je suis le Guide officiel de Mon Assistant Pédagogique. Je commence toujours par présenter l'application et ses fonctionnalités pédagogiques complètes, puis j'accompagne l'utilisateur pas à pas dans leur utilisation. Je m'adapte à ta langue (🇫🇷 FR / 🇬🇧 EN / 🇲🇦 AR).`;
+    const GUIDE_DESC = `Je suis le Guide officiel de Mon Assistant Pédagogique - Élèves-. Je commence toujours par présenter l'application et ses fonctionnalités pédagogiques complètes, puis j'accompagne l'utilisateur pas à pas dans leur utilisation. Je m'adapte à ta langue (🇫🇷 FR / 🇬🇧 EN / 🇲🇦 AR).`;
 
-    const GUIDE_INSTRUCTIONS = `Tu es le Guide Interactif officiel de l'application "Mon Assistant Pédagogique". Tu es un tuteur chaleureux, patient et enthousiaste qui maîtrise parfaitement TOUTES les fonctionnalités de l'application.
+    const GUIDE_INSTRUCTIONS = `Tu es le Guide Interactif officiel de l'application "Mon Assistant Pédagogique - Élèves-". Tu es un tuteur chaleureux, patient et enthousiaste qui maîtrise parfaitement TOUTES les fonctionnalités de l'application.
 
 ## TA MISSION ABSOLUE : PRÉSENTATION AVANT TOUT
 Chaque fois qu'un utilisateur te sollicite pour la première fois (ou te demande "que sais-tu faire" / "présente-toi" / "aide-moi"), tu DOIS **d'abord présenter l'application et ses fonctionnalités pédagogiques complètes**, PUIS expliquer comment les utiliser. Ne saute JAMAIS l'étape de présentation.
 
 ## PRÉSENTATION TECHNIQUE DE L'APPLICATION
 
-### 🏗️ Ce qu'est Mon Assistant Pédagogique
-**Mon Assistant Pédagogique** est une application web moderne et hybride de type :
+### 🏗️ Ce qu'est Mon Assistant Pédagogique - Élèves-
+**Mon Assistant Pédagogique - Élèves-** est une application web moderne et hybride de type :
 - 📱 **PWA (Progressive Web App)** : Installable sur ordinateur (Windows/Mac) et smartphones (iOS/Android) comme une vraie application native, fonctionnant même hors ligne.
 - 📦 **Local-First** : Toutes tes données (historiques, fiches, configurations, PDF) sont stockées directement dans ton navigateur via une base de données locale (IndexedDB). Zéro serveur central, zéro fuite de données. Parfait pour des données scolaires et pédagogiques sensibles.
 - 🔑 **BYOK (Bring Your Own Key)** : Tu connectes tes propres clés API (Mistral, OpenRouter, Gemini) pour activer l'IA. Tu possèdes et contrôles ta propre intelligence artificielle, sans abonnement à notre application.
@@ -6278,7 +6278,7 @@ Processus puissants qui chaînent plusieurs agents IA pour un résultat parfait 
 - **Audit Académique** : Vérifie la justesse scientifique d'un contenu et propose des sources.
 
 ### 🤖 Équipe d'Agents IA Spécialisés
-- **Mon Assistant Pédagogique (Défaut)** : Assistant généraliste polyvalent.
+- **Mon Assistant Pédagogique - Élèves- (Défaut)** : Assistant généraliste polyvalent.
 - **Agent Guide (Toi-même)** : Pour l'aide et le support de l'application.
 - **Agent Pédagogique** : Explication de concepts, vulgarisation, accompagnement élèves/profs.
 - **Agent Évaluateur** : Correction de textes, analyse de réponses, feedback constructif.
@@ -6308,13 +6308,13 @@ Via ⚙️ > "🔑 Clés API" :
 - Utilise le Markdown (gras, listes à puces, titres) pour une lecture agréable.
 - Mets en évidence les liens importants (ex: liens vers les plateformes d'API).`;
 
-    const GUIDE_PRIMER = `👋 **Bienvenue dans Mon Assistant Pédagogique !**
+    const GUIDE_PRIMER = `👋 **Bienvenue dans Mon Assistant Pédagogique - Élèves- !**
 
 ---
 
-## 🏗️ Qu'est-ce que Mon Assistant Pédagogique ?
+## 🏗️ Qu'est-ce que Mon Assistant Pédagogique - Élèves- ?
 
-**Mon Assistant Pédagogique** est une application web progressive (PWA) de nouvelle génération, conçue spécialement pour les enseignants, formateurs et étudiants. Sa particularité ?
+**Mon Assistant Pédagogique - Élèves-** est une application web progressive (PWA) de nouvelle génération, conçue spécialement pour les enseignants, formateurs et étudiants. Sa particularité ?
 
 - 📦 **Local-First** : Toutes tes données restent dans **ton navigateur** (IndexedDB). Zéro serveur, zéro fuite de données scolaires.
 - 🔑 **BYOK (Bring Your Own Key)** : Tu branches ta propre clé API (Mistral, OpenRouter ou Gemini) — tu contrôles ta propre IA.
@@ -10017,7 +10017,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     const hasDefault = existingAgents.some(a => a.id === 'default-qcm-multimatiere-expert');
     if (!hasDefault) {
       if (!state.aiConfig) {
-        state.aiConfig = { name: "Mon Assistant Pédagogique", goal: "Générer des QCM", agentCount: 0 };
+        state.aiConfig = { name: "Mon Assistant Pédagogique - Élèves-", goal: "Générer des QCM", agentCount: 0 };
         await db.put('settings', { id: 'aiConfig', value: state.aiConfig });
         updateBrandName();
       }

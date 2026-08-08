@@ -11,15 +11,15 @@
       <!-- STEP 1: Welcome & API Key -->
       <div class="wizard-step active" id="wizard-step-1">
         <div class="wizard-logo">
-          <div class="wizard-logo-text">Mon Assistant Pédagogique</div>
-          <div class="wizard-logo-sub">Plateforme Mon Assistant Pédagogique v4.0</div>
+          <div class="wizard-logo-text">Mon Assistant Pédagogique - Élèves-</div>
+          <div class="wizard-logo-sub">Plateforme Mon Assistant Pédagogique - Élèves- v4.0</div>
         </div>
         <div class="wizard-progress">
           <div class="wizard-dot active" id="wdot-1"></div>
           <div class="wizard-dot" id="wdot-2"></div>
           <div class="wizard-dot" id="wdot-3"></div>
         </div>
-        <div class="wizard-title">Bienvenue sur Mon Assistant Pédagogique</div>
+        <div class="wizard-title">Bienvenue sur Mon Assistant Pédagogique - Élèves-</div>
         <div class="wizard-subtitle">Votre IA personnelle, configurée selon votre vision.<br>Commençons par activer
           votre accès Mistral.</div>
         <div class="field-group">
@@ -44,7 +44,7 @@
           <div class="wizard-dot" id="wdot-3b"></div>
         </div>
         <div class="wizard-title">Définissez votre IA</div>
-        <div class="wizard-subtitle">Ces informations permettront à Mon Assistant Pédagogique de générer automatiquement une équipe de 1 à 4 agents experts parfaitement adaptés à vos besoins.</div>
+        <div class="wizard-subtitle">Ces informations permettront à Mon Assistant Pédagogique - Élèves- de générer automatiquement une équipe de 1 à 4 agents experts parfaitement adaptés à vos besoins.</div>
         <div class="field-group">
           <label class="field-label">🎯 Nom de votre IA <span style="color:var(--danger)">*</span></label>
           <input type="text" class="field-input" id="wizard-ai-name"
@@ -116,7 +116,7 @@
           <div class="agent-gen-grid" id="wizard-agents-grid"></div>
           <div class="btn-row" style="border-top:none;padding-top:8px">
             <button class="btn-primary" id="wizard-finish" style="width:100%;justify-content:center;display:flex">🚀
-              LANCER Mon Assistant Pédagogique →</button>
+              LANCER Mon Assistant Pédagogique - Élèves- →</button>
           </div>
         </div>
         <div id="wizard-gen-error" style="display:none">

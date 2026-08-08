@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => ({
         ]
       },
       manifest: {
-        name: 'Mon Assistant Pédagogique',
+        name: 'Mon Assistant Pédagogique - Élèves-',
         short_name: 'Assistant Pédagogique',
         description: 'Assistant IA de révision et QCM',
         theme_color: '#0d1117',
