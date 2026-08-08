@@ -1580,7 +1580,8 @@ function renderMessages(forceFull = false) {
   if (!msgs.length) {
     c.innerHTML = `
       <div class="welcome-banner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; min-height:50vh; text-align:center; opacity:0.9; padding:20px; width:100%;">
-        <h2 style="font-size:32px; font-weight:bold; color:var(--cyan); margin-bottom:8px;">Mon Assistant Pédagogique - Élèves-</h2>
+        <h2 style="font-size:28px; font-weight:bold; color:var(--cyan); margin-bottom:4px; white-space:nowrap;">Mon Assistant Pédagogique</h2>
+        <div style="display:inline-block; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; font-size:13px; font-weight:700; letter-spacing:2px; padding:3px 14px; border-radius:20px; margin-bottom:12px; text-transform:uppercase;">&#8722; Élèves &#8722;</div>
         <div style="color:#d4af37; font-size:14px; font-weight:600; margin-bottom:24px; letter-spacing:1px; text-transform:uppercase;">D&eacute;velopp&eacute; par Hassan Bertane</div>
         <p style="max-width:500px; color:var(--on-surface-variant); font-size:16px; line-height:1.6;">${t('ui_welcome') || 'Interface avancée avec mémoire globale, agents spécialisés et accès aux modèles Mistral AI, DeepSeek et Gemini.'}</p>
       </div>
