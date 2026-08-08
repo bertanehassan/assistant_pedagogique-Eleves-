@@ -21,7 +21,7 @@
       </div>
       <!-- Title — visible sur tous les écrans -->
       <div class="flex flex-col leading-tight min-w-0">
-        <div class="flex items-center gap-1.5 flex-wrap">
+        <div class="flex items-center gap-1.5 flex-wrap justify-center">
           <span class="text-xs md:text-sm font-bold text-on-surface tracking-wide whitespace-nowrap">Mon Assistant Pédagogique</span>
           <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 7px;border-radius:20px;white-space:nowrap;text-transform:uppercase;flex-shrink:0;">Élèves</span>
         </div>
