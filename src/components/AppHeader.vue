@@ -3,7 +3,7 @@
   <header class="w-full top-0 sticky z-50 backdrop-blur-[40px] border-b border-white/10 bg-white/5 flex justify-between items-center px-3 md:px-4 gap-2 md:gap-3 header-bar" id="hb-header">
     
     <!-- Left: Logo & Title -->
-    <div class="flex items-center gap-2 md:gap-3 shrink-0">
+    <div class="flex items-center gap-2 md:gap-3 shrink-0 max-w-[180px] md:max-w-[260px]">
       <!-- Hexagon logo — visible sur tous les écrans -->
       <div class="w-9 h-9 rounded-full border border-white/20 ring-2 ring-primary/20 flex items-center justify-center bg-primary/10 flex-shrink-0">
         <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6">
@@ -20,12 +20,12 @@
         </svg>
       </div>
       <!-- Title — visible sur tous les écrans -->
-      <div class="flex flex-col leading-tight">
-        <div class="flex items-center gap-1.5">
-          <span class="text-sm font-bold text-on-surface tracking-wide whitespace-nowrap">Mon Assistant Pédagogique</span>
-          <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 7px;border-radius:20px;white-space:nowrap;text-transform:uppercase;">Élèves</span>
+      <div class="flex flex-col leading-tight min-w-0">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs md:text-sm font-bold text-on-surface tracking-wide whitespace-nowrap">Mon Assistant Pédagogique</span>
+          <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 7px;border-radius:20px;white-space:nowrap;text-transform:uppercase;flex-shrink:0;">Élèves</span>
         </div>
-        <span class="text-[10px] text-[#FFD700] font-bold opacity-100 hidden sm:block">Développé par Hassan Bertane</span>
+        <span class="text-[10px] text-[#FFD700] font-bold opacity-100 hidden md:block">Développé par Hassan Bertane</span>
       </div>
     </div>
 
