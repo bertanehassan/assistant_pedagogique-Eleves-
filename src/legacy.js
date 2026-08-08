@@ -14517,7 +14517,8 @@ window.sendTutorMessage = async function() {
         model: activeModel,
         messages: messagesToSend,
         stream: true,
-        temperature: 0.7
+        temperature: 0.7,
+        max_tokens: 4096
       };
       const res = await fetch(aiConfig.url, {
         method: 'POST',
