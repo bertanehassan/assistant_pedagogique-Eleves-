@@ -148,4 +148,71 @@
   z-index: 9999 !important;
   transform: none !important;
 }
+
+/* Amélioration de la typographie et de l'expérience utilisateur dans le chat du tuteur */
+:deep(.tutor-message) {
+  line-height: 1.8 !important;
+  letter-spacing: 0.015em;
+  font-size: 14.5px;
+}
+
+:deep(.tutor-response-content strong),
+:deep(.tutor-response-content b) {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(76, 215, 246, 0.15) 0%, transparent 100%);
+  padding: 0 4px;
+  border-left: 2px solid var(--neon, #4cd7f6);
+  border-radius: 2px;
+}
+
+:deep(.tutor-response-content h1),
+:deep(.tutor-response-content h2),
+:deep(.tutor-response-content h3),
+:deep(.tutor-response-content h4) {
+  color: var(--cyan, #00f0ff);
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  font-weight: 700;
+}
+
+:deep(.tutor-response-content h1) { font-size: 1.4em; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 0.3em; }
+:deep(.tutor-response-content h2) { font-size: 1.25em; }
+:deep(.tutor-response-content h3) { font-size: 1.1em; }
+
+:deep(.tutor-response-content p) {
+  margin-bottom: 1.2em;
+}
+
+:deep(.tutor-response-content ul),
+:deep(.tutor-response-content ol) {
+  margin-left: 1.5em;
+  margin-bottom: 1.2em;
+}
+
+:deep(.tutor-response-content li) {
+  margin-bottom: 0.5em;
+}
+
+:deep(.tutor-response-content li::marker) {
+  color: var(--neon, #4cd7f6);
+  font-weight: bold;
+}
+
+:deep(.tutor-response-content code) {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: Consolas, monospace;
+  color: #ff9d00;
+  font-size: 0.9em;
+}
+
+:deep(.tutor-response-content pre) {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow-x: auto;
+  margin-bottom: 1.2em;
+}
 </style>
