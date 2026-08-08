@@ -49,8 +49,9 @@
     <button id="profile-btn" class="floating-fab" title="Mon Profil & Partage">
       <span class="material-symbols-outlined" style="font-size:20px; color: #4caf50">person</span>
     </button>
-    <button id="tutor-btn" class="floating-fab" title="Tuteur Pédagogique Expert" onclick="openTutorPanel()">
-      <span style="font-size:20px;">🎓</span>
+    <button id="tutor-btn" class="flex items-center gap-2 h-[44px] px-4 rounded-full border border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:border-green-500/50 shadow-[0_0_15px_rgba(76,175,80,0.2)] transition-all transform hover:-translate-y-1" title="Tuteur Pédagogique Expert" onclick="openTutorPanel()">
+      <span class="material-symbols-outlined" style="font-size:28px;">school</span>
+      <span class="font-bold text-sm tracking-wide">Tuteur Expert</span>
     </button>
   </div>
 
