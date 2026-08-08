@@ -13,6 +13,7 @@
   <DidactiqueModal />
   <MethodeModal />
   <EvaluationModal />
+  <TutorPanel />
 </template>
 
 <script setup>
@@ -30,5 +31,6 @@ import CorrectionModal from './modals/CorrectionModal.vue';
 import DidactiqueModal from './modals/DidactiqueModal.vue';
 import MethodeModal from './modals/MethodeModal.vue';
 import EvaluationModal from './modals/EvaluationModal.vue';
+import TutorPanel from './modals/TutorPanel.vue';
 </script>
 

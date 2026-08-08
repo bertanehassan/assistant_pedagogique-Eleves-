@@ -49,6 +49,9 @@
     <button id="profile-btn" class="floating-fab" title="Mon Profil & Partage">
       <span class="material-symbols-outlined" style="font-size:20px; color: #4caf50">person</span>
     </button>
+    <button id="tutor-btn" class="floating-fab" title="Tuteur Pédagogique Expert" onclick="openTutorPanel()">
+      <span style="font-size:20px;">🎓</span>
+    </button>
   </div>
 
   <button id="scroll-bottom" class="fixed bottom-32 md:bottom-8 right-4 w-10 h-10 rounded-full bg-cyan/20 flex items-center justify-center z-30 transition-colors backdrop-blur-md border border-cyan/30" :title="t('title_scroll_down')" style="display:none;">

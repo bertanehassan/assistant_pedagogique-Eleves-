@@ -2339,7 +2339,14 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
       }
 
       hideTyping();
+      renderMessages();
       await saveChat();
+      // Déclencher MathJax sur le dernier message
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        const chatContainer = document.getElementById('chat-container');
+        const lastMsgEl = chatContainer ? chatContainer.querySelector('.message.assistant:last-of-type') : null;
+        if (lastMsgEl) window.MathJax.typesetPromise([lastMsgEl]).catch(() => {});
+      }
     } else {
       // ── APPEL UNIVERSEL : supporte Mistral, Gemini, OpenRouter ──
       const reqBodyUniversal = {
@@ -2371,7 +2378,14 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
       }
 
       hideTyping();
+      renderMessages();
       await saveChat();
+      // Déclencher MathJax sur le dernier message
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        const chatContainer = document.getElementById('chat-container');
+        const lastMsgEl = chatContainer ? chatContainer.querySelector('.message.assistant:last-of-type') : null;
+        if (lastMsgEl) window.MathJax.typesetPromise([lastMsgEl]).catch(() => {});
+      }
     }
   } catch (e) {
     if (e.name === 'AbortError') {
@@ -14223,6 +14237,149 @@ window.evalDeleteConfig        = evalDeleteConfig;
 })();
 
 setTimeout(() => refreshEvalSavedList(), 600);
+
+// ════════════════════════════════════════
+// TUTOR PANEL LOGIC
+// ════════════════════════════════════════
+state.tutorMessages = [];
+
+window.openTutorPanel = function() {
+  const panel = document.getElementById('tutor-panel');
+  if (panel) {
+    panel.style.display = 'flex';
+    setTimeout(() => panel.classList.remove('translate-x-full'), 10);
+  }
+};
+
+window.closeTutorPanel = function() {
+  const panel = document.getElementById('tutor-panel');
+  if (panel) {
+    panel.classList.add('translate-x-full');
+    setTimeout(() => panel.style.display = 'none', 300);
+  }
+};
+
+function updateTutorLiveMessage(content) {
+  const lastMsg = state.tutorMessages[state.tutorMessages.length - 1];
+  if (lastMsg && lastMsg.role === 'assistant') {
+    lastMsg.content = content;
+    const container = document.getElementById('tutor-chat-container');
+    if (!container) return;
+    const msgEls = container.querySelectorAll('.tutor-message.assistant');
+    const lastEl = msgEls[msgEls.length - 1];
+    if (lastEl) {
+      const contentSpan = lastEl.querySelector('.tutor-response-content');
+      if (contentSpan) {
+        const rawHtml = parseMarkdownSafeMath(content);
+        contentSpan.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+      }
+    }
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+window.sendTutorMessage = async function() {
+  const input = document.getElementById('tutor-user-input');
+  if (!input) return;
+  const content = input.value.trim();
+  if (!content) return;
+
+  input.value = '';
+  input.style.height = '';
+
+  const container = document.getElementById('tutor-chat-container');
+  const banner = document.getElementById('tutor-welcome-banner');
+  if (banner) banner.style.display = 'none';
+
+  state.tutorMessages.push({ role: 'user', content });
+
+  const userDiv = document.createElement('div');
+  userDiv.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
+  userDiv.innerHTML = '<b style="color:var(--neon)">Vous :</b> ' + escapeHtml(content);
+  container.appendChild(userDiv);
+  container.scrollTop = container.scrollHeight;
+
+  let systemMsg = "Tu es un Tuteur Pédagogique Expert bienveillant. Utilise la maïeutique pour guider l'élève.";
+  const tutorAgent = (state.agents || []).find(a => a.id === 'tutor-agent');
+  if (tutorAgent && tutorAgent.system_prompt) systemMsg = tutorAgent.system_prompt;
+
+  const messagesToSend = [
+    { role: 'system', content: systemMsg },
+    ...state.tutorMessages.map(m => ({ role: m.role, content: m.content }))
+  ];
+
+  state.tutorMessages.push({ role: 'assistant', content: '' });
+
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'tutor-message assistant';
+  aiDiv.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;max-width:90%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
+  aiDiv.innerHTML = '<b style="color:var(--cyan)">🎓 Tuteur :</b> <span class="tutor-response-content"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
+  container.appendChild(aiDiv);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const aiConfig = getLlmApiConfig(state.model || 'mistral-large-2512');
+    const activeModel = aiConfig.actualModel || state.model || 'mistral-large-2512';
+    const reqBody = {
+      model: activeModel,
+      messages: messagesToSend,
+      stream: true,
+      temperature: 0.7
+    };
+
+    let ep = 'https://api.mistral.ai/v1/chat/completions';
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiConfig.apiKey}` };
+
+    if (aiConfig.provider === 'gemini') {
+      ep = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:streamGenerateContent?alt=sse&key=${aiConfig.apiKey}`;
+      delete headers['Authorization'];
+      const geminiBody = {
+        contents: messagesToSend
+          .filter(m => m.role !== 'system')
+          .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+        systemInstruction: { parts: [{ text: systemMsg }] },
+        generationConfig: { temperature: 0.7 }
+      };
+      const resGemini = await fetch(ep, { method: 'POST', headers, body: JSON.stringify(geminiBody) });
+      if (!resGemini.ok) throw new Error('API Error ' + resGemini.status);
+      const reader = resGemini.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('data: ')) {
+            try {
+              const j = JSON.parse(line.slice(6));
+              const txt = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (txt) { fullResponse += txt; updateTutorLiveMessage(fullResponse); }
+            } catch(e) {}
+          }
+        }
+      }
+    } else if (aiConfig.provider === 'openrouter') {
+      ep = 'https://openrouter.ai/api/v1/chat/completions';
+      headers['Authorization'] = `Bearer ${aiConfig.apiKey}`;
+      const res = await fetch(ep, { method: 'POST', headers, body: JSON.stringify(reqBody) });
+      if (!res.ok) throw new Error('API Error');
+      await handleStreamingResponse(res, updateTutorLiveMessage, () => {}, null);
+    } else {
+      const res = await fetch(ep, { method: 'POST', headers, body: JSON.stringify(reqBody) });
+      if (!res.ok) throw new Error('API Error');
+      await handleStreamingResponse(res, updateTutorLiveMessage, () => {}, null);
+    }
+
+    if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+      window.MathJax.typesetPromise([aiDiv]).catch(() => {});
+    }
+  } catch (error) {
+    const span = aiDiv.querySelector('.tutor-response-content');
+    if (span) span.innerHTML = '<span style="color:red">Erreur de connexion au Tuteur. Vérifiez votre clé API.</span>';
+  }
+};
+
 
 
 
