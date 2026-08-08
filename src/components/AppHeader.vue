@@ -25,7 +25,7 @@
           <span class="text-xs md:text-sm font-bold text-on-surface tracking-wide whitespace-nowrap">Mon Assistant Pédagogique</span>
           <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 7px;border-radius:20px;white-space:nowrap;text-transform:uppercase;flex-shrink:0;">Élèves</span>
         </div>
-        <span class="text-[10px] text-[#FFD700] font-bold opacity-100 hidden md:block">Développé par Hassan Bertane</span>
+        <span class="text-[10px] text-[#FFD700] font-bold opacity-100 hidden md:block text-center w-full">Développé par Hassan Bertane</span>
       </div>
     </div>
 
