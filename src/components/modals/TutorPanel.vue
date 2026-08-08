@@ -1,5 +1,5 @@
 <template>
-  <div id="tutor-panel" class="fixed md:absolute top-0 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[400px] h-full md:h-[600px] md:max-h-[80vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
+  <div id="tutor-panel" class="fixed md:absolute top-14 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[400px] h-[calc(100vh-56px)] md:h-[600px] md:max-h-[80vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
     
     <!-- HEADER -->
     <div class="flex justify-between items-center p-4 border-b border-white/10 bg-gradient-to-r from-cyan/20 to-transparent md:rounded-t-2xl">
