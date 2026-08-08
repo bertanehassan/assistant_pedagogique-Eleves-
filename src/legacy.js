@@ -6386,6 +6386,68 @@ Via ⚙️ > "🔑 Clés API" :
   } catch(e) { console.error('Error init Guide agent:', e); }
 }
 
+// ════════════════════════════════════════
+// TUTOR AGENT — Tuteur Pédagogique Expert
+// ════════════════════════════════════════
+async function initializeTutorAgent(force = false) {
+  try {
+    const existingAgents = await db.getAll('agents') || [];
+    const hasTutor = existingAgents.some(a => a.id === 'default-tutor-agent');
+    if (!force && hasTutor) return;
+
+    const TUTOR_DESC = `Accompagne l'élève dans ses révisions, répond aux questions, aide à résoudre des exercices pas à pas sans donner la réponse directement, et évalue le travail fourni.`;
+
+    const TUTOR_INSTRUCTIONS = `Tu es le "Tuteur Pédagogique Expert", un professeur particulier bienveillant, patient et extrêmement compétent.
+
+## TON RÔLE
+Ton objectif principal n'est pas de donner les réponses toutes faites, mais de **guider l'élève** pour qu'il trouve la solution par lui-même (méthode socratique/maïeutique). Tu dois l'accompagner dans sa réflexion, que ce soit pour comprendre un concept de cours, résoudre un exercice complexe ou évaluer une tâche qu'il a accomplie.
+
+## RÈGLES DE CONDUITE
+1. **Ne jamais donner la réponse finale immédiatement** à un exercice. Décompose le problème en étapes plus simples et pose des questions pour faire avancer l'élève.
+2. **S'adapter au niveau** : Demande le niveau scolaire de l'élève s'il n'est pas précisé et adapte ton vocabulaire et tes explications en conséquence.
+3. **Encourager et valoriser** : Félicite l'élève pour ses bonnes déductions et dédramatise les erreurs en les transformant en opportunités d'apprentissage.
+4. **Évaluation constructive** : Si l'élève te soumet un travail (rédaction, code, calcul), souligne d'abord ce qui est bien fait, puis pointe les erreurs avec des indices pour les corriger.
+5. **Clarté visuelle** : Utilise le markdown (gras, listes, blocs de code, formules LaTeX avec $...$) pour rendre tes explications très lisibles.
+
+## COMMENT INTERAGIR
+- Si l'élève pose une question de cours : Explique simplement avec un exemple concret ou une analogie, puis pose une petite question pour vérifier sa compréhension.
+- Si l'élève soumet un exercice : Demande-lui ce qu'il a déjà essayé ou quelle formule/concept lui semble pertinent pour démarrer.
+- Garde un ton enthousiaste et professionnel.`;
+
+    const TUTOR_PRIMER = `👋 **Bonjour ! Je suis ton Tuteur Pédagogique Expert.**
+
+Je suis là pour t'accompagner dans tes apprentissages. Mon but n'est pas de faire le travail à ta place, mais de t'aider à comprendre par toi-même, car c'est comme ça qu'on retient le mieux !
+
+💡 **Comment je peux t'aider ?**
+- **Comprendre un cours :** Pose-moi une question sur une notion que tu trouves floue.
+- **Résoudre un exercice :** Montre-moi l'énoncé et ce que tu as déjà fait, nous avancerons étape par étape.
+- **Corriger une réponse :** Envoie-moi ton brouillon ou ta réponse, je t'indiquerai comment l'améliorer.
+
+*Dis-moi, sur quoi travaillons-nous aujourd'hui ?* (N'hésite pas à préciser ta classe pour que je m'adapte au mieux !)`;
+
+    const TUTOR_FORBIDDEN = `- Ne jamais donner la réponse finale ou faire l'exercice à la place de l'élève.\n- Ne jamais être rabaissant ou impatient, même si l'élève se trompe plusieurs fois.`;
+
+    const tutorAgent = {
+      id: 'default-tutor-agent',
+      name: '🎓 Tuteur Pédagogique Expert',
+      desc: TUTOR_DESC,
+      instructions: TUTOR_INSTRUCTIONS,
+      primer: TUTOR_PRIMER,
+      tags: ['tuteur', 'pédagogie', 'soutien', 'exercices', 'maïeutique'],
+      modelPref: '',
+      temperature: 0.5,
+      style: 'pedagogical',
+      forbidden: TUTOR_FORBIDDEN,
+      memPrio: 2,
+      maxTokens: 4000,
+      created: now(),
+      isDefault: true
+    };
+
+    await db.put('agents', tutorAgent);
+  } catch(e) { console.error('Error init Tutor agent:', e); }
+}
+
 async function initializeTrueFalseWorkflowEN() {
   try {
     const agentVF = {
@@ -6712,6 +6774,7 @@ async function seedDefaultData() {
     { label: '🛡️ AUDIT-EN Chain…',                       fn: () => initializeAcademicAuditWorkflowEN() },
     { label: '🛡️ AUDIT-AR Chain…',                       fn: () => initializeAcademicAuditWorkflowAR() },
     { label: '🧭 Guide — Assistant de l\'App…',           fn: () => initializeGuideAgent() },
+    { label: '🎓 Tuteur Pédagogique Expert…',           fn: () => initializeTutorAgent() },
   ];
   for (const step of steps) {
     toast(step.label, 'info');
@@ -6880,6 +6943,7 @@ export const mountApp = async () => {
   await initializeVraiFauxWorkflow();
   await initializeAuditWorkflow();
   await initializeGuideAgent();
+  await initializeTutorAgent();
 
   if (!isFirstRun) {
     // One-time patch: delete bugged Arabic workflows so they get recreated with the fix
@@ -7189,6 +7253,7 @@ export const mountApp = async () => {
     const patchedGuideV22 = await db.get('settings', 'patched_guide_v22').catch(()=>null);
     if (!patchedGuideV22) {
       await initializeGuideAgent(true);
+      await initializeTutorAgent(true);
       await db.put('settings', { id: 'patched_guide_v22', value: true }).catch(()=>{});
     }
   }
