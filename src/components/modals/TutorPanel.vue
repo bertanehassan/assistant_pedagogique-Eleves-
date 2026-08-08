@@ -18,7 +18,12 @@
           <span style="font-size:10px;">🤖</span>
           <span id="tutor-model-name">—</span>
         </div>
-        <button class="panel-close-btn" onclick="closeTutorPanel()">
+        <!-- Bouton Nouvelle Conversation -->
+        <button onclick="clearTutorConversation()" class="panel-close-btn" title="Nouvelle conversation" style="color: var(--cyan);">
+          <span class="material-symbols-outlined" style="font-size: 20px;">add_comment</span>
+        </button>
+        <!-- Bouton Fermer -->
+        <button class="panel-close-btn" onclick="closeTutorPanel()" title="Fermer">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>

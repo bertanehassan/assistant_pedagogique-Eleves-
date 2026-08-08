@@ -14257,6 +14257,30 @@ window.openTutorPanel = function() {
   }
 };
 
+window.clearTutorConversation = function() {
+  state.tutorMessages = [];
+  
+  const container = document.getElementById('tutor-chat-container');
+  if (container) {
+    const banner = document.getElementById('tutor-welcome-banner');
+    container.innerHTML = '';
+    if (banner) {
+      banner.style.display = 'block';
+      container.appendChild(banner);
+    }
+  }
+  
+  state.tutorAttachedFiles = [];
+  if (window.updateTutorFilePreview) window.updateTutorFilePreview();
+  
+  const input = document.getElementById('tutor-user-input');
+  if (input) {
+    input.value = '';
+    input.style.height = '';
+  }
+};
+
+
 // ── Gestion des fichiers attachés du tuteur ──
 window.tutorHandleFiles = async function(files) {
   for (const file of files) {
