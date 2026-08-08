@@ -14310,11 +14310,14 @@ window.sendTutorMessage = async function() {
   if (tutorAgent && tutorAgent.system_prompt) systemMsg = tutorAgent.system_prompt;
 
   const niveauEl = document.getElementById('tutor-niveau');
-  if (niveauEl) {
+  const domaineEl = document.getElementById('tutor-domaine');
+  if (niveauEl && domaineEl) {
     const niv = niveauEl.value;
-    if (niv) {
+    const dom = domaineEl.value;
+    if (niv || dom) {
       systemMsg += `\n\nContexte de l'élève :\n`;
-      systemMsg += `- Niveau scolaire : ${niv}\n`;
+      if (niv) systemMsg += `- Niveau scolaire : ${niv}\n`;
+      if (dom) systemMsg += `- Domaine / Matière : ${dom}\n`;
       systemMsg += `Adapte ton discours, ton vocabulaire et ton niveau d'exigence à ce contexte.`;
     }
   }

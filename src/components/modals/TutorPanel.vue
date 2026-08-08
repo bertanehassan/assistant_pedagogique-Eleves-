@@ -28,7 +28,7 @@
     <!-- CHAT AREA -->
     <div id="tutor-chat-container" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar text-sm">
       <!-- Les messages seront injectés ici par legacy.js -->
-      <div id="tutor-welcome-banner" class="welcome-banner text-center opacity-80 mt-10">
+      <div id="tutor-welcome-banner" class="welcome-banner text-center opacity-80 mt-10 flex-shrink-0 pb-10">
         <div class="text-4xl mb-3">👋</div>
         <div class="text-cyan font-bold mb-2">Bonjour !</div>
         <div class="text-on-surface-variant text-xs px-4 mb-4">Je suis votre Tuteur. Posez-moi des questions sur vos exercices, demandez-moi de l'aide pour comprendre une notion, mais ne vous attendez pas à ce que je vous donne les réponses toutes faites ! 😉</div>
@@ -42,6 +42,21 @@
               <option value="Collège">Collège</option>
               <option value="Lycée">Lycée</option>
               <option value="Supérieur">Supérieur</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-on-surface-variant mb-1">Domaine / Matière</label>
+            <select id="tutor-domaine" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-cyan">
+              <option value="">Non précisé</option>
+              <option value="Mathématiques">Mathématiques</option>
+              <option value="Physique-Chimie">Physique-Chimie</option>
+              <option value="SVT">SVT</option>
+              <option value="Français">Français</option>
+              <option value="Anglais">Anglais</option>
+              <option value="Histoire-Géographie">Histoire-Géographie</option>
+              <option value="Philosophie">Philosophie</option>
+              <option value="Informatique">Informatique</option>
+              <option value="Autre">Autre</option>
             </select>
           </div>
         </div>
