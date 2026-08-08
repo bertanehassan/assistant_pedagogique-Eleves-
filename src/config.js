@@ -29,7 +29,7 @@ export const MODELS = [
   // 🧠 DEEPSEEK  (OpenRouter)
   // ══════════════════════════════════════════════════
   { id:"deepseek/deepseek-chat",                        name:"🧠 DeepSeek Chat v3",                      badge:"🧠 Intelligent",  desc:"Modèle très avancé DeepSeek via OpenRouter",                            tokens:64000,  ctx:"64K",  temp:0.5 },
-  { id:"deepseek/deepseek-r1:free",                     name:"🧠 DeepSeek R1 — Raisonnement (Gratuit)",  badge:"🆓 Gratuit",      desc:"Raisonnement avancé chain-of-thought, 100% gratuit via OpenRouter",     tokens:64000,  ctx:"64K",  temp:0.5 },
+  { id:"deepseek/deepseek-r1",                            name:"🧠 DeepSeek R1 — Raisonnement",            badge:"🧠 Avancé",      desc:"Raisonnement avancé chain-of-thought via OpenRouter (Version Payante)",     tokens:64000,  ctx:"64K",  temp:0.5 },
 
   // ══════════════════════════════════════════════════
   // 🦙 META  (OpenRouter)
