@@ -2798,25 +2798,25 @@ async function loadAgents() {
     toolsGroup.label = "🛠️ OUTILS & GÉNÉRATEURS";
     const corrOpt = document.createElement("option");
     corrOpt.value = "__TOOL__correction";
-    corrOpt.textContent = "📋 Fiche de Correction (Générateur)";
+    corrOpt.textContent = "📋 Fiche de Correction";
     corrOpt.title = "Générer une fiche de correction détaillée à partir d'un sujet d'évaluation";
     toolsGroup.appendChild(corrOpt);
 
     const didacOpt = document.createElement("option");
     didacOpt.value = "__TOOL__didactique";
-    didacOpt.textContent = "👨‍🏫 Fiche Didactique (Générateur)";
+    didacOpt.textContent = "👨‍🏫 Fiche Didactique";
     didacOpt.title = "Générer une fiche didactique de leçon/séquence avec grille d'évaluation formative";
     toolsGroup.appendChild(didacOpt);
 
     const methodeOpt = document.createElement("option");
     methodeOpt.value = "__TOOL__methode";
-    methodeOpt.textContent = "🧠 Fiche Méthode (Générateur)";
+    methodeOpt.textContent = "🧠 Fiche Méthode";
     methodeOpt.title = "Générer une fiche méthode étape par étape à partir d'un exercice";
     toolsGroup.appendChild(methodeOpt);
 
     const evalOpt = document.createElement("option");
     evalOpt.value = "__TOOL__evaluation";
-    evalOpt.textContent = "📝 Évaluations A/B (Générateur)";
+    evalOpt.textContent = "📝 Évaluations A/B";
     evalOpt.title = "Générer deux versions complémentaires d'une évaluation sommative (A et B) avec corrigés, à partir du contenu d'un cours";
     toolsGroup.appendChild(evalOpt);
 
