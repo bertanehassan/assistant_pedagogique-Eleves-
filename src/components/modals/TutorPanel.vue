@@ -18,6 +18,10 @@
           <span style="font-size:10px;">🤖</span>
           <span id="tutor-model-name">—</span>
         </div>
+        <!-- Bouton Plein Écran -->
+        <button onclick="toggleTutorFullscreen()" class="panel-close-btn" title="Plein écran">
+          <span id="tutor-fullscreen-icon" class="material-symbols-outlined" style="font-size: 20px;">fullscreen</span>
+        </button>
         <!-- Bouton Nouvelle Conversation -->
         <button onclick="clearTutorConversation()" class="panel-close-btn" title="Nouvelle conversation" style="color: var(--cyan);">
           <span class="material-symbols-outlined" style="font-size: 20px;">add_comment</span>
@@ -129,4 +133,19 @@
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+
+/* Fullscreen mode override */
+#tutor-panel.tutor-fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  border-radius: 0 !important;
+  z-index: 9999 !important;
+  transform: none !important;
+}
 </style>

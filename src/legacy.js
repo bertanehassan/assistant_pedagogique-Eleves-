@@ -14280,6 +14280,18 @@ window.clearTutorConversation = function() {
   }
 };
 
+window.toggleTutorFullscreen = function() {
+  const panel = document.getElementById('tutor-panel');
+  const icon = document.getElementById('tutor-fullscreen-icon');
+  if (panel) {
+    panel.classList.toggle('tutor-fullscreen');
+    if (icon) {
+      icon.textContent = panel.classList.contains('tutor-fullscreen') ? 'fullscreen_exit' : 'fullscreen';
+    }
+  }
+};
+
+
 
 // ── Gestion des fichiers attachés du tuteur ──
 window.tutorHandleFiles = async function(files) {
