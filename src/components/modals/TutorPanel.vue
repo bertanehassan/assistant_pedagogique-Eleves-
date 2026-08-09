@@ -18,6 +18,10 @@
           <span style="font-size:10px;">🤖</span>
           <span id="tutor-model-name">—</span>
         </div>
+        <!-- Bouton Synthèse Vocale (TTS) -->
+        <button id="tutor-tts-btn" onclick="toggleTutorTTS()" class="panel-close-btn" title="Lire les réponses à voix haute">
+          <span id="tutor-tts-icon" class="material-symbols-outlined" style="font-size: 20px;">volume_up</span>
+        </button>
         <!-- Bouton Export -->
         <div class="relative" id="tutor-export-menu-wrapper">
           <button onclick="toggleTutorExportMenu()" class="panel-close-btn" title="Exporter la conversation" style="color: #a78bfa;">
@@ -121,11 +125,17 @@
         <div class="flex-1 bg-white/5 border border-white/10 rounded-xl flex items-center px-3 py-2 min-h-[44px]">
           <textarea id="tutor-user-input"
                     class="bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant/50 w-full font-body-md resize-none py-1 px-1 focus:outline-none text-sm" 
-                    placeholder="Posez votre question... (joignez un document si besoin)"
+                    placeholder="Posez votre question..."
                     rows="1"
                     dir="auto"
                     oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';"
                     onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendTutorMessage(); }"></textarea>
+          <!-- Bouton micro pour dictée vocale dans le tuteur -->
+          <button id="tutor-voice-btn" onclick="toggleTutorVoice()"
+                  class="tutor-voice-btn flex-shrink-0 ml-1"
+                  title="Dicter votre question à voix haute">
+            <span id="tutor-voice-icon" class="material-symbols-outlined" style="font-size:20px">mic</span>
+          </button>
         </div>
         <button id="tutor-send-btn" class="w-11 h-11 min-w-[44px] rounded-xl flex items-center justify-center bg-cyan/20 text-cyan border border-cyan/30 hover:bg-cyan/30 transition-colors" onclick="sendTutorMessage()">
           <span class="material-symbols-outlined font-bold" style="font-size: 20px">send</span>
@@ -173,6 +183,44 @@
   background: rgba(255,255,255,0.15);
   color: #fff;
 }
+
+/* Bouton micro dans le tuteur */
+.tutor-voice-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgba(218, 226, 253, 0.5);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.tutor-voice-btn:hover {
+  color: var(--cyan, #4cd7f6);
+  background: rgba(76, 215, 246, 0.1);
+}
+/* État enregistrement : pulsation rouge */
+.tutor-voice-btn.recording {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.15);
+  animation: tutor-mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes tutor-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(248, 113, 113, 0); }
+}
+
+/* Bouton TTS actif → vert */
+.panel-close-btn.tts-active {
+  background: rgba(76, 215, 246, 0.15);
+  color: var(--cyan, #4cd7f6);
+  border: 1px solid rgba(76, 215, 246, 0.35);
+}
+
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }

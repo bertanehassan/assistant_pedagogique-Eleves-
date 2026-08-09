@@ -14275,6 +14275,13 @@ window.openTutorPanel = function() {
     // Mettre à jour le badge du modèle
     const badgeEl = document.getElementById('tutor-model-name');
     if (badgeEl) badgeEl.textContent = state.model || 'mistral-large-2512';
+    // Masquer le bouton micro si le navigateur ne supporte pas la dictée vocale
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const voiceBtn = document.getElementById('tutor-voice-btn');
+    if (voiceBtn && !SR) voiceBtn.style.display = 'none';
+    // Masquer le bouton TTS si non supporté
+    const ttsBtn = document.getElementById('tutor-tts-btn');
+    if (ttsBtn && !('speechSynthesis' in window)) ttsBtn.style.display = 'none';
   }
 };
 
@@ -14588,6 +14595,165 @@ function updateTutorLiveMessage(content) {
   }
 }
 
+// ═══════════════════════════════════════════════════════
+// 🎤 TUTEUR — DICTÉE VOCALE (Speech-to-Text)
+// ═══════════════════════════════════════════════════════
+(function initTutorVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SR) {
+    // Navigateur incompatible : masquer le bouton quand le panneau s'ouvre
+    window.toggleTutorVoice = function() {};
+    return;
+  }
+
+  let recognition = null;
+  let isRecording = false;
+
+  window.toggleTutorVoice = function() {
+    // Résoudre les éléments au moment de l'appel (le panneau est peut-être masqué à l'init)
+    const voiceBtn = document.getElementById('tutor-voice-btn');
+    const voiceIcon = document.getElementById('tutor-voice-icon');
+
+    if (isRecording) {
+      if (recognition) recognition.stop();
+      return;
+    }
+
+    recognition = new SR();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      isRecording = true;
+      if (voiceBtn) voiceBtn.classList.add('recording');
+      if (voiceIcon) voiceIcon.textContent = 'mic_off';
+      if (voiceBtn) voiceBtn.title = 'Arrêter la dictée';
+    };
+
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+      const inp = document.getElementById('tutor-user-input');
+      if (inp) {
+        inp.value += (inp.value ? ' ' : '') + transcript;
+        // Auto-resize
+        inp.style.height = '';
+        inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
+        // Envoyer automatiquement si la phrase est complète (ponctuation finale)
+        if (/[.!?]$/.test(transcript.trim())) {
+          setTimeout(() => sendTutorMessage(), 400);
+        }
+      }
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      const btn = document.getElementById('tutor-voice-btn');
+      const ico = document.getElementById('tutor-voice-icon');
+      if (btn) btn.classList.remove('recording');
+      if (ico) ico.textContent = 'mic';
+      if (btn) btn.title = 'Dicter votre question à voix haute';
+      recognition = null;
+    };
+
+    recognition.onerror = (e) => {
+      isRecording = false;
+      const btn = document.getElementById('tutor-voice-btn');
+      const ico = document.getElementById('tutor-voice-icon');
+      if (btn) btn.classList.remove('recording');
+      if (ico) ico.textContent = 'mic';
+      recognition = null;
+      if (e.error === 'not-allowed') {
+        if (typeof toast === 'function') toast('Accès au microphone refusé', 'error');
+        else alert('Accès au microphone refusé. Veuillez autoriser l\'accès dans les paramètres du navigateur.');
+      } else if (e.error !== 'no-speech') {
+        if (typeof toast === 'function') toast('Dictée vocale indisponible', 'error');
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch(err) {
+      isRecording = false;
+    }
+  };
+})();
+
+
+// ═══════════════════════════════════════════════════════
+// 🔊 TUTEUR — SYNTHÈSE VOCALE (Text-to-Speech)
+// ═══════════════════════════════════════════════════════
+(function initTutorTTS() {
+  // Vérifier la disponibilité
+  if (!('speechSynthesis' in window)) return;
+
+  // État persistant du mode TTS
+  let ttsEnabled = false;
+  let currentUtterance = null;
+
+  window.toggleTutorTTS = function() {
+    ttsEnabled = !ttsEnabled;
+    const btn = document.getElementById('tutor-tts-btn');
+    const icon = document.getElementById('tutor-tts-icon');
+
+    if (ttsEnabled) {
+      if (btn) {
+        btn.classList.add('tts-active');
+        btn.title = 'Désactiver la lecture vocale';
+      }
+      if (icon) icon.textContent = 'volume_up';
+    } else {
+      if (btn) {
+        btn.classList.remove('tts-active');
+        btn.title = 'Lire les réponses à voix haute';
+      }
+      if (icon) icon.textContent = 'volume_off';
+      // Arrêter toute lecture en cours
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  // Exposer la fonction de lecture pour l'appeler après chaque réponse du tuteur
+  window.tutorSpeak = function(text) {
+    if (!ttsEnabled || !text) return;
+
+    // Annuler la lecture précédente
+    window.speechSynthesis.cancel();
+
+    // Nettoyer le markdown / HTML pour la lecture
+    const clean = text
+      .replace(/<[^>]+>/g, ' ')          // Supprimer les balises HTML
+      .replace(/```[\s\S]*?```/g, '')     // Supprimer les blocs de code
+      .replace(/#{1,6}\s/g, '')           // Supprimer les titres markdown
+      .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1') // Gras/italique
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // Liens
+      .replace(/\s{2,}/g, ' ')            // Espaces multiples
+      .trim();
+
+    if (!clean) return;
+
+    currentUtterance = new SpeechSynthesisUtterance(clean);
+    currentUtterance.lang = 'fr-FR';
+    currentUtterance.rate = 0.95;   // Légèrement plus lent pour la pédagogie
+    currentUtterance.pitch = 1.05;
+    currentUtterance.volume = 1;
+
+    // Choisir une voix française si disponible
+    const voices = window.speechSynthesis.getVoices();
+    const frVoice = voices.find(v => v.lang.startsWith('fr') && v.localService)
+                 || voices.find(v => v.lang.startsWith('fr'));
+    if (frVoice) currentUtterance.voice = frVoice;
+
+    window.speechSynthesis.speak(currentUtterance);
+  };
+
+  // Sur iOS/macOS, les voix sont chargées de façon asynchrone
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = () => {};
+  }
+})();
+
 window.sendTutorMessage = async function() {
   const input = document.getElementById('tutor-user-input');
   if (!input) return;
@@ -14750,6 +14916,14 @@ Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 
 
     if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
       window.MathJax.typesetPromise([aiDiv]).catch(() => {});
+    }
+
+    // 🔊 Synthèse vocale — lire la réponse du tuteur si le mode TTS est activé
+    if (typeof window.tutorSpeak === 'function') {
+      const lastMsg = state.tutorMessages[state.tutorMessages.length - 1];
+      if (lastMsg && lastMsg.role === 'assistant') {
+        window.tutorSpeak(lastMsg.content);
+      }
     }
     
     // Rendu Mermaid.js pour les schémas avec gestion d'erreur (Fallback)
