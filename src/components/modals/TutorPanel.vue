@@ -144,6 +144,22 @@
 </script>
 
 <style scoped>
+.tutor-export-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: rgba(218, 226, 253, 0.85);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.tutor-export-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
 .panel-close-btn {
   display: flex;
   align-items: center;

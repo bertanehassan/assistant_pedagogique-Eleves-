@@ -14312,7 +14312,165 @@ window.toggleTutorFullscreen = function() {
   }
 };
 
+// ── Export menu toggle ──
+window.toggleTutorExportMenu = function() {
+  const menu = document.getElementById('tutor-export-menu');
+  if (!menu) return;
+  menu.classList.toggle('hidden');
+  // Fermer si clic en dehors
+  if (!menu.classList.contains('hidden')) {
+    setTimeout(() => {
+      const handler = (e) => {
+        if (!document.getElementById('tutor-export-menu-wrapper')?.contains(e.target)) {
+          menu.classList.add('hidden');
+          document.removeEventListener('click', handler);
+        }
+      };
+      document.addEventListener('click', handler);
+    }, 50);
+  }
+};
 
+// ── Collecte du contenu de la conversation tuteur ──
+function getTutorConversationData() {
+  const niveau = document.getElementById('tutor-niveau')?.value || '';
+  const domaine = document.getElementById('tutor-domaine')?.value || '';
+  const date = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  return { messages: state.tutorMessages || [], niveau, domaine, date };
+}
+
+// ── Export principal ──
+window.tutorExport = function(format) {
+  // Fermer le menu
+  document.getElementById('tutor-export-menu')?.classList.add('hidden');
+
+  const { messages, niveau, domaine, date } = getTutorConversationData();
+  if (!messages.length) {
+    alert('Aucune conversation à exporter !');
+    return;
+  }
+
+  const titre = `Tuteur Expert – ${domaine || 'Conversation'} ${niveau ? '(' + niveau + ')' : ''}`;
+
+  if (format === 'copy') {
+    // ── Copie dans le presse-papier ──
+    const text = messages.map(m => {
+      const role = m.role === 'user' ? 'Vous' : '🎓 Tuteur';
+      const raw = (m.content || '').replace(/<[^>]+>/g, '');
+      return `${role} :\n${raw}`;
+    }).join('\n\n---\n\n');
+    navigator.clipboard.writeText(`${titre}\n${date}\n\n${text}`).then(() => {
+      // Toast rapide
+      const toast = document.createElement('div');
+      toast.textContent = '✅ Conversation copiée !';
+      toast.style = 'position:fixed;bottom:80px;right:20px;background:#1e293b;color:#4cd7f6;padding:10px 18px;border-radius:12px;border:1px solid rgba(76,215,246,0.3);z-index:99999;font-size:13px;';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    });
+    return;
+  }
+
+  if (format === 'txt') {
+    const text = messages.map(m => {
+      const role = m.role === 'user' ? 'Vous' : 'Tuteur';
+      const raw = (m.content || '').replace(/<[^>]+>/g, '');
+      return `[${role}]\n${raw}`;
+    }).join('\n\n---\n\n');
+    const blob = new Blob([`${titre}\n${date}\n\n${text}`], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tuteur-${Date.now()}.txt`;
+    a.click();
+    return;
+  }
+
+  // ── Construction HTML commune (utilisée pour html, word et pdf) ──
+  const buildHtml = (forPrint = false) => {
+    const rows = messages.map(m => {
+      const isUser = m.role === 'user';
+      const content = m.content || '';
+      const bgColor = isUser ? '#1e2a3a' : '#0f2318';
+      const borderColor = isUser ? '#4cd7f6' : '#00f09d';
+      const label = isUser ? '👤 Vous' : '🎓 Tuteur Expert';
+      return `
+        <div style="margin-bottom:20px;padding:14px 18px;background:${bgColor};border-left:3px solid ${borderColor};border-radius:10px;">
+          <div style="font-weight:700;color:${borderColor};margin-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">${label}</div>
+          <div style="color:#d1d5db;line-height:1.8;">${content}</div>
+        </div>`;
+    }).join('');
+
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${titre}</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: ${forPrint ? '#fff' : '#0b1326'}; color: ${forPrint ? '#111' : '#d1d5db'}; margin: 0; padding: 30px; }
+    h1 { font-size: 22px; margin-bottom: 4px; color: ${forPrint ? '#111' : '#4cd7f6'}; }
+    .meta { font-size: 12px; color: #888; margin-bottom: 30px; }
+    .msg { margin-bottom: 20px; padding: 14px 18px; border-radius: 10px; line-height: 1.8; }
+    .msg-user { background: ${forPrint ? '#f0f7ff' : '#1e2a3a'}; border-left: 3px solid #4cd7f6; }
+    .msg-ai { background: ${forPrint ? '#f0fff7' : '#0f2318'}; border-left: 3px solid #00f09d; }
+    .role { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .role-user { color: #4cd7f6; }
+    .role-ai { color: #00f09d; }
+    @media print { body { background: #fff; color: #111; } }
+  </style>
+</head>
+<body>
+  <h1>${titre}</h1>
+  <div class="meta">📅 ${date}</div>
+  ${rows}
+</body>
+</html>`;
+  };
+
+  if (format === 'html') {
+    const blob = new Blob([buildHtml()], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tuteur-${Date.now()}.html`;
+    a.click();
+    return;
+  }
+
+  if (format === 'word') {
+    // Format Word via HTML enrichi (ouverture directe dans Word)
+    const wordHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+<head><meta charset='UTF-8'><title>${titre}</title>
+<style>body{font-family:Calibri,Arial;font-size:12pt;color:#111;}h1{font-size:18pt;color:#0a74da;}p{margin-bottom:10pt;line-height:1.6;}.role{font-weight:bold;font-size:10pt;text-transform:uppercase;color:#0a74da;}</style>
+</head><body>
+<h1>${titre}</h1><p style="color:#888;font-size:10pt;">${date}</p>
+${messages.map(m => {
+  const isUser = m.role === 'user';
+  const raw = (m.content || '').replace(/<\/?[^>]+(>|$)/g, '');
+  return `<p class="role" style="color:${isUser ? '#0a74da' : '#16a34a'}">${isUser ? 'Vous' : 'Tuteur Expert'}</p><p>${raw}</p><hr>`;
+}).join('')}
+</body></html>`;
+    const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tuteur-${Date.now()}.doc`;
+    a.click();
+    return;
+  }
+
+  if (format === 'pdf') {
+    // PDF via impression navigateur (conserve le LaTeX MathJax)
+    const win = window.open('', '_blank');
+    win.document.write(buildHtml(true));
+    win.document.close();
+    // Attendre MathJax puis lancer l'impression
+    win.onload = () => {
+      setTimeout(() => {
+        win.print();
+      }, 1500);
+    };
+    return;
+  }
+};
 
 // ── Gestion des fichiers attachés du tuteur ──
 window.tutorHandleFiles = async function(files) {
