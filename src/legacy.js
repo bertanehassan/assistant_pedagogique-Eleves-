@@ -14657,6 +14657,10 @@ Mode **Directif** : Réponds de façon complète et claire. Donne la réponse ou
     }
   }
 
+  // Encourager l'utilisation de graphiques visuels
+  systemMsg += `\n\n**OUTILS VISUELS** : L'interface supporte la génération de schémas interactifs avec **Mermaid.js**. N'hésite surtout pas à créer des diagrammes (flowcharts, mindmaps, géométrie basique, etc.) pour illustrer tes explications si cela aide à la compréhension visuelle, particulièrement en sciences. Utilise simplement un bloc de code \`\`\`mermaid ... \`\`\`.`;
+
+
   // Ajouter les images dans le système pour Gemini
   const imageFiles = files.filter(f => f.type === 'image');
 
@@ -14735,6 +14739,29 @@ Mode **Directif** : Réponds de façon complète et claire. Donne la réponse ou
 
     if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
       window.MathJax.typesetPromise([aiDiv]).catch(() => {});
+    }
+    
+    // Rendu Mermaid.js pour les schémas
+    if (window.mermaid) {
+      setTimeout(() => {
+        const mermaidBlocks = aiDiv.querySelectorAll('pre code.language-mermaid');
+        if (mermaidBlocks.length > 0) {
+          mermaidBlocks.forEach(block => {
+            const pre = block.parentElement;
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.textContent;
+            div.style.background = 'rgba(255,255,255,0.02)';
+            div.style.padding = '10px';
+            div.style.borderRadius = '8px';
+            div.style.overflowX = 'auto';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'center';
+            pre.parentNode.replaceChild(div, pre);
+          });
+          window.mermaid.run({ nodes: aiDiv.querySelectorAll('.mermaid') }).catch(err => console.error('Mermaid error:', err));
+        }
+      }, 200); // léger délai pour s'assurer que le DOM est prêt
     }
   } catch (error) {
     const span = aiDiv.querySelector('.tutor-response-content');
