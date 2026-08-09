@@ -14246,6 +14246,27 @@ state.tutorMessages = [];
 // Stockage des fichiers attachés au tuteur
 state.tutorAttachedFiles = state.tutorAttachedFiles || [];
 
+// Niveau de guidage du tuteur (socratic | balanced | direct)
+state.tutorGuidance = state.tutorGuidance || 'socratic';
+
+const GUIDANCE_HINTS = {
+  socratic: "Questions guidées · jamais de réponse directe",
+  balanced: "Indices progressifs · réponse si vraiment bloqué",
+  direct:   "Explications complètes · réponses avec détails"
+};
+
+window.setTutorGuidance = function(value, btn) {
+  state.tutorGuidance = value;
+  // Mettre à jour les boutons
+  document.querySelectorAll('.guidance-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // Mettre à jour le hint
+  const hint = document.getElementById('tutor-guidance-hint');
+  if (hint) hint.textContent = GUIDANCE_HINTS[value] || '';
+};
+
+
+
 window.openTutorPanel = function() {
   const panel = document.getElementById('tutor-panel');
   if (panel) {
@@ -14442,6 +14463,28 @@ window.sendTutorMessage = async function() {
   updateTutorFilePreview();
 
   let systemMsg = "Tu es un Tuteur Pédagogique Expert bienveillant. Utilise la maïeeutique pour guider l'élève. Ne donne jamais les réponses directement.";
+
+  // Niveau de guidage
+  const guidance = state.tutorGuidance || 'socratic';
+  if (guidance === 'socratic') {
+    systemMsg = `Tu es un Tuteur Pédagogique Expert bienveillant, expert en maïeutique socratique.
+**RÈGLE ABSOLUE** : Ne donne JAMAIS la réponse finale à un exercice. Pose des questions pour faire réfléchir l'élève.
+- Décompose le problème en micro-étapes et pose une seule question à la fois.
+- Si l'élève insiste pour avoir la réponse, encourage-le gentiment à continuer sa réflexion.
+- Félicite chaque bonne déduction, même partielle.`;
+  } else if (guidance === 'balanced') {
+    systemMsg = `Tu es un Tuteur Pédagogique Expert bienveillant.
+Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 tentatives l'élève est encore bloqué, révèle la réponse avec une explication détaillée.
+- Commence toujours par demander ce que l'élève a déjà essayé.
+- Donne des indices de plus en plus précis avant de dévoiler.
+- Explique toujours le raisonnement, même quand tu donnes la réponse.`;
+  } else if (guidance === 'direct') {
+    systemMsg = `Tu es un Tuteur Pédagogique Expert bienveillant.
+Mode **Directif** : Réponds de façon complète et claire. Donne la réponse ou l'explication complète sans attendre que l'élève tâtonne.
+- Explique le concept, montre la résolution étape par étape, puis donne la réponse finale.
+- Propose des exercices similaires pour consolider la compréhension.
+- Sois pédagogue : utilise des exemples concrets, des analogies, des schémas en ASCII si utile.`;
+  }
 
   const niveauEl = document.getElementById('tutor-niveau');
   const domaineEl = document.getElementById('tutor-domaine');

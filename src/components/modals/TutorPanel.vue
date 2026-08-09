@@ -35,7 +35,7 @@
 
     <!-- BARRE DE CONTEXTE (toujours visible) -->
     <div class="flex-shrink-0 px-4 py-3 border-b border-white/10 bg-black/30">
-      <div class="flex gap-3">
+      <div class="flex gap-3 mb-2">
         <div class="flex-1">
           <label class="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">🎓 Niveau scolaire</label>
           <select id="tutor-niveau" class="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors">
@@ -61,6 +61,25 @@
             <option value="Autre">Autre</option>
           </select>
         </div>
+      </div>
+      <!-- Niveau de guidage -->
+      <div>
+        <label class="block text-[10px] text-on-surface-variant mb-1.5 uppercase tracking-wider">🧭 Niveau de guidage</label>
+        <div class="tutor-guidance-selector" id="tutor-guidance-selector">
+          <button class="guidance-btn active" data-value="socratic" onclick="setTutorGuidance('socratic', this)" title="Le tuteur pose des questions et guide par la réflexion, sans jamais donner la réponse">
+            <span class="guidance-icon">🧠</span>
+            <span class="guidance-label">Socratique</span>
+          </button>
+          <button class="guidance-btn" data-value="balanced" onclick="setTutorGuidance('balanced', this)" title="Le tuteur donne des indices progressifs et révèle la réponse si l'élève est vraiment bloqué">
+            <span class="guidance-icon">⚖️</span>
+            <span class="guidance-label">Équilibré</span>
+          </button>
+          <button class="guidance-btn" data-value="direct" onclick="setTutorGuidance('direct', this)" title="Le tuteur explique complètement et donne la réponse avec des explications détaillées">
+            <span class="guidance-icon">💡</span>
+            <span class="guidance-label">Directif</span>
+          </button>
+        </div>
+        <div id="tutor-guidance-hint" class="text-[10px] text-on-surface-variant/60 mt-1 italic">Questions guidées · jamais de réponse directe</div>
       </div>
     </div>
 
@@ -133,6 +152,55 @@
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+
+/* Guidance selector */
+.tutor-guidance-selector {
+  display: flex;
+  gap: 6px;
+}
+.guidance-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  color: rgba(218,226,253,0.5);
+  transition: all 0.2s ease;
+}
+.guidance-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(218,226,253,0.85);
+}
+.guidance-icon { font-size: 16px; line-height: 1; }
+.guidance-label { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; }
+
+/* Socratique actif → violet */
+.guidance-btn.active[data-value="socratic"] {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #c4b5fd;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+}
+/* Équilibré actif → cyan */
+.guidance-btn.active[data-value="balanced"] {
+  background: rgba(76, 215, 246, 0.15);
+  border-color: rgba(76, 215, 246, 0.45);
+  color: var(--cyan, #4cd7f6);
+  box-shadow: 0 0 10px rgba(76, 215, 246, 0.18);
+}
+/* Directif actif → ambre */
+.guidance-btn.active[data-value="direct"] {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.18);
+}
 
 /* Fullscreen mode override */
 #tutor-panel.tutor-fullscreen {
