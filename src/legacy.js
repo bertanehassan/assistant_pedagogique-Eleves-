@@ -14597,162 +14597,159 @@ function updateTutorLiveMessage(content) {
 
 // ═══════════════════════════════════════════════════════
 // 🎤 TUTEUR — DICTÉE VOCALE (Speech-to-Text)
+// État stocké sur window pour éviter les problèmes d'obfuscation
 // ═══════════════════════════════════════════════════════
-(function initTutorVoice() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+window._tutorVoiceRecognition = null;
+window._tutorVoiceIsRecording = false;
 
-  if (!SR) {
-    // Navigateur incompatible : masquer le bouton quand le panneau s'ouvre
-    window.toggleTutorVoice = function() {};
+window.toggleTutorVoice = function() {
+  const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voiceBtn  = document.getElementById('tutor-voice-btn');
+  const voiceIcon = document.getElementById('tutor-voice-icon');
+
+  // Navigateur incompatible
+  if (!SpeechRecognitionAPI) {
+    if (voiceBtn) voiceBtn.style.display = 'none';
     return;
   }
 
-  let recognition = null;
-  let isRecording = false;
-
-  window.toggleTutorVoice = function() {
-    // Résoudre les éléments au moment de l'appel (le panneau est peut-être masqué à l'init)
-    const voiceBtn = document.getElementById('tutor-voice-btn');
-    const voiceIcon = document.getElementById('tutor-voice-icon');
-
-    if (isRecording) {
-      if (recognition) recognition.stop();
-      return;
+  // Si déjà en cours → arrêter
+  if (window._tutorVoiceIsRecording) {
+    if (window._tutorVoiceRecognition) {
+      window._tutorVoiceRecognition.stop();
     }
+    return;
+  }
 
-    recognition = new SR();
-    recognition.lang = 'fr-FR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+  // Créer une nouvelle instance
+  var recognition = new SpeechRecognitionAPI();
+  recognition.lang = 'fr-FR';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  window._tutorVoiceRecognition = recognition;
 
-    recognition.onstart = () => {
-      isRecording = true;
-      if (voiceBtn) voiceBtn.classList.add('recording');
-      if (voiceIcon) voiceIcon.textContent = 'mic_off';
-      if (voiceBtn) voiceBtn.title = 'Arrêter la dictée';
-    };
+  recognition.onstart = function() {
+    window._tutorVoiceIsRecording = true;
+    var btn  = document.getElementById('tutor-voice-btn');
+    var icon = document.getElementById('tutor-voice-icon');
+    if (btn)  btn.classList.add('recording');
+    if (icon) icon.textContent = 'mic_off';
+    if (btn)  btn.title = 'Arrêter la dictée';
+  };
 
-    recognition.onresult = (e) => {
-      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-      const inp = document.getElementById('tutor-user-input');
-      if (inp) {
-        inp.value += (inp.value ? ' ' : '') + transcript;
-        // Auto-resize
-        inp.style.height = '';
-        inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
-        // Envoyer automatiquement si la phrase est complète (ponctuation finale)
-        if (/[.!?]$/.test(transcript.trim())) {
-          setTimeout(() => sendTutorMessage(), 400);
-        }
-      }
-    };
-
-    recognition.onend = () => {
-      isRecording = false;
-      const btn = document.getElementById('tutor-voice-btn');
-      const ico = document.getElementById('tutor-voice-icon');
-      if (btn) btn.classList.remove('recording');
-      if (ico) ico.textContent = 'mic';
-      if (btn) btn.title = 'Dicter votre question à voix haute';
-      recognition = null;
-    };
-
-    recognition.onerror = (e) => {
-      isRecording = false;
-      const btn = document.getElementById('tutor-voice-btn');
-      const ico = document.getElementById('tutor-voice-icon');
-      if (btn) btn.classList.remove('recording');
-      if (ico) ico.textContent = 'mic';
-      recognition = null;
-      if (e.error === 'not-allowed') {
-        if (typeof toast === 'function') toast('Accès au microphone refusé', 'error');
-        else alert('Accès au microphone refusé. Veuillez autoriser l\'accès dans les paramètres du navigateur.');
-      } else if (e.error !== 'no-speech') {
-        if (typeof toast === 'function') toast('Dictée vocale indisponible', 'error');
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch(err) {
-      isRecording = false;
+  recognition.onresult = function(e) {
+    var transcript = '';
+    for (var i = 0; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript;
+    }
+    var inp = document.getElementById('tutor-user-input');
+    if (inp && transcript) {
+      inp.value = inp.value ? inp.value + ' ' + transcript : transcript;
+      inp.style.height = '';
+      inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
     }
   };
-})();
 
+  recognition.onend = function() {
+    window._tutorVoiceIsRecording = false;
+    window._tutorVoiceRecognition = null;
+    var btn  = document.getElementById('tutor-voice-btn');
+    var icon = document.getElementById('tutor-voice-icon');
+    if (btn)  btn.classList.remove('recording');
+    if (icon) icon.textContent = 'mic';
+    if (btn)  btn.title = 'Dicter votre question à voix haute';
+  };
+
+  recognition.onerror = function(evt) {
+    window._tutorVoiceIsRecording = false;
+    window._tutorVoiceRecognition = null;
+    var btn  = document.getElementById('tutor-voice-btn');
+    var icon = document.getElementById('tutor-voice-icon');
+    if (btn)  btn.classList.remove('recording');
+    if (icon) icon.textContent = 'mic';
+    if (evt.error === 'not-allowed') {
+      toast('Accès au microphone refusé — autorisez-le dans les paramètres du navigateur', 'error');
+    } else if (evt.error !== 'no-speech') {
+      toast('Dictée vocale indisponible', 'error');
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch(err) {
+    window._tutorVoiceIsRecording = false;
+    window._tutorVoiceRecognition = null;
+    console.error('[TutorVoice] start() error:', err);
+  }
+};
 
 // ═══════════════════════════════════════════════════════
 // 🔊 TUTEUR — SYNTHÈSE VOCALE (Text-to-Speech)
 // ═══════════════════════════════════════════════════════
-(function initTutorTTS() {
-  // Vérifier la disponibilité
-  if (!('speechSynthesis' in window)) return;
+window._tutorTTSEnabled = false;
 
-  // État persistant du mode TTS
-  let ttsEnabled = false;
-  let currentUtterance = null;
+window.toggleTutorTTS = function() {
+  var btn  = document.getElementById('tutor-tts-btn');
+  var icon = document.getElementById('tutor-tts-icon');
 
-  window.toggleTutorTTS = function() {
-    ttsEnabled = !ttsEnabled;
-    const btn = document.getElementById('tutor-tts-btn');
-    const icon = document.getElementById('tutor-tts-icon');
-
-    if (ttsEnabled) {
-      if (btn) {
-        btn.classList.add('tts-active');
-        btn.title = 'Désactiver la lecture vocale';
-      }
-      if (icon) icon.textContent = 'volume_up';
-    } else {
-      if (btn) {
-        btn.classList.remove('tts-active');
-        btn.title = 'Lire les réponses à voix haute';
-      }
-      if (icon) icon.textContent = 'volume_off';
-      // Arrêter toute lecture en cours
-      window.speechSynthesis.cancel();
-    }
-  };
-
-  // Exposer la fonction de lecture pour l'appeler après chaque réponse du tuteur
-  window.tutorSpeak = function(text) {
-    if (!ttsEnabled || !text) return;
-
-    // Annuler la lecture précédente
-    window.speechSynthesis.cancel();
-
-    // Nettoyer le markdown / HTML pour la lecture
-    const clean = text
-      .replace(/<[^>]+>/g, ' ')          // Supprimer les balises HTML
-      .replace(/```[\s\S]*?```/g, '')     // Supprimer les blocs de code
-      .replace(/#{1,6}\s/g, '')           // Supprimer les titres markdown
-      .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1') // Gras/italique
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // Liens
-      .replace(/\s{2,}/g, ' ')            // Espaces multiples
-      .trim();
-
-    if (!clean) return;
-
-    currentUtterance = new SpeechSynthesisUtterance(clean);
-    currentUtterance.lang = 'fr-FR';
-    currentUtterance.rate = 0.95;   // Légèrement plus lent pour la pédagogie
-    currentUtterance.pitch = 1.05;
-    currentUtterance.volume = 1;
-
-    // Choisir une voix française si disponible
-    const voices = window.speechSynthesis.getVoices();
-    const frVoice = voices.find(v => v.lang.startsWith('fr') && v.localService)
-                 || voices.find(v => v.lang.startsWith('fr'));
-    if (frVoice) currentUtterance.voice = frVoice;
-
-    window.speechSynthesis.speak(currentUtterance);
-  };
-
-  // Sur iOS/macOS, les voix sont chargées de façon asynchrone
-  if (window.speechSynthesis.onvoiceschanged !== undefined) {
-    window.speechSynthesis.onvoiceschanged = () => {};
+  if (!('speechSynthesis' in window)) {
+    if (btn) btn.style.display = 'none';
+    return;
   }
-})();
+
+  window._tutorTTSEnabled = !window._tutorTTSEnabled;
+
+  if (window._tutorTTSEnabled) {
+    if (btn)  btn.classList.add('tts-active');
+    if (btn)  btn.title = 'Désactiver la lecture vocale';
+    if (icon) icon.textContent = 'volume_up';
+  } else {
+    if (btn)  btn.classList.remove('tts-active');
+    if (btn)  btn.title = 'Lire les réponses à voix haute';
+    if (icon) icon.textContent = 'volume_off';
+    window.speechSynthesis.cancel();
+  }
+};
+
+window.tutorSpeak = function(text) {
+  if (!window._tutorTTSEnabled || !text || !('speechSynthesis' in window)) return;
+
+  // Arrêter la lecture précédente
+  window.speechSynthesis.cancel();
+
+  // Nettoyer le markdown / HTML pour une lecture naturelle
+  var clean = text
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/```[\s\S]*?```/g, 'bloc de code.')
+    .replace(/#{1,6}\s/g, '')
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  if (!clean) return;
+
+  var utterance = new SpeechSynthesisUtterance(clean);
+  utterance.lang = 'fr-FR';
+  utterance.rate = 0.95;
+  utterance.pitch = 1.05;
+  utterance.volume = 1;
+
+  // Préférer une voix française locale (meilleure qualité)
+  var voices = window.speechSynthesis.getVoices();
+  var frVoice = null;
+  for (var i = 0; i < voices.length; i++) {
+    if (voices[i].lang.startsWith('fr') && voices[i].localService) { frVoice = voices[i]; break; }
+  }
+  if (!frVoice) {
+    for (var j = 0; j < voices.length; j++) {
+      if (voices[j].lang.startsWith('fr')) { frVoice = voices[j]; break; }
+    }
+  }
+  if (frVoice) utterance.voice = frVoice;
+
+  window.speechSynthesis.speak(utterance);
+};
 
 window.sendTutorMessage = async function() {
   const input = document.getElementById('tutor-user-input');
