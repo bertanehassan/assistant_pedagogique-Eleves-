@@ -14743,25 +14743,42 @@ Mode **Directif** : Réponds de façon complète et claire. Donne la réponse ou
       window.MathJax.typesetPromise([aiDiv]).catch(() => {});
     }
     
-    // Rendu Mermaid.js pour les schémas
+    // Rendu Mermaid.js pour les schémas avec gestion d'erreur (Fallback)
     if (window.mermaid) {
       setTimeout(() => {
         const mermaidBlocks = aiDiv.querySelectorAll('pre code.language-mermaid');
         if (mermaidBlocks.length > 0) {
-          mermaidBlocks.forEach(block => {
+          mermaidBlocks.forEach(async (block, index) => {
+            const rawCode = block.textContent;
             const pre = block.parentElement;
-            const div = document.createElement('div');
-            div.className = 'mermaid';
-            div.textContent = block.textContent;
-            div.style.background = 'rgba(255,255,255,0.02)';
-            div.style.padding = '10px';
-            div.style.borderRadius = '8px';
-            div.style.overflowX = 'auto';
-            div.style.display = 'flex';
-            div.style.justifyContent = 'center';
-            pre.parentNode.replaceChild(div, pre);
+            try {
+              const id = 'mermaid-render-' + Date.now() + '-' + index;
+              const { svg } = await window.mermaid.render(id, rawCode);
+              
+              const div = document.createElement('div');
+              div.style.background = 'rgba(255,255,255,0.02)';
+              div.style.padding = '10px';
+              div.style.borderRadius = '8px';
+              div.style.overflowX = 'auto';
+              div.style.display = 'flex';
+              div.style.justifyContent = 'center';
+              div.innerHTML = svg;
+              
+              pre.parentNode.replaceChild(div, pre);
+            } catch (err) {
+              console.error('Mermaid syntax error:', err);
+              // On laisse le bloc de code original visible, mais on ajoute un avertissement
+              if (!pre.previousElementSibling || !pre.previousElementSibling.classList.contains('mermaid-warn')) {
+                const warn = document.createElement('div');
+                warn.className = 'mermaid-warn';
+                warn.style.color = '#fbbf24';
+                warn.style.fontSize = '11px';
+                warn.style.marginBottom = '4px';
+                warn.textContent = '⚠️ L\'IA a généré un schéma avec une syntaxe invalide. Voici le texte brut :';
+                pre.parentNode.insertBefore(warn, pre);
+              }
+            }
           });
-          window.mermaid.run({ nodes: aiDiv.querySelectorAll('.mermaid') }).catch(err => console.error('Mermaid error:', err));
         }
       }, 200); // léger délai pour s'assurer que le DOM est prêt
     }
