@@ -14651,12 +14651,6 @@ Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 
 - Commence toujours par demander ce que l'élève a déjà essayé.
 - Donne des indices de plus en plus précis avant de dévoiler.
 - Explique toujours le raisonnement, même quand tu donnes la réponse.`;
-  } else if (guidance === 'direct') {
-    systemMsg = `Tu es un Tuteur Pédagogique Expert bienveillant.
-Mode **Directif** : Réponds de façon complète et claire. Donne la réponse ou l'explication complète sans attendre que l'élève tâtonne.
-- Explique le concept, montre la résolution étape par étape, puis donne la réponse finale.
-- Propose des exercices similaires pour consolider la compréhension.
-- Sois pédagogue : utilise des exemples concrets, des analogies, des schémas en ASCII si utile.`;
   }
 
   const niveauEl = document.getElementById('tutor-niveau');

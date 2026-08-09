@@ -87,10 +87,6 @@
             <span class="guidance-icon">⚖️</span>
             <span class="guidance-label">Équilibré</span>
           </button>
-          <button class="guidance-btn" data-value="direct" onclick="setTutorGuidance('direct', this)" title="Le tuteur explique complètement et donne la réponse avec des explications détaillées">
-            <span class="guidance-icon">💡</span>
-            <span class="guidance-label">Directif</span>
-          </button>
         </div>
         <div id="tutor-guidance-hint" class="text-[10px] text-on-surface-variant/60 mt-1 italic">Questions guidées · jamais de réponse directe</div>
       </div>
@@ -222,13 +218,6 @@
   border-color: rgba(76, 215, 246, 0.45);
   color: var(--cyan, #4cd7f6);
   box-shadow: 0 0 10px rgba(76, 215, 246, 0.18);
-}
-/* Directif actif → ambre */
-.guidance-btn.active[data-value="direct"] {
-  background: rgba(251, 191, 36, 0.15);
-  border-color: rgba(251, 191, 36, 0.45);
-  color: #fbbf24;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.18);
 }
 
 /* Fullscreen mode override */
