@@ -14658,11 +14658,9 @@ Mode **Directif** : Réponds de façon complète et claire. Donne la réponse ou
   }
 
   // Encourager l'utilisation de graphiques visuels
-  systemMsg += `\n\n**OUTILS VISUELS** : Tu peux générer des schémas avec **Mermaid.js** (flowcharts, mindmaps). 
-**IMPORTANT POUR MERMAID** : Utilise une syntaxe extrêmement simple pour éviter les erreurs de rendu (Syntax error). 
-- Mets toujours le texte des noeuds entre guillemets doubles. Exemple correct : \`A["Angle droit"] --> B["Hypoténuse"]\`
-- Ne mets pas de caractères spéciaux hors des guillemets.
-- N'utilise que des \`graph TD\` ou \`graph LR\` basiques.`;
+  systemMsg += `\n\n**OUTILS VISUELS** : Tu peux générer des schémas visuels pour aider l'élève.
+1. **Géométrie et Mathématiques (Triangles, courbes, figures)** : Utilise UNIQUEMENT du code HTML \`<svg>\` brut. Mermaid ne sait pas dessiner de géométrie. Ex: \`<svg viewBox="0 0 200 100"><polygon points="10,90 190,90 10,10" fill="none" stroke="#4cd7f6" stroke-width="2"/></svg>\`. N'utilise JAMAIS de bloc de code (pas de \`\`\`html) pour le SVG, écris la balise \`<svg>\` directement dans le texte pour qu'elle s'affiche.
+2. **Algorithmes, Mindmaps, Processus** : Utilise **Mermaid.js**. Syntax : \`\`\`mermaid\n graph TD\n A["Texte"] --> B["Texte"]\n\`\`\`. Utilise TOUJOURS des guillemets doubles pour les labels.`;
 
 
   // Ajouter les images dans le système pour Gemini
