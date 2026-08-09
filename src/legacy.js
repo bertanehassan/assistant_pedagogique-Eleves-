@@ -14658,7 +14658,11 @@ Mode **Directif** : Réponds de façon complète et claire. Donne la réponse ou
   }
 
   // Encourager l'utilisation de graphiques visuels
-  systemMsg += `\n\n**OUTILS VISUELS** : L'interface supporte la génération de schémas interactifs avec **Mermaid.js**. N'hésite surtout pas à créer des diagrammes (flowcharts, mindmaps, géométrie basique, etc.) pour illustrer tes explications si cela aide à la compréhension visuelle, particulièrement en sciences. Utilise simplement un bloc de code \`\`\`mermaid ... \`\`\`.`;
+  systemMsg += `\n\n**OUTILS VISUELS** : Tu peux générer des schémas avec **Mermaid.js** (flowcharts, mindmaps). 
+**IMPORTANT POUR MERMAID** : Utilise une syntaxe extrêmement simple pour éviter les erreurs de rendu (Syntax error). 
+- Mets toujours le texte des noeuds entre guillemets doubles. Exemple correct : \`A["Angle droit"] --> B["Hypoténuse"]\`
+- Ne mets pas de caractères spéciaux hors des guillemets.
+- N'utilise que des \`graph TD\` ou \`graph LR\` basiques.`;
 
 
   // Ajouter les images dans le système pour Gemini
