@@ -14388,7 +14388,13 @@ window.tutorExport = function(format) {
   const buildHtml = (forPrint = false) => {
     const rows = messages.map(m => {
       const isUser = m.role === 'user';
-      const content = m.content || '';
+      let content = m.content || '';
+      if (typeof window.marked !== 'undefined' && window.marked.parse) {
+        content = window.marked.parse(content);
+      } else {
+        content = content.replace(/\n/g, '<br>');
+      }
+      
       const bgColor = isUser ? '#1e2a3a' : '#0f2318';
       const borderColor = isUser ? '#4cd7f6' : '#00f09d';
       const label = isUser ? '👤 Vous' : '🎓 Tuteur Expert';
@@ -14405,7 +14411,13 @@ window.tutorExport = function(format) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${titre}</title>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']], displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; background: ${forPrint ? '#fff' : '#0b1326'}; color: ${forPrint ? '#111' : '#d1d5db'}; margin: 0; padding: 30px; }
     h1 { font-size: 22px; margin-bottom: 4px; color: ${forPrint ? '#111' : '#4cd7f6'}; }
