@@ -1,31 +1,31 @@
 <template>
-  <div id="tutor-panel" class="fixed md:absolute top-14 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[600px] h-[calc(100vh-56px)] md:h-[640px] md:max-h-[85vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
+  <div id="tutor-panel" class="fixed md:absolute top-14 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[600px] h-[calc(100dvh-56px)] md:h-[640px] md:max-h-[85vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
     
     <!-- HEADER -->
-    <div class="flex justify-between items-center p-4 border-b border-white/10 bg-gradient-to-r from-cyan/20 to-transparent md:rounded-t-2xl flex-shrink-0">
+    <div class="flex justify-between items-center p-3 md:p-4 border-b border-white/10 bg-gradient-to-r from-cyan/20 to-transparent md:rounded-t-2xl flex-shrink-0">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-cyan/20 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(192,193,255,0.3)] border border-cyan/30">
+        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-cyan/20 flex items-center justify-center text-lg md:text-xl shadow-[0_0_15px_rgba(192,193,255,0.3)] border border-cyan/30">
           🎓
         </div>
         <div>
           <h3 class="font-bold text-on-surface text-sm">Tuteur Expert</h3>
-          <div class="text-[10px] text-cyan font-mono tracking-widest uppercase opacity-80">Assistance Pédagogique</div>
+          <div class="text-[9px] md:text-[10px] text-cyan font-mono tracking-widest uppercase opacity-80">Assistance Pédagogique</div>
         </div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1 md:gap-2">
         <!-- Badge modèle actif -->
-        <div id="tutor-model-badge" class="flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-[10px] font-mono text-on-surface-variant whitespace-nowrap max-w-[130px] overflow-hidden text-ellipsis" title="Modèle actif">
+        <div id="tutor-model-badge" class="flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-1 md:px-3 text-[10px] font-mono text-on-surface-variant whitespace-nowrap max-w-[90px] md:max-w-[130px] overflow-hidden text-ellipsis" title="Modèle actif">
           <span style="font-size:10px;">🤖</span>
           <span id="tutor-model-name">—</span>
         </div>
         <!-- Bouton Synthèse Vocale (TTS) -->
         <button id="tutor-tts-btn" onclick="toggleTutorTTS()" class="panel-close-btn" title="Lire les réponses à voix haute">
-          <span id="tutor-tts-icon" class="material-symbols-outlined" style="font-size: 20px;">volume_up</span>
+          <span id="tutor-tts-icon" class="material-symbols-outlined" style="font-size: 18px;">volume_up</span>
         </button>
         <!-- Bouton Export -->
         <div class="relative" id="tutor-export-menu-wrapper">
           <button onclick="toggleTutorExportMenu()" class="panel-close-btn" title="Exporter la conversation" style="color: #a78bfa;">
-            <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
+            <span class="material-symbols-outlined" style="font-size: 18px;">download</span>
           </button>
           <div id="tutor-export-menu" class="hidden absolute right-0 top-full mt-1 bg-black/90 border border-white/15 rounded-xl shadow-2xl overflow-hidden z-50 w-44 backdrop-blur-xl">
             <button onclick="tutorExport('copy')" class="tutor-export-item">📋 Copier</button>
@@ -36,36 +36,37 @@
           </div>
         </div>
         <!-- Bouton Plein Écran -->
-        <button onclick="toggleTutorFullscreen()" class="panel-close-btn" title="Plein écran">
-          <span id="tutor-fullscreen-icon" class="material-symbols-outlined" style="font-size: 20px;">fullscreen</span>
+        <button onclick="toggleTutorFullscreen()" class="panel-close-btn hidden md:flex" title="Plein écran">
+          <span id="tutor-fullscreen-icon" class="material-symbols-outlined" style="font-size: 18px;">fullscreen</span>
         </button>
         <!-- Bouton Nouvelle Conversation -->
         <button onclick="clearTutorConversation()" class="panel-close-btn" title="Nouvelle conversation" style="color: var(--cyan);">
-          <span class="material-symbols-outlined" style="font-size: 20px;">add_comment</span>
+          <span class="material-symbols-outlined" style="font-size: 18px;">add_comment</span>
         </button>
         <!-- Bouton Fermer -->
         <button class="panel-close-btn" onclick="closeTutorPanel()" title="Fermer">
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
         </button>
       </div>
     </div>
 
     <!-- BARRE DE CONTEXTE (toujours visible) -->
-    <div class="flex-shrink-0 px-4 py-3 border-b border-white/10 bg-black/30">
-      <div class="flex gap-3 mb-2">
+    <div class="flex-shrink-0 px-3 md:px-4 py-2 border-b border-white/10 bg-black/30 overflow-y-auto max-h-[25dvh] md:max-h-none custom-scrollbar">
+      <div class="flex gap-2 md:gap-3 mb-2">
         <div class="flex-1">
-          <label class="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">🎓 Niveau scolaire</label>
-          <select id="tutor-niveau" class="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors">
+          <label class="block text-[9px] md:text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">🎓 Niveau scolaire</label>
+          <select id="tutor-niveau" class="w-full bg-black/50 border border-white/15 rounded-lg px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors">
             <option value="">Non précisé</option>
             <option value="Primaire">Primaire</option>
+
             <option value="Collège">Collège</option>
             <option value="Lycée">Lycée</option>
             <option value="Supérieur">Supérieur</option>
           </select>
         </div>
         <div class="flex-1">
-          <label class="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">📚 Domaine / Matière</label>
-          <select id="tutor-domaine" class="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors">
+          <label class="block text-[9px] md:text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">📚 Domaine / Matière</label>
+          <select id="tutor-domaine" class="w-full bg-black/50 border border-white/15 rounded-lg px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors">
             <option value="">Non précisé</option>
             <option value="Mathématiques">Mathématiques</option>
             <option value="Physique-Chimie">Physique-Chimie</option>
@@ -80,19 +81,17 @@
         </div>
       </div>
       <!-- Niveau de guidage -->
-      <div>
-        <label class="block text-[10px] text-on-surface-variant mb-1.5 uppercase tracking-wider">🧭 Niveau de guidage</label>
-        <div class="tutor-guidance-selector" id="tutor-guidance-selector">
-          <button class="guidance-btn active" data-value="socratic" onclick="setTutorGuidance('socratic', this)" title="Le tuteur pose des questions et guide par la réflexion, sans jamais donner la réponse">
-            <span class="guidance-icon">🧠</span>
-            <span class="guidance-label">Socratique</span>
+      <div class="flex md:block items-center gap-2">
+        <label class="hidden md:block text-[10px] text-on-surface-variant mb-1.5 uppercase tracking-wider">🧭 Niveau de guidage</label>
+        <div class="tutor-guidance-selector flex-1" id="tutor-guidance-selector">
+          <button class="guidance-btn active py-1 md:py-1.5" data-value="socratic" onclick="setTutorGuidance('socratic', this)" title="Socratique : questions guidées">
+            <span class="guidance-label">🧠 Socratique</span>
           </button>
-          <button class="guidance-btn" data-value="balanced" onclick="setTutorGuidance('balanced', this)" title="Le tuteur donne des indices progressifs et révèle la réponse si l'élève est vraiment bloqué">
-            <span class="guidance-icon">⚖️</span>
-            <span class="guidance-label">Équilibré</span>
+          <button class="guidance-btn py-1 md:py-1.5" data-value="balanced" onclick="setTutorGuidance('balanced', this)" title="Équilibré : indices progressifs">
+            <span class="guidance-label">⚖️ Équilibré</span>
           </button>
         </div>
-        <div id="tutor-guidance-hint" class="text-[10px] text-on-surface-variant/60 mt-1 italic">Questions guidées · jamais de réponse directe</div>
+        <div id="tutor-guidance-hint" class="hidden md:block text-[10px] text-on-surface-variant/60 mt-1 italic">Questions guidées · jamais de réponse directe</div>
       </div>
     </div>
 

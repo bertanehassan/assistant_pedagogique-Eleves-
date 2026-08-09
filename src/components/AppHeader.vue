@@ -30,7 +30,7 @@
     </div>
 
     <!-- Center: Selectors & Actions (Scrollable horizontally on all screens) -->
-    <div class="scrollable-header-center flex items-center gap-2 md:gap-3 flex-1 justify-start md:justify-center px-2 flex-nowrap whitespace-nowrap overflow-x-auto">
+    <div class="scrollable-header-center flex items-center gap-2 md:gap-3 flex-1 min-w-0 justify-start md:justify-center px-2 flex-nowrap whitespace-nowrap overflow-x-auto">
       
       <!-- Selectors -->
       <div class="flex items-center gap-2">
