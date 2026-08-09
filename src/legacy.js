@@ -14389,7 +14389,10 @@ window.tutorExport = function(format) {
     const rows = messages.map(m => {
       const isUser = m.role === 'user';
       let content = m.content || '';
-      if (typeof window.marked !== 'undefined' && window.marked.parse) {
+      
+      if (typeof parseMarkdownSafeMath === 'function') {
+        content = parseMarkdownSafeMath(content);
+      } else if (typeof window.marked !== 'undefined' && window.marked.parse) {
         content = window.marked.parse(content);
       } else {
         content = content.replace(/\n/g, '<br>');
