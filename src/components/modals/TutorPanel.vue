@@ -18,6 +18,19 @@
           <span style="font-size:10px;">🤖</span>
           <span id="tutor-model-name">—</span>
         </div>
+        <!-- Bouton Export -->
+        <div class="relative" id="tutor-export-menu-wrapper">
+          <button onclick="toggleTutorExportMenu()" class="panel-close-btn" title="Exporter la conversation" style="color: #a78bfa;">
+            <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
+          </button>
+          <div id="tutor-export-menu" class="hidden absolute right-0 top-full mt-1 bg-black/90 border border-white/15 rounded-xl shadow-2xl overflow-hidden z-50 w-44 backdrop-blur-xl">
+            <button onclick="tutorExport('copy')" class="tutor-export-item">📋 Copier</button>
+            <button onclick="tutorExport('html')" class="tutor-export-item">🌐 HTML</button>
+            <button onclick="tutorExport('txt')" class="tutor-export-item">📄 Texte (.txt)</button>
+            <button onclick="tutorExport('word')" class="tutor-export-item">📝 Word (.doc)</button>
+            <button onclick="tutorExport('pdf')" class="tutor-export-item">🔴 PDF</button>
+          </div>
+        </div>
         <!-- Bouton Plein Écran -->
         <button onclick="toggleTutorFullscreen()" class="panel-close-btn" title="Plein écran">
           <span id="tutor-fullscreen-icon" class="material-symbols-outlined" style="font-size: 20px;">fullscreen</span>
