@@ -83,6 +83,8 @@ export default defineConfig(({ mode }) => ({
     }),
     // Obfuscation activée uniquement en production
     mode === 'production' && obfuscatorPlugin({
+      // Exclure tutor-voice.js : controlFlowFlattening casse les callbacks SpeechRecognition
+      exclude: [/tutor-voice/],
       options: {
         // ── Encodage des chaînes de caractères ──
         stringArray: true,
