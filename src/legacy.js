@@ -8597,7 +8597,10 @@ function bindEvents() {
     const existingModal = document.getElementById('quiz-save-modal');
     if (existingModal) existingModal.remove();
 
-    const defaultTitle = "Quiz du " + new Date().toLocaleDateString();
+    const defaultTitle = (wqState.metadata && (wqState.metadata.title || wqState.metadata.titre)) || ("Quiz du " + new Date().toLocaleDateString());
+    const defaultMatiere = (wqState.metadata && wqState.metadata.matiere) || "SVT";
+    const defaultLecon = (wqState.metadata && wqState.metadata.lecon) || "";
+    const defaultAuteur = (wqState.metadata && wqState.metadata.auteur) || "Bertane Hassan";
 
     const modal = document.createElement('div');
     modal.id = 'quiz-save-modal';
@@ -8617,25 +8620,25 @@ function bindEvents() {
         <p style="color:#aaa; font-size:13px; margin:0 0 20px 0;">Complétez les métadonnées de votre quiz avant de l'enregistrer.</p>
 
         <label style="color:#ddd; font-size:14px; font-weight:600; display:block; margin-bottom:6px;">Nom du quiz</label>
-        <input id="quiz-save-name" type="text" value="${defaultTitle}"
+        <input id="quiz-save-name" type="text" value="${escapeHtml(defaultTitle)}"
           style="width:100%; box-sizing:border-box; padding:10px 14px; border-radius:10px;
                  border:1px solid rgba(0,229,255,0.3); background:rgba(255,255,255,0.07);
                  color:#fff; font-size:14px; outline:none; margin-bottom:14px;">
 
         <label style="color:#ddd; font-size:14px; font-weight:600; display:block; margin-bottom:6px;">Matière</label>
-        <input id="quiz-save-matiere" type="text" value="SVT"
+        <input id="quiz-save-matiere" type="text" value="${escapeHtml(defaultMatiere)}"
           style="width:100%; box-sizing:border-box; padding:10px 14px; border-radius:10px;
                  border:1px solid rgba(0,229,255,0.3); background:rgba(255,255,255,0.07);
                  color:#fff; font-size:14px; outline:none; margin-bottom:14px;">
 
         <label style="color:#ddd; font-size:14px; font-weight:600; display:block; margin-bottom:6px;">Leçon / Chapitre</label>
-        <input id="quiz-save-lecon" type="text" placeholder="ex: Chapitre 1"
+        <input id="quiz-save-lecon" type="text" placeholder="ex: Chapitre 1" value="${escapeHtml(defaultLecon)}"
           style="width:100%; box-sizing:border-box; padding:10px 14px; border-radius:10px;
                  border:1px solid rgba(0,229,255,0.3); background:rgba(255,255,255,0.07);
                  color:#fff; font-size:14px; outline:none; margin-bottom:14px;">
 
         <label style="color:#ddd; font-size:14px; font-weight:600; display:block; margin-bottom:6px;">Auteur du quiz</label>
-        <input id="quiz-save-auteur" type="text" value="Bertane Hassan"
+        <input id="quiz-save-auteur" type="text" value="${escapeHtml(defaultAuteur)}"
           style="width:100%; box-sizing:border-box; padding:10px 14px; border-radius:10px;
                  border:1px solid rgba(0,229,255,0.3); background:rgba(255,255,255,0.07);
                  color:#fff; font-size:14px; outline:none; margin-bottom:20px;">
