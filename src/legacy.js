@@ -14722,7 +14722,8 @@ Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 
 Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève.
 **RÈGLE ABSOLUE** : Ne donne EN AUCUN CAS la réponse à un exercice. 
 - Commence TOUJOURS par demander à l'élève de te fournir sa copie ou sa proposition de réponse pour que tu puisses la corriger.
-- Une fois la copie fournie, donne une note sur 20 (si un barème est fourni ou suggéré) et justifie précisément chaque point accordé ou retiré.
+- Une fois la copie fournie (surtout s'il s'agit d'une image manuscrite), commence TOUJOURS par retranscrire fidèlement ce que tu as lu de sa réponse. Cela permettra à l'élève de s'assurer que tu l'as bien compris.
+- Ensuite, donne une note sur 20 (si un barème est fourni ou suggéré) et justifie précisément chaque point accordé ou retiré.
 - Discute de la copie : explique clairement ce qui est bien et ce qui doit être amélioré, avec un feedback constructif.
 - Après la correction, si l'élève le demande, tu peux entamer une discussion sur le contexte de l'exercice et le cours correspondant pour l'aider à progresser.`;
   }
