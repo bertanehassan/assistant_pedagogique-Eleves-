@@ -20,7 +20,7 @@
         </div>
         <!-- Bouton Synthèse Vocale (TTS) -->
         <button id="tutor-tts-btn" onclick="toggleTutorTTS()" class="panel-close-btn" title="Lire les réponses à voix haute">
-          <span id="tutor-tts-icon" class="material-symbols-outlined" style="font-size: 18px;">volume_up</span>
+          <span id="tutor-tts-icon" class="material-symbols-outlined" style="font-size: 18px;">volume_off</span>
         </button>
         <!-- Bouton Export -->
         <div class="relative" id="tutor-export-menu-wrapper">

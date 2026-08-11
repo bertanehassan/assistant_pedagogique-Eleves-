@@ -136,17 +136,32 @@ window.tutorSpeak = function (text) {
   utterance.pitch   = 1.05;
   utterance.volume  = 1;
 
-  var voices = window.speechSynthesis.getVoices();
-  for (var i = 0; i < voices.length; i++) {
-    if (voices[i].lang.startsWith('fr') && voices[i].localService) {
-      utterance.voice = voices[i]; break;
+  function pickVoiceAndSpeak() {
+    var voices = window.speechSynthesis.getVoices();
+    for (var i = 0; i < voices.length; i++) {
+      if (voices[i].lang.startsWith('fr') && voices[i].localService) {
+        utterance.voice = voices[i]; break;
+      }
     }
-  }
-  if (!utterance.voice) {
-    for (var j = 0; j < voices.length; j++) {
-      if (voices[j].lang.startsWith('fr')) { utterance.voice = voices[j]; break; }
+    if (!utterance.voice) {
+      for (var j = 0; j < voices.length; j++) {
+        if (voices[j].lang.startsWith('fr')) { utterance.voice = voices[j]; break; }
+      }
     }
+    window.speechSynthesis.speak(utterance);
   }
 
-  window.speechSynthesis.speak(utterance);
+  // Sur Android/Chrome, getVoices() est vide au premier appel.
+  // On attend l'événement voiceschanged si nécessaire.
+  var voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    pickVoiceAndSpeak();
+  } else {
+    window.speechSynthesis.addEventListener('voiceschanged', function onVoicesChanged() {
+      window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+      pickVoiceAndSpeak();
+    });
+    // Fallback si voiceschanged ne tire pas (certains navigateurs)
+    setTimeout(pickVoiceAndSpeak, 300);
+  }
 };
