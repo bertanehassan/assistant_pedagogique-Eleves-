@@ -3319,10 +3319,34 @@ function initFileUpload() {
       const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx');
       
       if (isImage) {
+        toast(`🖼 Traitement de l'image en cours...`, 'info');
         const reader = new FileReader();
         reader.onload = (ev) => {
-          state.attachedFiles.push({ type: 'image', data: ev.target.result, name: file.name, mimeType: file.type });
-          updateFilePreview();
+          const img = new Image();
+          img.onload = () => {
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+            } else {
+              if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            state.attachedFiles.push({ type: 'image', data: dataUrl, name: file.name, mimeType: 'image/jpeg' });
+            updateFilePreview();
+            toast(`🖼 ${file.name} ajouté`, 'success');
+          };
+          img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
       } else if (isAudioFile) {
@@ -14510,11 +14534,34 @@ window.tutorHandleFiles = async function(files) {
     const isDocx = file.type.includes('wordprocessingml') || file.name.endsWith('.docx');
 
     if (isImage) {
+      toast(`🖼 Traitement de ${file.name} en cours...`, 'info');
       const reader = new FileReader();
       reader.onload = (ev) => {
-        state.tutorAttachedFiles.push({ type: 'image', data: ev.target.result, name: file.name, mimeType: file.type });
-        updateTutorFilePreview();
-        toast(`🖼 ${file.name} ajouté`, 'success');
+        const img = new Image();
+        img.onload = () => {
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+          } else {
+            if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          state.tutorAttachedFiles.push({ type: 'image', data: dataUrl, name: file.name, mimeType: 'image/jpeg' });
+          updateTutorFilePreview();
+          toast(`🖼 ${file.name} ajouté`, 'success');
+        };
+        img.src = ev.target.result;
       };
       reader.readAsDataURL(file);
     } else if (isPdf) {
