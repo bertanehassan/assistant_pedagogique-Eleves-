@@ -83,12 +83,15 @@
       <!-- Niveau de guidage -->
       <div class="flex md:block items-center gap-2">
         <label class="hidden md:block text-[10px] text-on-surface-variant mb-1.5 uppercase tracking-wider">🧭 Niveau de guidage</label>
-        <div class="tutor-guidance-selector flex-1" id="tutor-guidance-selector">
+        <div class="tutor-guidance-selector flex-1 flex flex-wrap gap-1" id="tutor-guidance-selector">
           <button class="guidance-btn active py-1 md:py-1.5" data-value="socratic" onclick="setTutorGuidance('socratic', this)" title="Socratique : questions guidées">
             <span class="guidance-label">🧠 Socratique</span>
           </button>
           <button class="guidance-btn py-1 md:py-1.5" data-value="balanced" onclick="setTutorGuidance('balanced', this)" title="Équilibré : indices progressifs">
             <span class="guidance-label">⚖️ Équilibré</span>
+          </button>
+          <button class="guidance-btn py-1 md:py-1.5" data-value="corrector" onclick="setTutorGuidance('corrector', this)" title="Correcteur : notation et feedback">
+            <span class="guidance-label">✍️ Correcteur</span>
           </button>
         </div>
         <div id="tutor-guidance-hint" class="hidden md:block text-[10px] text-on-surface-variant/60 mt-1 italic">Questions guidées · jamais de réponse directe</div>

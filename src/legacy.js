@@ -14258,7 +14258,8 @@ state.tutorGuidance = state.tutorGuidance || 'socratic';
 const GUIDANCE_HINTS = {
   socratic: "Questions guidées · jamais de réponse directe",
   balanced: "Indices progressifs · réponse si vraiment bloqué",
-  direct:   "Explications complètes · réponses avec détails"
+  direct:   "Explications complètes · réponses avec détails",
+  corrector: "Correction notée · justification et feedback"
 };
 
 window.setTutorGuidance = function(value, btn) {
@@ -14669,6 +14670,13 @@ Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 
 - Commence toujours par demander ce que l'élève a déjà essayé.
 - Donne des indices de plus en plus précis avant de dévoiler.
 - Explique toujours le raisonnement, même quand tu donnes la réponse.`;
+  } else if (guidance === 'corrector') {
+    systemMsg = `Tu es un Professeur Correcteur bienveillant mais rigoureux.
+Mode **Correcteur** : Ton rôle est de corriger le travail de l'élève de manière détaillée.
+- Si la situation s'y prête (ou si un barème est fourni/suggéré), donne une note sur 20.
+- Justifie précisément chaque point accordé ou retiré.
+- Discute de la copie : explique clairement ce qui est bien et ce qui doit être amélioré.
+- Donne un feedback constructif et des conseils pour permettre à l'élève de progresser, sans jamais le décourager.`;
   }
 
   const niveauEl = document.getElementById('tutor-niveau');
