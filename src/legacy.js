@@ -8470,6 +8470,9 @@ function bindEvents() {
   const quizzesBtn = $("#quizzes-btn");
   const quizzesPanel = $("#quizzes-panel");
   let quizzesSearchQuery = "";
+  let quizzesFilterMatiere = "";
+  let quizzesFilterLecon = "";
+  let quizzesFilterType = "";
 
   window.openQuizzesPanel = () => {
     quizzesPanel.style.display = "flex";
@@ -8503,6 +8506,18 @@ function bindEvents() {
     $("#quizzes-search-input").oninput = e => { quizzesSearchQuery = e.target.value; renderQuizzes(); };
     $("#quizzes-search-input").onclick = e => e.stopPropagation();
   }
+  if ($("#quizzes-filter-matiere")) {
+    $("#quizzes-filter-matiere").onchange = e => { quizzesFilterMatiere = e.target.value; renderQuizzes(); };
+    $("#quizzes-filter-matiere").onclick = e => e.stopPropagation();
+  }
+  if ($("#quizzes-filter-lecon")) {
+    $("#quizzes-filter-lecon").onchange = e => { quizzesFilterLecon = e.target.value; renderQuizzes(); };
+    $("#quizzes-filter-lecon").onclick = e => e.stopPropagation();
+  }
+  if ($("#quizzes-filter-type")) {
+    $("#quizzes-filter-type").onchange = e => { quizzesFilterType = e.target.value; renderQuizzes(); };
+    $("#quizzes-filter-type").onclick = e => e.stopPropagation();
+  }
 
   window.renderQuizzes = async function() {
     const list = $("#quizzes-list");
@@ -8510,9 +8525,37 @@ function bindEvents() {
     try {
       let quizzes = await db.getAll('saved_quizzes') || [];
       quizzes = quizzes.sort((a, b) => (b.date||0) - (a.date||0));
+      
+      const matieres = [...new Set(quizzes.map(q => q.matiere).filter(Boolean))].sort();
+      const selectMatiere = $("#quizzes-filter-matiere");
+      if (selectMatiere && selectMatiere.options.length <= 1) {
+          const currentValue = selectMatiere.value;
+          selectMatiere.innerHTML = '<option value="">Toutes les matières</option>' + matieres.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+          selectMatiere.value = currentValue;
+      }
+      
+      const lecons = [...new Set(quizzes.map(q => q.lecon).filter(Boolean))].sort();
+      const selectLecon = $("#quizzes-filter-lecon");
+      if (selectLecon && selectLecon.options.length <= 1) {
+          const currentValue = selectLecon.value;
+          selectLecon.innerHTML = '<option value="">Toutes les leçons</option>' + lecons.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+          selectLecon.value = currentValue;
+      }
+
+      if (quizzesFilterMatiere) {
+        quizzes = quizzes.filter(q => q.matiere === quizzesFilterMatiere);
+      }
+      if (quizzesFilterLecon) {
+        quizzes = quizzes.filter(q => q.lecon === quizzesFilterLecon);
+      }
+      if (quizzesFilterType) {
+        if (quizzesFilterType === 'QR') quizzes = quizzes.filter(q => q.type === 'QR');
+        else if (quizzesFilterType === 'QCM') quizzes = quizzes.filter(q => q.type === 'QCM' || !q.type);
+      }
+
       if (quizzesSearchQuery) {
         const q = quizzesSearchQuery.toLowerCase();
-        quizzes = quizzes.filter(c => (c.title||"").toLowerCase().includes(q));
+        quizzes = quizzes.filter(c => (c.title||"").toLowerCase().includes(q) || (c.matiere||"").toLowerCase().includes(q) || (c.lecon||"").toLowerCase().includes(q));
       }
       if (!quizzes.length) {
         list.innerHTML = '<div class="archive-empty">Aucun quiz trouvé</div>';

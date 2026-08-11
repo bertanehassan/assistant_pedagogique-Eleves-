@@ -83,7 +83,25 @@
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
-    <input type="text" id="quizzes-search-input" class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-yellow-500 transition-colors" placeholder="Rechercher un quiz...">
+    <div class="flex flex-col gap-2">
+      <div class="flex gap-2">
+        <select id="quizzes-filter-matiere" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-on-surface focus:outline-none focus:border-yellow-500 transition-colors">
+          <option value="">Toutes les matières</option>
+        </select>
+        <select id="quizzes-filter-lecon" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-on-surface focus:outline-none focus:border-yellow-500 transition-colors">
+          <option value="">Toutes les leçons</option>
+        </select>
+      </div>
+      <div class="flex gap-2">
+        <select id="quizzes-filter-type" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-on-surface focus:outline-none focus:border-yellow-500 transition-colors">
+          <option value="">Tous les types</option>
+          <option value="QCM">QCM</option>
+          <option value="QR">FlashCards</option>
+          <!-- <option value="V/F">Vrai/Faux</option> if you want to support more later -->
+        </select>
+        <input type="text" id="quizzes-search-input" class="flex-[2] bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-on-surface focus:outline-none focus:border-yellow-500 transition-colors" placeholder="Rechercher...">
+      </div>
+    </div>
     <div id="quizzes-list" class="flex-1 md:max-h-60 overflow-y-auto text-sm text-on-surface-variant flex flex-col gap-2 pr-1 custom-scrollbar">
       <div class="archive-empty text-center italic opacity-50 py-4">Aucun quiz sauvegardé.</div>
     </div>
