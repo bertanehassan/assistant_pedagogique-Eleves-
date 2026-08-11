@@ -14776,8 +14776,25 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
     // Vérifier si le modèle est vision depuis la config MODELS
     const modelCfg = (window.APP_MODELS || []).find(m => m.id === activeModel);
     const isTutorVision = isTutorGemini || !!(modelCfg && modelCfg.vision);
+
+    // ── Si images présentes mais modèle non-vision → bloquer et avertir ──
     if (hasImages && !isTutorVision) {
-      toast("📷 Images ignorées : sélectionnez un modèle compatible vision (Gemini, Mistral Large, Ministral, Llama 4 Maverick…).", "error");
+      // Enlever l'indicateur "typing" du DOM
+      const contentSpanBlocked = aiDiv.querySelector('.tutor-response-content');
+      if (contentSpanBlocked) {
+        contentSpanBlocked.innerHTML = `
+          <div style="color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 14px;font-size:13px;">
+            📷 <b>Ce modèle (${activeModel}) ne supporte pas les images.</b><br>
+            Pour analyser une copie manuscrite, sélectionnez un modèle compatible :<br>
+            <span style="color:#4cd7f6">✨ Gemini 3.5 Flash · 🔥 Mistral Large / Medium / Small · ⚡ Ministral · 🦙 Llama 4 Maverick</span>
+          </div>`;
+      }
+      // Retirer le message vide de l'historique
+      state.tutorMessages.pop();
+      // Remettre les fichiers pour que l'élève puisse réessayer avec un autre modèle
+      state.tutorAttachedFiles = [...imageFiles];
+      updateTutorFilePreview();
+      return;
     }
 
     if (isTutorGemini) {
