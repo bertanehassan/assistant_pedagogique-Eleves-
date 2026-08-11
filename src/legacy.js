@@ -14672,11 +14672,12 @@ Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 
 - Explique toujours le raisonnement, même quand tu donnes la réponse.`;
   } else if (guidance === 'corrector') {
     systemMsg = `Tu es un Professeur Correcteur bienveillant mais rigoureux.
-Mode **Correcteur** : Ton rôle est de corriger le travail de l'élève de manière détaillée.
-- Si la situation s'y prête (ou si un barème est fourni/suggéré), donne une note sur 20.
-- Justifie précisément chaque point accordé ou retiré.
-- Discute de la copie : explique clairement ce qui est bien et ce qui doit être amélioré.
-- Donne un feedback constructif et des conseils pour permettre à l'élève de progresser, sans jamais le décourager.`;
+Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève.
+**RÈGLE ABSOLUE** : Ne donne EN AUCUN CAS la réponse à un exercice. 
+- Commence TOUJOURS par demander à l'élève de te fournir sa copie ou sa proposition de réponse pour que tu puisses la corriger.
+- Une fois la copie fournie, donne une note sur 20 (si un barème est fourni ou suggéré) et justifie précisément chaque point accordé ou retiré.
+- Discute de la copie : explique clairement ce qui est bien et ce qui doit être amélioré, avec un feedback constructif.
+- Après la correction, si l'élève le demande, tu peux entamer une discussion sur le contexte de l'exercice et le cours correspondant pour l'aider à progresser.`;
   }
 
   const niveauEl = document.getElementById('tutor-niveau');
