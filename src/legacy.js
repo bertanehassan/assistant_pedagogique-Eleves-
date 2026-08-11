@@ -13528,6 +13528,29 @@ document.addEventListener('click', (e) => {
 
 // ─── JSON QUIZ IMPORT & EVALUATION MODE ─────────────────────────────────────
 
+/**
+ * Charge un quiz à partir du contenu texte d'un fichier JSON.
+ * Appelé depuis le sélecteur de fichier ET depuis le handler launchQueue (PWA File Handling).
+ */
+window.handleQuizJsonText = function(content) {
+  try {
+    if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
+    const json = JSON.parse(content);
+    const questions = Array.isArray(json) ? json : (json.questions || []);
+    if (!questions || questions.length === 0) throw new Error('Format invalide');
+
+    if (json.type === 'QR') {
+      _showFlashCardPlayer(questions, json);
+    } else {
+      wqState.metadata = json;
+      askQuizMode((mode) => { startWebQuizFromData(questions, mode); });
+    }
+  } catch (err) {
+    console.error(err);
+    alert(t('msg_json_load_error'));
+  }
+};
+
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('#import-quiz-json-btn');
   if (btn) {
@@ -13541,25 +13564,7 @@ document.addEventListener('change', (e) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      try {
-        let content = ev.target.result;
-        if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
-        const json = JSON.parse(content);
-        const questions = Array.isArray(json) ? json : (json.questions || []);
-        if (!questions || questions.length === 0) throw new Error('Format invalide');
-
-        // Demander le mode
-        // Demander le mode via le modal élégant
-        if (json.type === 'QR') {
-          _showFlashCardPlayer(questions, json);
-        } else {
-          wqState.metadata = json;
-          askQuizMode((mode) => { startWebQuizFromData(questions, mode); });
-        }
-      } catch (err) {
-        console.error(err);
-        alert(t('msg_json_load_error'));
-      }
+      window.handleQuizJsonText(ev.target.result);
       e.target.value = '';
     };
     reader.readAsText(file);

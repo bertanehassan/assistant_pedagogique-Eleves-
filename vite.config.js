@@ -24,47 +24,16 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'prompt',
       injectRegister: 'auto',
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2,ttf}'],
         maximumFileSizeToCacheInBytes: 5000000,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'jsdelivr-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/cdnjs\.cloudflare\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'cdnjs-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'google-fonts-cache'
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 365 }
-            }
-          }
-        ]
       },
+      // Suppression de la section workbox qui est gérée dans src/sw.js
       manifest: {
         name: 'Mon Assistant Pédagogique - Élèves-',
         short_name: 'Assistant Pédagogique',
@@ -78,7 +47,23 @@ export default defineConfig(({ mode }) => ({
             sizes: 'any',
             type: 'image/svg+xml'
           }
-        ]
+        ],
+        share_target: {
+          action: '/?shared_file=true',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
+            files: [
+              {
+                name: 'shared_quiz_file',
+                accept: ['application/json', '.json']
+              }
+            ]
+          }
+        }
       }
     }),
     // Obfuscation activée uniquement en production
