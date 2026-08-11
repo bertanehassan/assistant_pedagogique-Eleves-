@@ -14928,16 +14928,20 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
       await handleStreamingResponse(res, updateTutorLiveMessage, () => {}, null);
     }
 
+    // 🔊 Synthèse vocale — lire le texte rendu (après MathJax) si le mode TTS est activé
+    const doSpeak = typeof window.tutorSpeak === 'function';
     if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
-      window.MathJax.typesetPromise([aiDiv]).catch(() => {});
-    }
-
-    // 🔊 Synthèse vocale — lire la réponse du tuteur si le mode TTS est activé
-    if (typeof window.tutorSpeak === 'function') {
-      const lastMsg = state.tutorMessages[state.tutorMessages.length - 1];
-      if (lastMsg && lastMsg.role === 'assistant') {
-        window.tutorSpeak(lastMsg.content);
-      }
+      window.MathJax.typesetPromise([aiDiv]).then(() => {
+        if (doSpeak) {
+          const contentSpan = aiDiv.querySelector('.tutor-response-content');
+          const spokenText = contentSpan ? contentSpan.innerText : aiDiv.innerText;
+          window.tutorSpeak(spokenText);
+        }
+      }).catch(() => {});
+    } else if (doSpeak) {
+      const contentSpan = aiDiv.querySelector('.tutor-response-content');
+      const spokenText = contentSpan ? contentSpan.innerText : aiDiv.innerText;
+      window.tutorSpeak(spokenText);
     }
     
     // Rendu Mermaid.js pour les schémas avec gestion d'erreur (Fallback)
