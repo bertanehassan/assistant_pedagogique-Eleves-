@@ -14712,15 +14712,40 @@ Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 
     // getLlmApiConfig retourne { provider, url, headers }
     const aiConfig = getLlmApiConfig(state.model || 'mistral-large-2512');
     const activeModel = state.model || 'mistral-large-2512';
+    
+    // Vérifier la compatibilité image
+    const hasImages = imageFiles && imageFiles.length > 0;
+    const isTutorGemini = aiConfig.provider === 'gemini';
+    const isTutorPixtral = activeModel.includes('pixtral');
+    if (hasImages && !isTutorGemini && !isTutorPixtral) {
+      toast("📷 Images ignorées : sélectionnez Gemini ou Pixtral.", "error");
+    }
 
-    if (aiConfig.provider === 'gemini') {
-      // Gemini : format différent (contents + systemInstruction)
+    if (isTutorGemini) {
+      // ── GEMINI : injecter les images en inlineData dans le dernier message user ──
+      const geminiContents = messagesToSend
+        .filter(m => m.role !== 'system')
+        .map((m, idx, arr) => {
+          const role = m.role === 'assistant' ? 'model' : 'user';
+          let parts = [{ text: m.content || '' }];
+          // Injecter les images uniquement dans le DERNIER message utilisateur
+          if (role === 'user' && idx === arr.length - 1 && hasImages) {
+            const imageParts = imageFiles.map(f => ({
+              inlineData: {
+                mimeType: f.mimeType,
+                data: f.data.split(',')[1] // base64 pur (sans data:image/...)
+              }
+            }));
+            const textContent = m.content || "Lis fidèlement le texte manuscrit de cette copie d'élève, puis aide-le.";
+            parts = [...imageParts, { text: textContent }];
+          }
+          return { role, parts };
+        });
+
       const geminiBody = {
-        contents: messagesToSend
-          .filter(m => m.role !== 'system')
-          .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+        contents: geminiContents,
         systemInstruction: { parts: [{ text: systemMsg }] },
-        generationConfig: { temperature: 0.7 }
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
       };
       const resGemini = await fetch(aiConfig.url, {
         method: 'POST',
@@ -14746,10 +14771,20 @@ Mode **Équilibré** : Guide l'élève par des indices progressifs. Si après 2 
         }
       }
     } else {
-      // Mistral ou OpenRouter : format messages standard
+      // ── MISTRAL / OPENROUTER ──
+      let tutorMessages = messagesToSend;
+      if (hasImages && isTutorPixtral) {
+        tutorMessages = messagesToSend.map((m, idx, arr) => {
+          if (m.role === 'user' && idx === arr.length - 1) {
+            const imgParts = imageFiles.map(f => ({ type: 'image_url', image_url: { url: f.data } }));
+            return { role: 'user', content: [...imgParts, { type: 'text', text: m.content || "Analyse cette copie." }] };
+          }
+          return m;
+        });
+      }
       const reqBody = {
         model: activeModel,
-        messages: messagesToSend,
+        messages: tutorMessages,
         stream: true,
         temperature: 0.7,
         max_tokens: 4096
