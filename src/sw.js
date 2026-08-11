@@ -87,3 +87,10 @@ registerRoute(
   },
   'POST'
 );
+
+// 4. Gestion de la mise à jour du Service Worker (Bouton "Mettre à jour")
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
