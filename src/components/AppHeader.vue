@@ -3,7 +3,7 @@
   <header class="w-full top-0 sticky z-50 backdrop-blur-[40px] border-b border-white/10 bg-white/5 flex justify-between items-center px-3 md:px-4 gap-2 md:gap-3 header-bar" id="hb-header">
     
     <!-- Left: Logo & Title -->
-    <div class="flex items-center gap-2 md:gap-3 shrink-0 max-w-[180px] md:max-w-[260px]">
+    <div class="flex items-center gap-2 md:gap-3 shrink-0 max-w-[140px] md:max-w-[260px]">
       <!-- Hexagon logo — visible sur tous les écrans -->
       <div class="w-9 h-9 rounded-full border border-white/20 ring-2 ring-primary/20 flex items-center justify-center bg-primary/10 flex-shrink-0">
         <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6">
@@ -30,7 +30,7 @@
     </div>
 
     <!-- Center: Selectors & Actions (Scrollable horizontally on all screens) -->
-    <div class="scrollable-header-center flex items-center gap-2 md:gap-3 flex-1 min-w-0 justify-start md:justify-center px-2 flex-nowrap whitespace-nowrap overflow-x-auto">
+    <div class="scrollable-header-center flex items-center gap-2 md:gap-3 flex-1 min-w-0 justify-start md:justify-center flex-nowrap whitespace-nowrap overflow-x-auto">
       
       <!-- Selectors -->
       <div class="flex items-center gap-2">
@@ -341,6 +341,9 @@ onMounted(() => {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none;  /* IE and Edge */
+  /* Padding ensures last item is reachable on mobile scroll */
+  padding-left: 8px;
+  padding-right: 16px;
 }
 .scrollable-header-center::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
