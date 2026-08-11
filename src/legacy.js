@@ -14770,12 +14770,14 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
     const aiConfig = getLlmApiConfig(state.model || 'mistral-large-2512');
     const activeModel = state.model || 'mistral-large-2512';
     
-    // Vérifier la compatibilité image
+    // Vérifier la compatibilité image depuis la config MODELS
     const hasImages = imageFiles && imageFiles.length > 0;
     const isTutorGemini = aiConfig.provider === 'gemini';
-    const isTutorPixtral = activeModel.includes('pixtral');
-    if (hasImages && !isTutorGemini && !isTutorPixtral) {
-      toast("📷 Images ignorées : sélectionnez Gemini ou Pixtral.", "error");
+    // Vérifier si le modèle est vision depuis la config MODELS
+    const modelCfg = (window.APP_MODELS || []).find(m => m.id === activeModel);
+    const isTutorVision = isTutorGemini || !!(modelCfg && modelCfg.vision);
+    if (hasImages && !isTutorVision) {
+      toast("📷 Images ignorées : sélectionnez un modèle compatible vision (Gemini, Mistral Large, Ministral, Llama 4 Maverick…).", "error");
     }
 
     if (isTutorGemini) {
@@ -14830,11 +14832,11 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
     } else {
       // ── MISTRAL / OPENROUTER ──
       let tutorMessages = messagesToSend;
-      if (hasImages && isTutorPixtral) {
+      if (hasImages && isTutorVision) {
         tutorMessages = messagesToSend.map((m, idx, arr) => {
           if (m.role === 'user' && idx === arr.length - 1) {
             const imgParts = imageFiles.map(f => ({ type: 'image_url', image_url: { url: f.data } }));
-            return { role: 'user', content: [...imgParts, { type: 'text', text: m.content || "Analyse cette copie." }] };
+            return { role: 'user', content: [...imgParts, { type: 'text', text: m.content || "Retranscris fidèlement puis corrige cette copie manuscrite." }] };
           }
           return m;
         });
