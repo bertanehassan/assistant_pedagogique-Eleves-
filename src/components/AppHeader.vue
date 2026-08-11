@@ -1,9 +1,9 @@
 <template>
   <!-- ─── Header Bar ─── -->
-  <header class="w-full top-0 sticky z-50 backdrop-blur-[40px] border-b border-white/10 bg-white/5 flex justify-between items-center px-3 md:px-4 gap-2 md:gap-3 header-bar" id="hb-header">
+  <header class="w-full top-0 sticky z-50 backdrop-blur-[40px] border-b border-white/10 bg-white/5 flex items-center px-2 md:px-4 gap-2 md:gap-3 header-bar" id="hb-header">
     
     <!-- Left: Logo & Title -->
-    <div class="flex items-center gap-2 md:gap-3 shrink-0 max-w-[140px] md:max-w-[260px]">
+    <div class="header-left flex items-center gap-2 shrink-0">
       <!-- Hexagon logo — visible sur tous les écrans -->
       <div class="w-9 h-9 rounded-full border border-white/20 ring-2 ring-primary/20 flex items-center justify-center bg-primary/10 flex-shrink-0">
         <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6">
@@ -30,7 +30,8 @@
     </div>
 
     <!-- Center: Selectors & Actions (Scrollable horizontally on all screens) -->
-    <div class="scrollable-header-center flex items-center gap-2 md:gap-3 flex-1 min-w-0 justify-start md:justify-center flex-nowrap whitespace-nowrap overflow-x-auto">
+    <div class="scrollable-header-center" role="toolbar" aria-label="Actions">
+      <div class="scrollable-header-inner">
       
       <!-- Selectors -->
       <div class="flex items-center gap-2">
@@ -59,18 +60,18 @@
           <span class="material-symbols-outlined" style="font-size:16px">quiz</span>
           <span class="ml-1 text-xs font-semibold">Mes Quiz</span>
         </button>
-      </div>
-
-    </div>
+      </div><!-- /actions -->
+      </div><!-- /scrollable-header-inner -->
+    </div><!-- /scrollable-header-center -->
 
     <!-- Right: Status & Settings -->
-    <div class="flex items-center gap-2 shrink-0">
+    <div class="header-right flex items-center gap-1 shrink-0">
       <!-- Bouton API cliquable -->
       <button id="open-api-modal"
         class="api-btn-top"
         title="Configurer les clés API (Mistral & Gemini)">
         <span id="api-status-dot-icon">🔑</span>
-        <span id="api-status" class="api-btn-label">API</span>
+        <span id="api-status" class="api-btn-label hidden md:inline">API</span>
       </button>
       <!-- Sidebar toggle -->
       <button @click="showSidebar = !showSidebar"
@@ -285,11 +286,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ── Header height ── */
+/* ── Header layout ── */
 .header-bar {
-  min-height: 56px;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  min-height: 52px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  /* CRITIQUE : overflow hidden permet aux enfants flex de scroller en interne */
+  overflow: hidden;
+}
+
+/* Section gauche : logo + titre */
+.header-left {
+  /* Largeur fixe sur mobile pour laisser de la place au centre */
+  max-width: 44px; /* icône seule */
+  flex-shrink: 0;
+}
+@media (min-width: 480px) {
+  .header-left { max-width: 160px; }
+}
+@media (min-width: 768px) {
+  .header-left { max-width: 260px; }
+  .header-bar  { min-height: 56px; padding-top: 8px; padding-bottom: 8px; }
+}
+
+/* Section droite */
+.header-right {
+  flex-shrink: 0;
+  gap: 6px;
 }
 
 /* ── Fallback Media Queries if Tailwind classes fail ── */
@@ -337,16 +360,34 @@ onMounted(() => {
   min-width: 100px;
 }
 
+/* ─── Zone scrollable centrale ─── */
 .scrollable-header-center {
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none;  /* IE and Edge */
-  /* Padding ensures last item is reachable on mobile scroll */
-  padding-left: 8px;
-  padding-right: 16px;
+  /* flex:1 + min-width:0 : laisse le conteneur rétrécir sans déborder */
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: hidden; /* le parent cache le débordement */
+  position: relative;
 }
-.scrollable-header-center::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+.scrollable-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Scroll tactile fluide Android/iOS */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  /* Padding pour que le dernier item soit accessible */
+  padding-left: 4px;
+  padding-right: 24px;
+  /* Scrollbar cachée */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollable-header-inner::-webkit-scrollbar {
+  display: none;
 }
 .mobile-quick-btn.primary-gradient {
   background: linear-gradient(135deg, var(--cyan, #c0c1ff) 0%, var(--violet, #8083ff) 100%);
