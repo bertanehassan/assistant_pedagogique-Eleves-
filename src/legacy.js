@@ -3526,8 +3526,15 @@ async function sendMessage() {
   }
 
   const model = MODELS.find(m => m.id === state.model) || MODELS[0];
-  const isVision = state.model.includes('pixtral');
+  const isVision = state.model.includes('pixtral') || (state.model.includes('gemini') && !!state.geminiApiKey);
   const isAudio = state.model.includes('voxtral');
+
+  // ── Avertissement si image jointe avec modèle non-vision ──
+  const hasImages = state.attachedFiles && state.attachedFiles.some(f => f.type === 'image');
+  if (hasImages && !isVision && !isAudio) {
+    toast("📷 Ce modèle ne supporte pas les images. Utilisez Gemini (clé API requise) ou Pixtral pour analyser des photos de copies.", "error");
+    return;
+  }
 
   if (state.attachedFiles && state.attachedFiles.length > 0 && (isVision || isAudio)) {
     // Multi-modal message
@@ -3561,11 +3568,12 @@ async function sendMessage() {
     let msgContent = [];
     for (const f of state.attachedFiles) {
         if (f.type === 'image') {
-            msgContent.push({ type: "image_url", image_url: f.data });
+            // Format OpenAI image_url — universalFetchLlmStream le traduit en inlineData pour Gemini
+            msgContent.push({ type: "image_url", image_url: { url: f.data } });
         }
     }
     if (txt) msgContent.push({ type: "text", text: txt });
-    else msgContent.push({ type: "text", text: "Analyse ces images en détail." });
+    else msgContent.push({ type: "text", text: "Analyse ces images en détail. S'il s'agit d'une copie manuscrite, lis et retranscris fidèlement le texte, puis analyse la réponse de l'élève." });
 
     const contextMessages = [
       { role: "system", content: buildSystemPrompt() },
@@ -3576,21 +3584,19 @@ async function sendMessage() {
       const _isRealAgent = state.agent && state.agent !== '__ALL_AGENTS__';
       const agentTemp = (_isRealAgent && state.agent.temperature !== undefined) ? state.agent.temperature : model.temp;
       const agentMaxTok = (_isRealAgent && state.agent.maxTokens) ? state.agent.maxTokens : 4096;
-      const _apiConf = getLlmApiConfig(state.model);
-      const res = await fetchWithRetry(_apiConf.url, {
-        method: "POST",
-        headers: _apiConf.headers,
-        signal: state.abortController?.signal,
-        body: JSON.stringify({
+      // universalFetchLlmStream gère Gemini (inlineData) ET Mistral/Pixtral (image_url)
+      await universalFetchLlmStream(
+        {
           model: state.model,
           messages: contextMessages,
           temperature: agentTemp,
           max_tokens: agentMaxTok,
           stream: true
-        })
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await handleStreamingResponse(res, updateLiveMessage, () => {}, state.abortController?.signal);
+        },
+        state.abortController?.signal,
+        updateLiveMessage,
+        () => {}
+      );
       
       const lastMsg = state.messages[state.messages.length - 1];
       if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content) {
@@ -3631,7 +3637,7 @@ async function sendMessage() {
 
   const isDocument = state.attachedFile?.type === 'document';
   if (state.attachedFile && !isVision && !isAudio && !isDocument) {
-    toast("Ce modèle ne supporte pas les fichiers. Utilisez Pixtral Vision ou Voxtral pour audio.", "error");
+    toast("📷 Ce modèle ne supporte pas les images. Utilisez Gemini (clé API requise) ou Pixtral Vision.", "error");
     return;
   }
 
