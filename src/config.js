@@ -51,7 +51,14 @@ export const MODELS = [
   // ══════════════════════════════════════════════════
   // 💡 MICROSOFT  (OpenRouter)
   // ══════════════════════════════════════════════════
-  { id:"microsoft/phi-4",                                 name:"💡 Phi-4 — Microsoft", badge:"💡 Rapide",      desc:"Microsoft Phi-4, raisonnement logique avancé, compact",       tokens:32000,  ctx:"32K",  temp:0.4 }
+  { id:"microsoft/phi-4",                                 name:"💡 Phi-4 — Microsoft",                         badge:"💡 Rapide",      desc:"Microsoft Phi-4, raisonnement logique avancé, compact",                  tokens:32000,  ctx:"32K",  temp:0.4 },
+
+  // ══════════════════════════════════════════════════
+  // 🤖 xAI / GROK  (api.x.ai)
+  // ══════════════════════════════════════════════════
+  { id:"grok-4",                                          name:"🤖 Grok 4 — xAI Ultra",                        badge:"🤖 Ultra",       desc:"Grok 4 by xAI, raisonnement frontier, très avancé (2025)",               tokens:131072, ctx:"128K", temp:0.42, xai:true },
+  { id:"grok-4-5",                                        name:"🤖 Grok 4.5 — xAI Frontier",                   badge:"🤖 Frontier",    desc:"Grok 4.5 by xAI, modèle de pointe avec raisonnement avancé",             tokens:131072, ctx:"128K", temp:0.42, xai:true },
+  { id:"grok-3-mini",                                     name:"🤖 Grok 3 Mini — xAI Rapide",                  badge:"🤖 Rapide",      desc:"Grok 3 Mini by xAI, rapide et efficace pour tâches quotidiennes",        tokens:131072, ctx:"128K", temp:0.42, xai:true }
 
 ];
 

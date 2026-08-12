@@ -48,6 +48,19 @@
             <span id="test-openrouter-result" style="font-size:11px;margin-left:8px;font-weight:600"></span>
           </div>
         </div>
+
+        <div class="field-group" style="margin-top:16px">
+          <label class="field-label" style="color:#f97316">🤖 Clé API xAI (Grok 4 / Grok 4.5 / Grok 3 Mini)</label>
+          <input type="password" class="field-input" id="xai-api-key-input" placeholder="Collez votre clé API xAI ici...">
+          <div class="field-hint">Obtenez une clé sur <a href="https://console.x.ai/" target="_blank" style="color:#f97316;text-decoration:underline">console.x.ai</a>. <code
+              style="font-family:var(--font-mono);color:var(--text-code);font-size:11px">xai-...</code>
+          </div>
+          <div style="margin-top:6px; display:flex; align-items:center;">
+            <button class="btn-ghost" id="test-xai-api" style="font-size:11px;padding:4px 8px;border:1px solid rgba(249,115,22,0.3);color:#f97316">📡 Tester xAI (Grok)</button>
+            <span id="test-xai-result" style="font-size:11px;margin-left:8px;font-weight:600"></span>
+          </div>
+        </div>
+
         <div class="btn-row" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:20px">
           <button class="btn-ghost" id="close-api-modal-2">{{ t('btn_cancel') }}</button>
           <button class="btn-ghost danger" id="delete-api-key"

@@ -1294,6 +1294,15 @@ function getLlmApiConfig(modelId) {
         "Content-Type": "application/json"
       }
     };
+  } else if (modelId.startsWith("grok")) {
+    return {
+      provider: "xai",
+      url: "https://api.x.ai/v1/chat/completions",
+      headers: {
+        "Authorization": `Bearer ${state.xaiApiKey || ""}`,
+        "Content-Type": "application/json"
+      }
+    };
   } else if (modelId.includes("deepseek") || modelId.includes("openrouter") || modelId.includes("/") || modelId.includes(":free")) {
     return {
       provider: "openrouter",
@@ -1503,6 +1512,7 @@ function createMessageElement(m) {
     const apiConf = getLlmApiConfig(m.modelUsed);
     let providerName = "Mistral API";
     if (apiConf.provider === 'gemini') providerName = "Gemini API";
+    else if (apiConf.provider === 'xai') providerName = "xAI (Grok)";
     else if (apiConf.provider === 'openrouter') providerName = "OpenRouter API";
     modelTagText = `${providerName} • ${m.modelUsed}`;
   }
@@ -1614,6 +1624,7 @@ function showTyping(modelId = '') {
   
   let providerName = "Mistral API";
   if (apiConf.provider === 'gemini') providerName = "Gemini API";
+  else if (apiConf.provider === 'xai') providerName = "xAI (Grok)";
   else if (apiConf.provider === 'openrouter') providerName = "OpenRouter API";
   
   statusText = `⚡ ${providerName} (${actualModel})`;
@@ -2143,14 +2154,20 @@ async function _sendMessageOriginal() {
   if (!txt) return;
   const activeModelForCheck = state.model || '';
   const isGeminiModel = activeModelForCheck.includes('gemini');
-  const isOpenRouterModel = activeModelForCheck.includes('deepseek') || activeModelForCheck.includes('openrouter') || activeModelForCheck.includes('/') || activeModelForCheck.includes(':free');
-  if (!state.apiKey && !isGeminiModel && !isOpenRouterModel) {
+  const isXAIModel = activeModelForCheck.startsWith('grok');
+  const isOpenRouterModel = !isXAIModel && (activeModelForCheck.includes('deepseek') || activeModelForCheck.includes('openrouter') || activeModelForCheck.includes('/') || activeModelForCheck.includes(':free'));
+  if (!state.apiKey && !isGeminiModel && !isOpenRouterModel && !isXAIModel) {
     toast("Configurez votre clé API d'abord", "error");
     $("#api-modal").classList.add("active");
     return;
   }
   if (isGeminiModel && !state.geminiApiKey) {
     toast("Clé API Gemini requise. Configurez-la dans Paramètres API.", "error");
+    $("#api-modal").classList.add("active");
+    return;
+  }
+  if (isXAIModel && !state.xaiApiKey) {
+    toast("Clé API xAI (Grok) requise. Configurez-la dans Paramètres API.", "error");
     $("#api-modal").classList.add("active");
     return;
   }
@@ -3457,7 +3474,7 @@ function clearAttachedFile(index = null) {
 async function sendMessage() {
   const txt = document.getElementById('user-input').value.trim();
   if (!txt && (!state.attachedFiles || state.attachedFiles.length === 0)) return;
-  if (!state.apiKey && !state.geminiApiKey && !state.openRouterApiKey) {
+  if (!state.apiKey && !state.geminiApiKey && !state.openRouterApiKey && !state.xaiApiKey) {
     toast("Configurez votre clé API d'abord", "error");
     document.getElementById('api-modal').classList.add("active");
     return;
@@ -6896,16 +6913,18 @@ export const mountApp = async () => {
     else modelSel.value = state.model;
   } catch(e) {}
 
-  // API Key Mistral & Gemini & OpenRouter
+  // API Key Mistral & Gemini & OpenRouter & xAI
   const cookieKey = await getCookie("mistral_api_key");
   const geminiCookieKey = await getCookie("gemini_api_key");
   const orCookieKey = await getCookie("openrouter_api_key");
+  const xaiCookieKey = await getCookie("xai_api_key");
   
   if (cookieKey && isValidApiKey(cookieKey)) state.apiKey = cookieKey;
   if (geminiCookieKey) state.geminiApiKey = geminiCookieKey;
   if (orCookieKey) state.openRouterApiKey = orCookieKey;
+  if (xaiCookieKey) state.xaiApiKey = xaiCookieKey;
 
-  if (state.apiKey || state.geminiApiKey || state.openRouterApiKey) {
+  if (state.apiKey || state.geminiApiKey || state.openRouterApiKey || state.xaiApiKey) {
     const apiBtn = $("#open-api-modal");
     if (apiBtn) {
       apiBtn.classList.add("active");
@@ -10009,6 +10028,9 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     if (state.openRouterApiKey && $("#openrouter-api-key-input")) {
       $("#openrouter-api-key-input").value = state.openRouterApiKey;
     }
+    if (state.xaiApiKey && $("#xai-api-key-input")) {
+      $("#xai-api-key-input").value = state.xaiApiKey;
+    }
     $("#api-modal").classList.add("active");
   };
   const closeApiModal = () => $("#api-modal").classList.remove("active");
@@ -10027,7 +10049,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       } catch (err) { /* ignore */ }
     }
   };
-  const apiInputs = ["api-key-input", "wizard-api-key", "gemini-api-key-input", "openrouter-api-key-input"];
+  const apiInputs = ["api-key-input", "wizard-api-key", "gemini-api-key-input", "openrouter-api-key-input", "xai-api-key-input"];
   apiInputs.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -10135,10 +10157,40 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     };
   }
 
+  // ── TEST xAI (GROK) ──
+  const btnTestXAI = $("#test-xai-api");
+  if (btnTestXAI) {
+    btnTestXAI.onclick = async () => {
+      const xK = $("#xai-api-key-input").value.trim() || state.xaiApiKey;
+      const resEl = $("#test-xai-result");
+      if (!xK) { resEl.textContent = "❌ Clé manquante"; resEl.style.color = "var(--danger)"; return; }
+      resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
+      try {
+        const cleanKey = xK.replace(/[\r\n\s]+/g, '');
+        const res = await fetch("https://api.x.ai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cleanKey}` },
+          body: JSON.stringify({ model: "grok-3-mini", messages: [{ role: "user", content: "ping" }], max_tokens: 1 })
+        });
+        if (res.ok) { resEl.textContent = "✅ Connecté (xAI Grok)"; resEl.style.color = "#f97316"; }
+        else { 
+          const errData = await res.json().catch(()=>({}));
+          resEl.textContent = `❌ Err: ${res.status}`; 
+          resEl.style.color = "var(--danger)"; 
+          resEl.title = errData.error?.message || "";
+        }
+      } catch(e) {
+        resEl.textContent = `❌ Échec: ${e.message}`; 
+        resEl.style.color = "var(--danger)";
+      }
+    };
+  }
+
   $("#save-api-key").onclick = async () => {
     const k = $("#api-key-input").value.trim();
     const gK = $("#gemini-api-key-input") ? $("#gemini-api-key-input").value.trim() : "";
     const oK = $("#openrouter-api-key-input") ? $("#openrouter-api-key-input").value.trim() : "";
+    const xK = $("#xai-api-key-input") ? $("#xai-api-key-input").value.trim() : "";
 
     if (k && !isValidApiKey(k)) {
       toast("Clé Mistral invalide — min. 20 caractères alphanumériques", "error");
@@ -10157,8 +10209,12 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       await setCookie("openrouter_api_key", oK);
       state.openRouterApiKey = oK;
     }
+    if (xK) {
+      await setCookie("xai_api_key", xK);
+      state.xaiApiKey = xK;
+    }
 
-    if (state.apiKey || state.geminiApiKey || state.openRouterApiKey) {
+    if (state.apiKey || state.geminiApiKey || state.openRouterApiKey || state.xaiApiKey) {
       const apiBtn = $("#open-api-modal");
       if (apiBtn) {
         apiBtn.classList.add("active");
@@ -10184,16 +10240,19 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
 
   if ($("#delete-api-key")) {
     $("#delete-api-key").onclick = () => {
-      if (!confirm("Supprimer vos clés API sauvegardées (Mistral, Gemini, OpenRouter) ?")) return;
+      if (!confirm("Supprimer vos clés API sauvegardées (Mistral, Gemini, OpenRouter, xAI) ?")) return;
       deleteCookie("mistral_api_key");
       deleteCookie("gemini_api_key");
       deleteCookie("openrouter_api_key");
+      deleteCookie("xai_api_key");
       state.apiKey = null;
       state.geminiApiKey = null;
       state.openRouterApiKey = null;
+      state.xaiApiKey = null;
       $("#api-key-input").value = "";
       if ($("#gemini-api-key-input")) $("#gemini-api-key-input").value = "";
       if ($("#openrouter-api-key-input")) $("#openrouter-api-key-input").value = "";
+      if ($("#xai-api-key-input")) $("#xai-api-key-input").value = "";
       
       const apiBtn = $("#open-api-modal");
       if (apiBtn) {
@@ -14704,6 +14763,21 @@ function updateTutorLiveMessage(content) {
 // Les fonctions window.toggleTutorVoice, window.toggleTutorTTS et window.tutorSpeak
 // sont définies dans src/tutor-voice.js pour éviter que controlFlowFlattening ne les casse.
 
+// Construit le texte parlé à partir d'un élément DOM :
+// remplace chaque formule MathJax (mjx-container) par son aria-label,
+// afin que le TTS entende "un demi" au lieu d'un SVG vide.
+function buildSpokenText(el) {
+  const clone = el.cloneNode(true);
+  // Chaque formule MathJax est dans un <mjx-container aria-label="...">
+  clone.querySelectorAll('mjx-container').forEach(mjx => {
+    const label = mjx.getAttribute('aria-label') || '';
+    const replacement = document.createTextNode(label ? ' ' + label + ' ' : '');
+    mjx.parentNode.replaceChild(replacement, mjx);
+  });
+  // Supprimer aussi les éventuels <script type="math/tex"> résiduels
+  clone.querySelectorAll('script[type="math/tex"]').forEach(s => s.remove());
+  return (clone.innerText || clone.textContent || '').replace(/\s{2,}/g, ' ').trim();
+}
 
 window.sendTutorMessage = async function() {
   const input = document.getElementById('tutor-user-input');
@@ -14933,15 +15007,11 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
     if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
       window.MathJax.typesetPromise([aiDiv]).then(() => {
         if (doSpeak) {
-          const contentSpan = aiDiv.querySelector('.tutor-response-content');
-          const spokenText = contentSpan ? contentSpan.innerText : aiDiv.innerText;
-          window.tutorSpeak(spokenText);
+          window.tutorSpeak(buildSpokenText(aiDiv));
         }
       }).catch(() => {});
     } else if (doSpeak) {
-      const contentSpan = aiDiv.querySelector('.tutor-response-content');
-      const spokenText = contentSpan ? contentSpan.innerText : aiDiv.innerText;
-      window.tutorSpeak(spokenText);
+      window.tutorSpeak(buildSpokenText(aiDiv));
     }
     
     // Rendu Mermaid.js pour les schémas avec gestion d'erreur (Fallback)
