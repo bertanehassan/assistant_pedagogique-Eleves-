@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => ({
         target: 'https://openrouter.ai',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/openrouter/, '')
+      },
+      '/api/xai': {
+        target: 'https://api.x.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/xai/, '')
       }
     }
   },

@@ -1295,9 +1295,13 @@ function getLlmApiConfig(modelId) {
       }
     };
   } else if (modelId.startsWith("grok")) {
+    // En dev (Vite) : proxy local /api/xai → https://api.x.ai
+    // En production (Vercel) : Edge Function /api/xai-proxy
+    const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+    const xaiBase = isDev ? '/api/xai' : '/api/xai-proxy';
     return {
       provider: "xai",
-      url: "https://api.x.ai/v1/chat/completions",
+      url: `${xaiBase}/v1/chat/completions`,
       headers: {
         "Authorization": `Bearer ${state.xaiApiKey || ""}`,
         "Content-Type": "application/json"
@@ -10167,7 +10171,9 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
       try {
         const cleanKey = xK.replace(/[\r\n\s]+/g, '');
-        const res = await fetch("https://api.x.ai/v1/chat/completions", {
+        const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+        const xaiUrl = isDev ? '/api/xai/v1/chat/completions' : '/api/xai-proxy/v1/chat/completions';
+        const res = await fetch(xaiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cleanKey}` },
           body: JSON.stringify({ model: "grok-3-mini", messages: [{ role: "user", content: "ping" }], max_tokens: 1 })
@@ -10180,12 +10186,8 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
           resEl.title = errData.error?.message || "";
         }
       } catch(e) {
-        console.error("xAI Test Error:", e);
         resEl.textContent = `❌ Échec: ${e.message}`; 
         resEl.style.color = "var(--danger)";
-        if (e.message.includes("Failed to fetch")) {
-          alert("Erreur réseau: " + e.message + "\n\nSi vous utilisez un bloqueur de publicité (comme uBlock Origin) ou le navigateur Brave, il est fort probable que la connexion vers x.ai soit bloquée. Veuillez désactiver la protection pour ce site.");
-        }
       }
     };
   }
