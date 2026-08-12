@@ -64,3 +64,11 @@ export const MODELS = [
 
 export const DB_NAME = "QCM_EDU_MAROC_DB";
 export const DB_VERSION = 2;
+
+// ══════════════════════════════════════════════════════════════════════
+// 🤖 xAI PROXY URL (Cloudflare Worker)
+// ══════════════════════════════════════════════════════════════════════
+// Après avoir déployé cf-worker/xai-cors-proxy.js sur Cloudflare Workers,
+// remplacez la valeur ci-dessous par l'URL de votre Worker :
+// Ex : "https://xai-proxy.votre-nom.workers.dev"
+export const XAI_PROXY_URL = "https://xai-proxy.votre-nom.workers.dev";

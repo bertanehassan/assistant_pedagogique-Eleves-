@@ -1,7 +1,7 @@
 // ════════════════════════════════════════
 // CONFIG
 // ════════════════════════════════════════
-import { MODELS, DB_NAME, DB_VERSION } from './config.js';
+import { MODELS, DB_NAME, DB_VERSION, XAI_PROXY_URL } from './config.js';
 import { state } from './state.js';
 import { fetchWithRetry as fetchWithRetryBase } from './composables/useMistral.js';
 import { t } from './i18n.js';
@@ -1297,7 +1297,7 @@ function getLlmApiConfig(modelId) {
   } else if (modelId.startsWith("grok")) {
     return {
       provider: "xai",
-      url: "https://api.x.ai/v1/chat/completions",
+      url: `${XAI_PROXY_URL}/v1/chat/completions`,
       headers: {
         "Authorization": `Bearer ${state.xaiApiKey || ""}`,
         "Content-Type": "application/json"
@@ -10167,7 +10167,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
       try {
         const cleanKey = xK.replace(/[\r\n\s]+/g, '');
-        const res = await fetch("https://api.x.ai/v1/chat/completions", {
+        const res = await fetch(`${XAI_PROXY_URL}/v1/chat/completions`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cleanKey}` },
           body: JSON.stringify({ model: "grok-3-mini", messages: [{ role: "user", content: "ping" }], max_tokens: 1 })
