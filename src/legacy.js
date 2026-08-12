@@ -10180,8 +10180,12 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
           resEl.title = errData.error?.message || "";
         }
       } catch(e) {
+        console.error("xAI Test Error:", e);
         resEl.textContent = `❌ Échec: ${e.message}`; 
         resEl.style.color = "var(--danger)";
+        if (e.message.includes("Failed to fetch")) {
+          alert("Erreur réseau: " + e.message + "\n\nSi vous utilisez un bloqueur de publicité (comme uBlock Origin) ou le navigateur Brave, il est fort probable que la connexion vers x.ai soit bloquée. Veuillez désactiver la protection pour ce site.");
+        }
       }
     };
   }
