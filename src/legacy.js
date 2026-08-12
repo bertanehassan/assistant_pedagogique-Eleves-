@@ -1295,13 +1295,9 @@ function getLlmApiConfig(modelId) {
       }
     };
   } else if (modelId.startsWith("grok")) {
-    // En dev (Vite) : proxy local /api/xai → https://api.x.ai
-    // En production (Vercel) : Edge Function /api/xai-proxy
-    const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
-    const xaiBase = isDev ? '/api/xai' : '/api/xai-proxy';
     return {
       provider: "xai",
-      url: `${xaiBase}/v1/chat/completions`,
+      url: "https://api.x.ai/v1/chat/completions",
       headers: {
         "Authorization": `Bearer ${state.xaiApiKey || ""}`,
         "Content-Type": "application/json"
@@ -10171,9 +10167,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
       try {
         const cleanKey = xK.replace(/[\r\n\s]+/g, '');
-        const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
-        const xaiUrl = isDev ? '/api/xai/v1/chat/completions' : '/api/xai-proxy/v1/chat/completions';
-        const res = await fetch(xaiUrl, {
+        const res = await fetch("https://api.x.ai/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cleanKey}` },
           body: JSON.stringify({ model: "grok-3-mini", messages: [{ role: "user", content: "ping" }], max_tokens: 1 })

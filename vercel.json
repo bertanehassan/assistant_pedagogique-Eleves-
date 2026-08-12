@@ -1,6 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/xai-proxy/:path*", "destination": "/api/xai-proxy" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
