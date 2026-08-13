@@ -50,7 +50,13 @@ export default defineConfig(({ mode }) => ({
           {
             src: 'icon-v2.svg',
             sizes: 'any',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          },
+          {
+            src: 'icon-new.jpg',
+            sizes: '1024x1024',
+            type: 'image/jpeg'
           }
         ],
         share_target: {
