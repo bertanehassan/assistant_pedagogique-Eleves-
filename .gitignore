@@ -38,3 +38,7 @@ check_console.py
 debug_state.py
 diff.patch
 diff_utf8.patch
+
+# Fichiers avec clés secrètes ou de test
+cf-worker/deploy-via-api.js
+test.json
