@@ -10376,7 +10376,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
 
   // ── Navigation du wizard ───────────────────────────────────────────────
   const CORR_STEPS = ['corr-step-1','corr-step-2','corr-step-3','corr-step-4'];
-  const CORR_LABELS = ['Contexte pédagogique','Sujet & Barème','Compétences & Options','Résumé & Génération'];
+  const CORR_LABELS = ['lbl_corr_step_1','lbl_corr_step_2','lbl_corr_step_3','lbl_corr_step_4'];
 
   const corrShowStep = (n) => {
     CORR_STEPS.forEach((id, i) => {
@@ -10392,7 +10392,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       if (line) line.className = 'corr-step-line' + (i < n ? ' done' : '');
     }
     const lbl = $('#corr-step-label');
-    if (lbl) lbl.textContent = CORR_LABELS[n - 1];
+    if (lbl) lbl.textContent = t(CORR_LABELS[n - 1]);
 
     // Étape 4 : afficher le bon badge moteur IA
     if (n === 4) {
@@ -10853,14 +10853,14 @@ let _didacDirectivesMime   = '';
 const didactiqueValidateStep1 = () => {
   const disc = $('#didac-discipline')?.value;
   const niv = $('#didac-niveau')?.value;
-  if (!disc) { toast('Veuillez choisir une discipline.', 'error'); return false; }
-  if (!niv) { toast('Veuillez choisir un niveau scolaire.', 'error'); return false; }
+  if (!disc) { toast(t('val_select_discipline'), 'error'); return false; }
+  if (!niv) { toast(t('val_select_level'), 'error'); return false; }
   return true;
 };
 const didactiqueValidateStep2 = () => {
   if (_didacPdfBase64) return true; // OK si un document est chargé
   const cours = $('#didac-cours')?.value?.trim();
-  if (!cours || cours.length < 20) { toast('Veuillez coller le cours (au moins 20 caractères) ou importer un PDF.', 'error'); return false; }
+  if (!cours || cours.length < 20) { toast(t('val_paste_course'), 'error'); return false; }
   return true;
 };
 const didactiqueShowStep = (step) => {
@@ -10868,8 +10868,8 @@ const didactiqueShowStep = (step) => {
   const target = document.getElementById('didac-step-' + step);
   if (target) target.style.display = 'block';
 
-  const labels = ['Contexte pédagogique', 'Support de cours', 'Objectifs & Cadre', 'Résumé & Génération'];
-  if ($('#didac-step-label')) $('#didac-step-label').textContent = labels[step-1];
+  const labels = ['lbl_didac_step_1', 'lbl_didac_step_2', 'lbl_didac_step_3', 'lbl_didac_step_4'];
+  if ($('#didac-step-label')) $('#didac-step-label').textContent = t(labels[step-1]);
 
   for (let i = 1; i <= 4; i++) {
     const dot = $('#ddot-'+i);
@@ -11815,16 +11815,16 @@ const methodeValidateStep1 = () => {
   const disc = $('#methode-discipline')?.value;
   const niv = $('#methode-niveau')?.value;
   const role = $('#methode-role')?.value?.trim();
-  if (!disc) { toast('Veuillez choisir une discipline.', 'error'); return false; }
-  if (!niv) { toast('Veuillez choisir un niveau scolaire.', 'error'); return false; }
-  if (!role || role.length < 5) { toast('Veuillez renseigner le rôle de l\'IA.', 'error'); return false; }
+  if (!disc) { toast(t('val_select_discipline'), 'error'); return false; }
+  if (!niv) { toast(t('val_select_level'), 'error'); return false; }
+  if (!role || role.length < 5) { toast(t('val_enter_role'), 'error'); return false; }
   return true;
 };
 
 const methodeValidateStep2 = () => {
   if (_methodePdfBase64) return true;
   const exo = $('#methode-exercice')?.value?.trim();
-  if (!exo || exo.length < 10) { toast('Veuillez saisir l\'exercice ou importer un fichier.', 'error'); return false; }
+  if (!exo || exo.length < 10) { toast(t('val_paste_exercise'), 'error'); return false; }
   return true;
 };
 
@@ -11833,8 +11833,8 @@ const methodeShowStep = (step) => {
   const target = document.getElementById('methode-step-' + step);
   if (target) target.style.display = 'block';
 
-  const labels = ['Contexte général', 'L\'Exercice / Problème', 'Référentiel & Modèles', 'Résumé & Génération'];
-  if ($('#methode-step-label')) $('#methode-step-label').textContent = labels[step-1];
+  const labels = ['lbl_methode_step_1', 'lbl_methode_step_2', 'lbl_methode_step_3', 'lbl_methode_step_4'];
+  if ($('#methode-step-label')) $('#methode-step-label').textContent = t(labels[step-1]);
 
   for (let i = 1; i <= 4; i++) {
     const dot = $('#mdot-'+i);
@@ -13924,16 +13924,16 @@ function evalShowStep(n) {
       line.classList.toggle('done', i < n);
     }
   }
-  const labels = ['Contexte de l\'évaluation', 'Contenu du cours', 'Résumé & Génération'];
+  const labels = ['lbl_eval_step_1', 'lbl_eval_step_2', 'lbl_eval_step_3'];
   const lbl = document.getElementById('eval-step-label');
-  if (lbl) lbl.textContent = labels[n - 1] || '';
+  if (lbl) lbl.textContent = t(labels[n - 1]) || '';
 }
 
 function evalValidateStep1() {
   const disc = document.getElementById('eval-discipline')?.value;
   const niv  = document.getElementById('eval-niveau')?.value;
-  if (!disc) { toast('Veuillez choisir une discipline.', 'error'); return false; }
-  if (!niv)  { toast('Veuillez choisir un niveau scolaire.', 'error'); return false; }
+  if (!disc) { toast(t('val_select_discipline'), 'error'); return false; }
+  if (!niv)  { toast(t('val_select_level'), 'error'); return false; }
   return true;
 }
 
@@ -13941,7 +13941,7 @@ function evalValidateStep2() {
   const cours  = (document.getElementById('eval-cours')?.value || '').trim();
   const hasPdf = _evalPdfFiles.length > 0;
   if (!hasPdf && cours.length < 20) {
-    toast('Veuillez coller le contenu du cours ou importer un fichier PDF/image.', 'error');
+    toast(t('val_paste_course_or_pdf'), 'error');
     return false;
   }
   return true;
