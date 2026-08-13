@@ -58,7 +58,15 @@
     </div><!-- /scrollable-header-center -->
 
     <!-- Right: Status & Settings -->
-    <div class="header-right flex items-center gap-1 shrink-0">
+    <div class="header-right flex items-center gap-1.5 md:gap-2 shrink-0">
+      <!-- Bouton Langue cliquable -->
+      <button id="lang-switch-btn"
+        class="lang-btn-top"
+        title="Changer de langue / Change language / تغيير اللغة">
+        <span class="material-symbols-outlined" style="font-size:18px">language</span>
+        <span class="lang-btn-label hidden sm:inline">FR/AR/EN</span>
+      </button>
+
       <!-- Bouton API cliquable -->
       <button id="open-api-modal"
         class="api-btn-top"
@@ -66,12 +74,13 @@
         <span id="api-status-dot-icon">🔑</span>
         <span id="api-status" class="api-btn-label hidden md:inline">API</span>
       </button>
+
       <!-- Sidebar toggle -->
       <button @click="showSidebar = !showSidebar"
               class="sidebar-toggle-btn"
               :class="{ 'active': showSidebar }"
               :title="t('btn_settings')">
-        <span class="material-symbols-outlined" style="font-size:22px">
+        <span class="material-symbols-outlined" style="font-size:26px">
           {{ showSidebar ? 'close' : 'tune' }}
         </span>
       </button>
@@ -154,9 +163,6 @@
             <option value="midnight">◈ MIDNIGHT</option>
             <option value="light">◈ LIGHT</option>
           </select>
-          <button id="lang-switch-btn" class="sb-btn w-full mt-2">
-            🌐 &nbsp;عربي / FR / EN
-          </button>
         </div>
 
         <!-- Gestion -->
@@ -426,5 +432,64 @@ onMounted(() => {
 .api-btn-label {
   font-size: 12px;
   font-weight: 700;
+}
+
+/* ── Lang top button ── */
+.lang-btn-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1.5px solid rgba(192, 193, 255, 0.4);
+  background: rgba(192, 193, 255, 0.08);
+  color: var(--cyan, #c0c1ff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.lang-btn-top:hover {
+  background: rgba(192, 193, 255, 0.15);
+  border-color: rgba(192, 193, 255, 0.7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(192, 193, 255, 0.2);
+}
+.lang-btn-top:active {
+  transform: translateY(0);
+}
+.lang-btn-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Sidebar toggle button ── */
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-bright, #dae2fd);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--cyan, #c0c1ff);
+  transform: rotate(45deg) scale(1.05);
+  box-shadow: 0 0 15px rgba(192, 193, 255, 0.2);
+}
+.sidebar-toggle-btn.active {
+  background: rgba(192, 193, 255, 0.15);
+  border-color: rgba(192, 193, 255, 0.5);
+  color: var(--cyan, #c0c1ff);
+  transform: rotate(90deg);
 }
 </style>
