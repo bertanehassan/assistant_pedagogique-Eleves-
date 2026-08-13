@@ -1,0 +1,7 @@
+name = "xai-proxy"
+main = "xai-cors-proxy.js"
+compatibility_date = "2024-01-01"
+account_id = "223622a6237916795858f5f85f8273a3"
+
+[placement]
+mode = "smart"
