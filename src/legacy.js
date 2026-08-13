@@ -1590,10 +1590,41 @@ function renderMessages(forceFull = false) {
   if (!msgs.length) {
     c.innerHTML = `
       <div class="welcome-banner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; min-height:50vh; text-align:center; opacity:0.9; padding:20px; width:100%;">
-        <h2 style="font-size:28px; font-weight:bold; color:var(--cyan); margin-bottom:4px; white-space:nowrap;">Mon Assistant Pédagogique</h2>
-        <div style="display:inline-block; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; font-size:13px; font-weight:700; letter-spacing:2px; padding:3px 14px; border-radius:20px; margin-bottom:12px; text-transform:uppercase;">&#8722; Élèves &#8722;</div>
-        <div style="color:#d4af37; font-size:14px; font-weight:600; margin-bottom:24px; letter-spacing:1px; text-transform:uppercase;">D&eacute;velopp&eacute; par Hassan Bertane</div>
-        <p style="max-width:500px; color:var(--on-surface-variant); font-size:16px; line-height:1.6;">${t('ui_welcome') || 'Interface avancée avec mémoire globale, agents spécialisés et accès aux modèles Mistral AI, DeepSeek et Gemini.'}</p>
+        <style>
+          @keyframes splashIconFloat {
+            0%,100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 8px 32px rgba(0,150,57,0.35)) drop-shadow(0 4px 16px rgba(226,48,56,0.25)); }
+            50% { transform: translateY(-8px) scale(1.03); filter: drop-shadow(0 18px 40px rgba(0,150,57,0.5)) drop-shadow(0 8px 24px rgba(226,48,56,0.35)); }
+          }
+          @keyframes splashFadeIn {
+            from { opacity:0; transform: translateY(20px) scale(0.92); }
+            to   { opacity:1; transform: translateY(0) scale(1); }
+          }
+          .splash-icon-wrap {
+            animation: splashFadeIn 0.7s cubic-bezier(.22,.68,0,1.2) both, splashIconFloat 4s ease-in-out 0.7s infinite;
+            margin-bottom: 28px;
+          }
+          .splash-icon-img {
+            width: 160px;
+            height: 160px;
+            border-radius: 36px;
+            object-fit: cover;
+            box-shadow: 0 8px 40px rgba(0,150,57,0.3), 0 4px 20px rgba(226,48,56,0.2), 0 0 0 1px rgba(255,255,255,0.08);
+          }
+          @media (max-width: 480px) {
+            .splash-icon-img { width: 120px; height: 120px; border-radius: 28px; }
+          }
+          .splash-title { animation: splashFadeIn 0.6s 0.25s both; }
+          .splash-badge { animation: splashFadeIn 0.6s 0.4s both; }
+          .splash-author { animation: splashFadeIn 0.6s 0.55s both; }
+          .splash-desc { animation: splashFadeIn 0.6s 0.7s both; }
+        </style>
+        <div class="splash-icon-wrap">
+          <img src="/icon-new.jpg" alt="App Icon" class="splash-icon-img" />
+        </div>
+        <h2 class="splash-title" style="font-size:28px; font-weight:bold; color:var(--cyan); margin-bottom:4px; white-space:nowrap;">Mon Assistant Pédagogique</h2>
+        <div class="splash-badge" style="display:inline-block; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; font-size:13px; font-weight:700; letter-spacing:2px; padding:3px 14px; border-radius:20px; margin-bottom:12px; text-transform:uppercase;">&#8722; Élèves &#8722;</div>
+        <div class="splash-author" style="color:#d4af37; font-size:14px; font-weight:600; margin-bottom:24px; letter-spacing:1px; text-transform:uppercase;">D&eacute;velopp&eacute; par Hassan Bertane</div>
+        <p class="splash-desc" style="max-width:500px; color:var(--on-surface-variant); font-size:16px; line-height:1.6;">${t('ui_welcome') || 'Interface avancée avec mémoire globale, agents spécialisés et accès aux modèles Mistral AI, DeepSeek et Gemini.'}</p>
       </div>
     `;
     return;
