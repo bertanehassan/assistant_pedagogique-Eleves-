@@ -19,14 +19,7 @@
           <path d="M18,0 L18,2 M18,10 L18,12 M12,6 L14,6 M22,6 L24,6 M14,2 L15,3 M22,2 L21,3" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
         </svg>
       </div>
-      <!-- Title — visible sur tous les écrans -->
-      <div class="flex flex-col leading-tight min-w-0">
-        <div class="flex items-center gap-1.5 flex-wrap justify-center">
-          <span class="text-xs md:text-sm font-bold text-on-surface tracking-wide whitespace-nowrap">Mon Assistant Pédagogique</span>
-          <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 7px;border-radius:20px;white-space:nowrap;text-transform:uppercase;flex-shrink:0;">Élèves</span>
-        </div>
-        <span class="text-[10px] text-[#FFD700] font-bold opacity-100 hidden md:block text-center w-full">Développé par Hassan Bertane</span>
-      </div>
+
     </div>
 
     <!-- Center: Selectors & Actions (Scrollable horizontally on all screens) -->
