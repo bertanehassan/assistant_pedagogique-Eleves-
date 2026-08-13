@@ -48,15 +48,10 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         icons: [
           {
-            src: 'icon-v2.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
-          {
             src: 'icon-new.jpg',
             sizes: '1024x1024',
-            type: 'image/jpeg'
+            type: 'image/jpeg',
+            purpose: 'any maskable'
           }
         ],
         share_target: {
