@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         icons: [
           {
-            src: 'favicon.svg',
+            src: 'icon-v2.svg',
             sizes: 'any',
             type: 'image/svg+xml'
           }
