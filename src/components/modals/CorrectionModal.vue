@@ -11,7 +11,7 @@
       <div class="modal-header">
         <div class="modal-title" style="display:flex;align-items:center;gap:8px">
           <span style="font-size:18px">📋</span>
-          Générateur de Fiche de Correction
+          {{ t('corr_modal_title') }}
         </div>
         <button class="modal-close" id="close-correction-modal">✕</button>
       </div>
@@ -27,7 +27,7 @@
           <div class="corr-step-dot" id="cdot-3">3</div>
           <div class="corr-step-line" id="cline-3"></div>
           <div class="corr-step-dot" id="cdot-4">4</div>
-          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="corr-step-label">Contexte pédagogique</div>
+          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="corr-step-label">{{ t('lbl_corr_step_1') }}</div>
         </div>
 
         <!-- ══════════════════════════════════════════
@@ -36,23 +36,23 @@
         <div class="corr-step" id="corr-step-1">
           <div class="info-block" style="border-left-color:var(--neon);margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div>
-              <strong style="color:var(--neon)">🎯 Étape 1 / 4 — Contexte pédagogique</strong><br>
-              Renseignez la discipline, le niveau et le type d'évaluation.
+              <strong style="color:var(--neon)">{{ t('corr_step1_title') }}</strong><br>
+              {{ t('corr_step1_desc') }}
             </div>
             <div class="corr-save-load-controls" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
               <select class="field-input field-select" id="corr-saved-list" style="width:auto; padding:6px; font-size:12px; background:rgba(0,0,0,0.2)">
-                <option value="">— Profils sauvegardés —</option>
+                <option value="">{{ t('sheet_saved_profiles') }}</option>
               </select>
-              <button class="btn-ghost" id="corr-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">📂 Charger</button>
+              <button class="btn-ghost" id="corr-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">{{ t('sheet_btn_load') }}</button>
               <button class="btn-ghost" id="corr-delete-save-btn" @click="handleDeleteSave" style="border:1px dashed rgba(255,100,100,0.4); font-size:12px; padding:6px 12px; background:rgba(255,0,0,0.1); color:#ff6b6b">🗑️</button>
             </div>
           </div>
 
           <!-- Discipline -->
           <div class="field-group">
-            <label class="field-label">📚 Discipline <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('sheet_discipline') }} <span style="color:var(--danger)">*</span></label>
             <select class="field-input field-select" id="corr-discipline" @change="handleDisciplineChange">
-              <option value="">— Choisir une discipline —</option>
+              <option value="">{{ t('sheet_discipline_select') }}</option>
               <optgroup label="Sciences">
                 <option value="SVT">SVT (Sciences de la Vie et de la Terre)</option>
                 <option value="Physique-Chimie">Physique-Chimie</option>
@@ -81,18 +81,18 @@
 
           <!-- Discipline personnalisée -->
           <div class="field-group" id="corr-custom-discipline-group" style="display:none">
-            <label class="field-label">✏️ Nom de la discipline</label>
+            <label class="field-label">{{ t('sheet_discipline_name') }}</label>
             <input type="text" class="field-input" id="corr-custom-discipline"
-              placeholder="Ex : Chimie Organique, Droit, Comptabilité…">
+              :placeholder="t('sheet_discipline_placeholder')">
           </div>
 
           <!-- Paramètres de classe -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <!-- Niveau scolaire -->
             <div class="field-group">
-              <label class="field-label">🎓 Niveau scolaire <span style="color:var(--danger)">*</span></label>
+              <label class="field-label">{{ t('sheet_level') }} <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="corr-niveau">
-                <option value="">— Choisir —</option>
+                <option value="">{{ t('sheet_level_select') }}</option>
                 <optgroup label="Collège">
                   <option value="1ère Année Collège (1AC)">1ère Année Collège (1AC)</option>
                   <option value="2ème Année Collège (2AC)">2ème Année Collège (2AC)</option>
@@ -108,7 +108,7 @@
 
             <!-- Filière -->
             <div class="field-group">
-              <label class="field-label">📚 Filière</label>
+              <label class="field-label">{{ t('sheet_filiere') }}</label>
               <select class="field-input field-select" id="corr-filiere">
                 <option value="Aucune (Collège)">Aucune (Collège)</option>
                 <optgroup label="Tronc Commun">
@@ -133,7 +133,7 @@
 
             <!-- Option -->
             <div class="field-group">
-              <label class="field-label">🌍 Option (Langue)</label>
+              <label class="field-label">{{ t('sheet_option_lang') }}</label>
               <select class="field-input field-select" id="corr-option">
                 <option value="Générale (Arabe)">Générale (Arabe)</option>
                 <option value="Section Internationale - Français (BIOF)">Section Internationale - Français (BIOF)</option>
@@ -144,7 +144,7 @@
 
             <!-- Type d'évaluation -->
             <div class="field-group">
-              <label class="field-label">📝 Type d'évaluation <span style="color:var(--danger)">*</span></label>
+              <label class="field-label">{{ t('corr_type_eval') }} <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="corr-type-eval">
                 <option value="Contrôle continu">Contrôle continu (CC)</option>
                 <option value="Devoir surveillé">Devoir surveillé (DS)</option>
@@ -158,7 +158,7 @@
 
           <!-- Niveau de langue (conditionnel) -->
           <div class="field-group" id="corr-langue-group" style="display:none">
-            <label class="field-label">🗣️ Niveau de langue cible</label>
+            <label class="field-label">{{ t('corr_lang_lvl') }}</label>
             <select class="field-input field-select" id="corr-niveau-langue">
               <option value="">— Optionnel —</option>
               <option value="A1">A1 — Débutant</option>
@@ -174,20 +174,20 @@
 
           <!-- Langue de génération de la fiche -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🌍 Langue de génération de la fiche</label>
+            <label class="field-label">{{ t('sheet_output_lang') }}</label>
             <select class="field-input field-select" id="corr-output-lang">
               <option value="fr" selected>🇫🇷 Français (par défaut)</option>
               <option value="en">🇬🇧 English</option>
               <option value="ar">🇲🇦 العربية (Arabe)</option>
             </select>
             <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
-              ℹ️ Détection automatique si la matière est « Arabe » ou « Anglais ».
+              {{ t('sheet_lang_hint') }}
             </div>
           </div>
 
           <!-- Modèle IA à utiliser -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🤖 Modèle IA à utiliser</label>
+            <label class="field-label">{{ t('sheet_model_label') }}</label>
             <select class="field-input field-select" id="corr-model-select">
               <option value="gemini-3.5-flash" selected>✨ Gemini 3.5 Flash — Vision & PDF (par défaut)</option>
             </select>
@@ -197,8 +197,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="close-correction-modal-step1" @click="handleClose">Annuler</button>
-            <button class="btn-primary" id="corr-next-1" @click="handleNext1">Suivant →</button>
+            <button class="btn-ghost" id="close-correction-modal-step1" @click="handleClose">{{ t('btn_cancel') }}</button>
+            <button class="btn-primary" id="corr-next-1" @click="handleNext1">{{ t('btn_next_arrow') }}</button>
           </div>
         </div>
 
@@ -208,19 +208,19 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="corr-step-2" style="display:none">
           <div class="info-block" style="border-left-color:var(--cyan);margin-bottom:16px">
-            <strong style="color:var(--cyan)">📄 Étape 2 / 4 — Sujet & Barème</strong><br>
-            Collez votre sujet complet ci-dessous. Indiquez le barème si disponible.
+            <strong style="color:var(--cyan)">{{ t('corr_s2_header') }}</strong><br>
+            {{ t('corr_s2_desc') }}
           </div>
 
           <!-- Zone sujet -->
           <div class="field-group">
-            <label class="field-label">📋 Sujet complet <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('corr_sujet_label') }} <span style="color:var(--danger)">*</span></label>
             <textarea class="field-textarea" id="corr-sujet" rows="8"
               placeholder="Collez ici le texte complet de votre exercice ou contrôle…&#10;&#10;Exemple :&#10;Question 1 (4 pts) : Décrivez les étapes de la respiration cellulaire.&#10;Question 2 (6 pts) : À partir du document 1, proposez deux hypothèses…&#10;&#10;Conseil : Plus le sujet est complet, plus la fiche sera précise."></textarea>
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="corr-pdf-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un fichier (PDF, image ou TXT)
+                {{ t('sheet_import_file') }}
               </label>
               <input type="file" id="corr-pdf-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="corr-pdf-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
@@ -233,7 +233,7 @@
 
           <!-- Barème -->
           <div class="field-group">
-            <label class="field-label">⚖️ Barème détaillé</label>
+            <label class="field-label">{{ t('corr_bareme_label') }}</label>
             <textarea class="field-textarea" id="corr-bareme" rows="4"
               placeholder="Exemples :&#10;Q1 : 4 pts (description 2pts + analyse 2pts)&#10;Q2 : 6 pts (hypothèse 1 : 3pts / hypothèse 2 : 3pts)&#10;&#10;Laissez vide → l'IA créera des espaces [À définir]"></textarea>
             <div class="field-hint">Si le barème est absent, l'IA générera la structure et signalera les zones à compléter.</div>
@@ -241,7 +241,7 @@
 
           <!-- Format de sortie -->
           <div class="field-group">
-            <label class="field-label">🗂️ Format de sortie souhaité</label>
+            <label class="field-label">{{ t('corr_format_label') }}</label>
             <select class="field-input field-select" id="corr-format">
               <option value="Tableau 4 colonnes (Numéro, Réponse attendue, Critères+Barème, Compétence) + Conseils pédagogiques">📊 Tableau 4 colonnes + Conseils (défaut)</option>
               <option value="Texte structuré par question avec sous-sections (réponse, barème, compétence) sans tableau">📝 Texte structuré (sans tableau)</option>
@@ -251,8 +251,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="corr-back-2" @click="handleBack(1)">← Retour</button>
-            <button class="btn-primary" id="corr-next-2" @click="handleNext2">Suivant →</button>
+            <button class="btn-ghost" id="corr-back-2" @click="handleBack(1)">{{ t('btn_back') }}</button>
+            <button class="btn-primary" id="corr-next-2" @click="handleNext2">{{ t('btn_next_arrow') }}</button>
           </div>
         </div>
 
@@ -261,19 +261,19 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="corr-step-3" style="display:none">
           <div class="info-block" style="border-left-color:#a78bfa;margin-bottom:16px">
-            <strong style="color:#a78bfa">🧠 Étape 3 / 4 — Compétences & Options</strong><br>
-            Les compétences sont pré-remplies selon votre discipline. Modifiez-les si besoin.
+            <strong style="color:#a78bfa">{{ t('corr_s3_header') }}</strong><br>
+            {{ t('corr_s3_desc') }}
           </div>
 
           <!-- Compétences -->
           <div class="field-group">
-            <label class="field-label">🎯 Référentiel de compétences évaluées</label>
+            <label class="field-label">{{ t('corr_skills_ref') }}</label>
             <textarea class="field-textarea" id="corr-competences" rows="4"
               placeholder="Pré-remplies automatiquement selon la discipline choisie…"></textarea>
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="corr-ref-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un Cadre de Référence (PDF/Image/TXT)
+                {{ t('sheet_import_ref') }}
               </label>
               <input type="file" id="corr-ref-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="corr-ref-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
@@ -284,27 +284,27 @@
 
           <!-- Critères personnalisés -->
           <div class="field-group">
-            <label class="field-label">✅ Critères d'évaluation personnalisés</label>
+            <label class="field-label">{{ t('corr_criteria_label') }}</label>
             <input type="text" class="field-input" id="corr-criteres"
               placeholder="Ex : Qualité rédaction, Schéma obligatoire, Orthographe pénalisée…">
           </div>
 
           <!-- Consignes supplémentaires -->
           <div class="field-group">
-            <label class="field-label">💬 Consignes supplémentaires à l'IA</label>
+            <label class="field-label">{{ t('corr_instr_label') }}</label>
             <textarea class="field-textarea" id="corr-consignes" rows="3"
               placeholder="Ex : Réponses très courtes pour Q1 / Valoriser les schémas-blocs / Ne pas pénaliser l'orthographe / Indiquer les erreurs classiques attendues…"></textarea>
           </div>
 
           <!-- Exemple modèle (optionnel) -->
           <div class="field-group">
-            <label class="field-label">📎 Exemple de correction modèle <span style="font-weight:normal;color:var(--text-dim)">(Few-Shot, Optionnel)</span></label>
+            <label class="field-label">{{ t('corr_example_label') }} <span style="font-weight:normal;color:var(--text-dim)">(Few-Shot, Optionnel)</span></label>
             <textarea class="field-textarea" id="corr-exemple" rows="3"
               placeholder="Collez une ancienne fiche de correction pour guider le style et le niveau de détail, ou importez-en une depuis un fichier."></textarea>
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
               <label for="corr-exemple-upload" class="corr-upload-btn" style="border-color:rgba(245,158,11,0.5);color:#f59e0b;background:rgba(245,158,11,0.07)">
                 <span style="font-size:13px">📄</span>
-                Importer une fiche modèle (PDF / Image / TXT)
+                {{ t('sheet_import_example') }}
               </label>
               <input type="file" id="corr-exemple-upload" accept=".pdf,.txt,.md,.doc,.docx,image/*" style="display:none">
               <span id="corr-exemple-badge" style="display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
@@ -316,8 +316,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="corr-back-3" @click="handleBack(2)">← Retour</button>
-            <button class="btn-primary" id="corr-next-3" @click="handleNext3">Vérifier →</button>
+            <button class="btn-ghost" id="corr-back-3" @click="handleBack(2)">{{ t('btn_back') }}</button>
+            <button class="btn-primary" id="corr-next-3" @click="handleNext3">{{ t('btn_verify') }}</button>
           </div>
         </div>
 
@@ -326,8 +326,8 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="corr-step-4" style="display:none">
           <div class="info-block" style="border-left-color:#f59e0b;margin-bottom:16px">
-            <strong style="color:#f59e0b">🚀 Étape 4 / 4 — Prêt à générer</strong><br>
-            Vérifiez le résumé ci-dessous avant de lancer la génération.
+            <strong style="color:#f59e0b">{{ t('corr_s4_header') }}</strong><br>
+            {{ t('corr_s4_desc') }}
           </div>
 
           <!-- Résumé -->
@@ -339,15 +339,15 @@
           <div class="field-group" style="margin-bottom:12px">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim)">
               <input type="checkbox" id="corr-export-word" style="accent-color:var(--neon)">
-              <span>📄 Exporter automatiquement en Word (.doc) après génération</span>
+              <span>{{ t('sheet_export_word') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="corr-export-html" style="accent-color:var(--neon)">
-              <span>🌐 Exporter automatiquement en HTML (Idéal pour les formules scientifiques)</span>
+              <span>{{ t('sheet_export_html') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="corr-export-pdf" style="accent-color:var(--neon)">
-              <span>📕 Exporter automatiquement en PDF (Rendu parfait)</span>
+              <span>{{ t('sheet_export_pdf') }}</span>
             </label>
           </div>
 
@@ -362,10 +362,10 @@
           </div>
 
           <div class="btn-row" style="flex-wrap: wrap;">
-            <button class="btn-ghost" id="corr-back-4" @click="handleBack(3)">← Retour</button>
-            <button class="btn-ghost" id="corr-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">💾 Sauvegarder config</button>
+            <button class="btn-ghost" id="corr-back-4" @click="handleBack(3)">{{ t('btn_back') }}</button>
+            <button class="btn-ghost" id="corr-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">{{ t('sheet_btn_save_config_short') }}</button>
             <button class="btn-primary" id="corr-generate-btn" @click="handleGenerate" style="background:linear-gradient(135deg,var(--neon),var(--cyan));color:#000;font-weight:700;gap:8px">
-              <span>🎯</span> GÉNÉRER LA FICHE
+              <span>🎯</span> {{ t('sheet_generate_btn') }}
             </button>
           </div>
         </div>

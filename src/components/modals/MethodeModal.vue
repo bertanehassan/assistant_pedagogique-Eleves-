@@ -11,7 +11,7 @@
       <div class="modal-header">
         <div class="modal-title" style="display:flex;align-items:center;gap:8px">
           <span style="font-size:18px">🧠</span>
-          Générateur de Fiche Méthode
+          {{ t('methode_modal_title') }}
         </div>
         <button class="modal-close" id="close-methode-modal">✕</button>
       </div>
@@ -27,7 +27,7 @@
           <div class="corr-step-dot" id="mdot-3">3</div>
           <div class="corr-step-line" id="mline-3"></div>
           <div class="corr-step-dot" id="mdot-4">4</div>
-          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="methode-step-label">Contexte général</div>
+          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="methode-step-label">{{ t('lbl_methode_step_1') }}</div>
         </div>
 
         <!-- ══════════════════════════════════════════
@@ -36,23 +36,23 @@
         <div class="corr-step" id="methode-step-1">
           <div class="info-block" style="border-left-color:var(--neon);margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div>
-              <strong style="color:var(--neon)">🎯 Étape 1 / 4 — Contexte général</strong><br>
-              Spécifiez la matière, le niveau et le rôle attendu de l'IA.
+              <strong style="color:var(--neon)">{{ t('methode_s1_title') }}</strong><br>
+              {{ t('methode_s1_desc') }}
             </div>
             <div class="corr-save-load-controls" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
               <select class="field-input field-select" id="methode-saved-list" style="width:auto; padding:6px; font-size:12px; background:rgba(0,0,0,0.2)">
-                <option value="">— Profils sauvegardés —</option>
+                <option value="">{{ t('sheet_saved_profiles') }}</option>
               </select>
-              <button class="btn-ghost" id="methode-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">📂 Charger</button>
+              <button class="btn-ghost" id="methode-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">{{ t('sheet_btn_load') }}</button>
               <button class="btn-ghost" id="methode-delete-save-btn" @click="handleDeleteSave" style="border:1px dashed rgba(255,100,100,0.4); font-size:12px; padding:6px 12px; background:rgba(255,0,0,0.1); color:#ff6b6b">🗑️</button>
             </div>
           </div>
 
           <!-- Discipline -->
           <div class="field-group">
-            <label class="field-label">📚 Discipline / Matière <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('sheet_discipline') }} <span style="color:var(--danger)">*</span></label>
             <select class="field-input field-select" id="methode-discipline" @change="handleDisciplineChange">
-              <option value="">— Choisir une discipline —</option>
+              <option value="">{{ t('sheet_discipline_select') }}</option>
               <optgroup label="Sciences">
                 <option value="SVT" selected>SVT (Sciences de la Vie et de la Terre)</option>
                 <option value="Physique-Chimie">Physique-Chimie</option>
@@ -76,18 +76,18 @@
 
           <!-- Discipline personnalisée -->
           <div class="field-group" id="methode-custom-discipline-group" style="display:none">
-            <label class="field-label">✏️ Nom de la discipline</label>
+            <label class="field-label">{{ t('sheet_discipline_name') }}</label>
             <input type="text" class="field-input" id="methode-custom-discipline"
-              placeholder="Ex : Chimie Organique, Droit, Comptabilité…">
+              :placeholder="t('sheet_discipline_placeholder')">
           </div>
 
           <!-- Niveau & Langue -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <!-- Niveau scolaire -->
             <div class="field-group">
-              <label class="field-label">🎓 Niveau scolaire <span style="color:var(--danger)">*</span></label>
+              <label class="field-label">{{ t('sheet_level') }} <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="methode-niveau">
-                <option value="">— Choisir —</option>
+                <option value="">{{ t('sheet_level_select') }}</option>
                 <optgroup label="Lycée">
                   <option value="Tronc Commun (TC)">Tronc Commun (TC)</option>
                   <option value="1ère Année Bac (1BAC)">1ère Année Bac (1BAC)</option>
@@ -103,7 +103,7 @@
 
             <!-- Niveau de langue de l'élève -->
             <div class="field-group">
-              <label class="field-label">🗣️ Niveau de langue de l'élève <span style="color:var(--danger)">*</span></label>
+              <label class="field-label">{{ t('methode_lang_student') }} <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="methode-niveau-langue">
                 <option value="B1-B2 (français langue seconde)" selected>B1-B2 (français langue seconde)</option>
                 <option value="Langue maternelle">Langue maternelle</option>
@@ -115,20 +115,20 @@
 
           <!-- Langue de génération de la fiche -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🌍 Langue de génération de la fiche</label>
+            <label class="field-label">{{ t('sheet_output_lang') }}</label>
             <select class="field-input field-select" id="methode-output-lang">
               <option value="fr" selected>🇫🇷 Français (par défaut)</option>
               <option value="en">🇬🇧 English</option>
               <option value="ar">🇲🇦 العربية (Arabe)</option>
             </select>
             <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
-              ℹ️ Détection automatique si la matière est « Arabe » ou « Anglais ».
+              {{ t('sheet_lang_hint') }}
             </div>
           </div>
 
           <!-- Modèle IA à utiliser -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🤖 Modèle IA à utiliser</label>
+            <label class="field-label">{{ t('sheet_model_label') }}</label>
             <select class="field-input field-select" id="methode-model-select">
               <option value="gemini-3.5-flash" selected>✨ Gemini 3.5 Flash — Vision & PDF (par défaut)</option>
             </select>
@@ -139,14 +139,14 @@
 
           <!-- Rôle & expertise IA -->
           <div class="field-group">
-            <label class="field-label">🤖 Rôle et expertise de l'IA <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('methode_role_label') }} <span style="color:var(--danger)">*</span></label>
             <textarea class="field-textarea" id="methode-role" rows="5"
               placeholder="Ex : Tu es un tuteur en Mathématiques, spécialisé en analyse et résolution de problèmes complexes.">Tu es un expert pédagogique spécialisé dans la conception de fiches méthode pour les élèves du collège et du lycée marocain (de la 1AC au 2BAC), toutes disciplines confondues — Sciences, Mathématiques, Lettres, Langues, Histoire-Géographie, Philosophie et Économie. Ton rôle est de produire des fiches méthode rigoureuses, concrètes et immédiatement utilisables : tu corriges les erreurs identifiées, tu déconstruis la démarche attendue étape par étape, et tu fournis un modèle de travail explicite et reproductible que l'élève peut appliquer de façon autonome à tout exercice similaire. Tu ne te contentes pas d'expliquer — tu montres exactement ce qu'il faut faire, dans quel ordre et pourquoi, avec des exemples rédigés et des formulations modèles prêtes à réutiliser.</textarea>
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="close-methode-modal-step1" @click="handleClose">Annuler</button>
-            <button class="btn-primary" id="methode-next-1" @click="handleNext1">Suivant →</button>
+            <button class="btn-ghost" id="close-methode-modal-step1" @click="handleClose">{{ t('btn_cancel') }}</button>
+            <button class="btn-primary" id="methode-next-1" @click="handleNext1">{{ t('btn_next_arrow') }}</button>
           </div>
         </div>
 
@@ -156,19 +156,19 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="methode-step-2" style="display:none">
           <div class="info-block" style="border-left-color:var(--cyan);margin-bottom:16px">
-            <strong style="color:var(--cyan)">📄 Étape 2 / 4 — Données d'entrée (L'exercice)</strong><br>
-            Collez l'exercice (les questions et les documents) ou importez un PDF.
+            <strong style="color:var(--cyan)">{{ t('methode_s2_header') }}</strong><br>
+            {{ t('methode_s2_desc') }}
           </div>
 
           <!-- Zone Exercice -->
           <div class="field-group">
-            <label class="field-label">📋 Énoncé de l'exercice et ressources <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('methode_exercice_label') }} <span style="color:var(--danger)">*</span></label>
             <textarea class="field-textarea" id="methode-exercice" rows="10"
               placeholder="Collez ici l'exercice complet (contexte, questions et données associées)…"></textarea>
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="methode-pdf-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un fichier (PDF, image ou TXT)
+                {{ t('sheet_import_file') }}
               </label>
               <input type="file" id="methode-pdf-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="methode-pdf-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
@@ -180,8 +180,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="methode-back-2" @click="handleBack(1)">← Retour</button>
-            <button class="btn-primary" id="methode-next-2" @click="handleNext2">Suivant →</button>
+            <button class="btn-ghost" id="methode-back-2" @click="handleBack(1)">{{ t('btn_back') }}</button>
+            <button class="btn-primary" id="methode-next-2" @click="handleNext2">{{ t('btn_next_arrow') }}</button>
           </div>
         </div>
 
@@ -190,20 +190,20 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="methode-step-3" style="display:none">
           <div class="info-block" style="border-left-color:#a78bfa;margin-bottom:16px">
-            <strong style="color:#a78bfa">🧠 Étape 3 / 4 — Référentiel & Modèles</strong><br>
-            Spécifiez le cadre de compétences, un exemple de fiche (Few-shot) ou des consignes spécifiques.
+            <strong style="color:#a78bfa">{{ t('methode_s3_header') }}</strong><br>
+            {{ t('methode_s3_desc') }}
           </div>
 
           <!-- Référentiel de compétences -->
           <div class="field-group">
-            <label class="field-label">🎯 Référentiel de compétences officiel <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('methode_competences_label') }} <span style="color:var(--danger)">*</span></label>
             <textarea class="field-textarea" id="methode-competences" rows="4"
               placeholder="Collez ici les compétences attendues (ex: Analyser, Résoudre, Restituer)…"></textarea>
             
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="methode-ref-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un Cadre de Référence (PDF/Image/TXT)
+                {{ t('sheet_import_ref') }}
               </label>
               <input type="file" id="methode-ref-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="methode-ref-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
@@ -213,33 +213,33 @@
 
           <!-- Exemple de fiche (Few-shot) -->
           <div class="field-group" style="margin-top: 16px;">
-            <label class="field-label">📎 Exemple de fiche modèle <span style="font-weight:normal;color:var(--text-dim)">(Few-Shot, Optionnel)</span></label>
+            <label class="field-label">{{ t('methode_example_label') }} <span style="font-weight:normal;color:var(--text-dim)">{{ t('methode_optional') }}</span></label>
             <textarea class="field-textarea" id="methode-exemple" rows="3"
               placeholder="Collez ici un exemple de fiche méthode réussie en XML..."></textarea>
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
               <label for="methode-exemple-upload" class="corr-upload-btn" style="border-color:rgba(245,158,11,0.5);color:#f59e0b;background:rgba(245,158,11,0.07)">
                 <span style="font-size:13px">📄</span>
-                Importer une fiche modèle (PDF / Image / TXT / MD)
+                {{ t('sheet_import_example') }}
               </label>
               <input type="file" id="methode-exemple-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="methode-exemple-badge" style="display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
               <button id="methode-exemple-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
             <div id="methode-exemple-info" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:6px;font-size:11px;color:#f59e0b">
-              ✅ Fiche modèle importée avec succès.
+              {{ t('methode_example_loaded') }}
             </div>
           </div>
 
           <!-- Style, Ton & Directives spécifiques -->
           <div class="field-group" style="margin-top:16px;">
-            <label class="field-label">📐 Style, Ton & Consignes supplémentaires</label>
+            <label class="field-label">{{ t('methode_directives_label') }}</label>
             <textarea class="field-textarea" id="methode-directives" rows="3"
               placeholder="Ex : Ton encourageant et patient, style clair et pédagogique, explications courtes..."></textarea>
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="methode-back-3" @click="handleBack(2)">← Retour</button>
-            <button class="btn-primary" id="methode-next-3" @click="handleNext3">Vérifier →</button>
+            <button class="btn-ghost" id="methode-back-3" @click="handleBack(2)">{{ t('btn_back') }}</button>
+            <button class="btn-primary" id="methode-next-3" @click="handleNext3">{{ t('btn_verify') }}</button>
           </div>
         </div>
 
@@ -248,8 +248,8 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="methode-step-4" style="display:none">
           <div class="info-block" style="border-left-color:#f59e0b;margin-bottom:16px">
-            <strong style="color:#f59e0b">🚀 Étape 4 / 4 — Prêt à générer</strong><br>
-            Vérifiez le résumé ci-dessous avant de lancer la génération.
+            <strong style="color:#f59e0b">{{ t('methode_s4_header') }}</strong><br>
+            {{ t('methode_s4_desc') }}
           </div>
 
           <!-- Résumé -->
@@ -261,15 +261,15 @@
           <div class="field-group" style="margin-bottom:12px">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim)">
               <input type="checkbox" id="methode-export-word" style="accent-color:var(--neon)">
-              <span>📄 Exporter automatiquement en Word (.doc) après génération</span>
+              <span>{{ t('sheet_export_word') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="methode-export-html" style="accent-color:var(--neon)">
-              <span>🌐 Exporter automatiquement en HTML (Idéal pour les formules scientifiques)</span>
+              <span>{{ t('sheet_export_html') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="methode-export-pdf" style="accent-color:var(--neon)">
-              <span>📕 Exporter automatiquement en PDF (Rendu parfait)</span>
+              <span>{{ t('sheet_export_pdf') }}</span>
             </label>
           </div>
 
@@ -279,10 +279,10 @@
           </div>
 
           <div class="btn-row" style="flex-wrap: wrap;">
-            <button class="btn-ghost" id="methode-back-4" @click="handleBack(3)">← Retour</button>
-            <button class="btn-ghost" id="methode-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">💾 Sauvegarder config</button>
+            <button class="btn-ghost" id="methode-back-4" @click="handleBack(3)">{{ t('btn_back') }}</button>
+            <button class="btn-ghost" id="methode-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">{{ t('sheet_btn_save_config_short') }}</button>
             <button class="btn-primary" id="methode-generate-btn" @click="handleGenerate" style="background:linear-gradient(135deg,var(--neon),var(--cyan));color:#000;font-weight:700;gap:8px">
-              <span>🎯</span> GÉNÉRER LA FICHE MÉTHODE
+              <span>🎯</span> {{ t('methode_btn_generate') }}
             </button>
           </div>
         </div>
@@ -294,6 +294,7 @@
 
 <script setup>
 import { onMounted } from 'vue';
+import { t } from '../../i18n.js';
 
 const DEFAULT_ROLE = `Tu es un expert pédagogique spécialisé dans la conception de fiches méthode pour les élèves du collège et du lycée marocain (de la 1AC au 2BAC), toutes disciplines confondues — Sciences, Mathématiques, Lettres, Langues, Histoire-Géographie, Philosophie et Économie. Ton rôle est de produire des fiches méthode rigoureuses, concrètes et immédiatement utilisables : tu corriges les erreurs identifiées, tu déconstruis la démarche attendue étape par étape, et tu fournis un modèle de travail explicite et reproductible que l'élève peut appliquer de façon autonome à tout exercice similaire. Tu ne te contentes pas d'expliquer — tu montres exactement ce qu'il faut faire, dans quel ordre et pourquoi, avec des exemples rédigés et des formulations modèles prêtes à réutiliser.`;
 

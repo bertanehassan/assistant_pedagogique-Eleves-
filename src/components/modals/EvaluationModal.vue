@@ -11,7 +11,7 @@
       <div class="modal-header">
         <div class="modal-title" style="display:flex;align-items:center;gap:8px">
           <span style="font-size:18px">📝</span>
-          Générateur d'Évaluations A/B — Devoir Surveillé
+          {{ t('eval_modal_title') }}
         </div>
         <button class="modal-close" id="close-evaluation-modal">✕</button>
       </div>
@@ -25,7 +25,7 @@
           <div class="eval-step-dot" id="evdot-2">2</div>
           <div class="eval-step-line" id="evline-2"></div>
           <div class="eval-step-dot" id="evdot-3">3</div>
-          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="eval-step-label">Contexte de l'évaluation</div>
+          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="eval-step-label">{{ t('lbl_eval_step_1') }}</div>
         </div>
 
         <!-- ══════════════════════════════════════════
@@ -34,23 +34,23 @@
         <div class="corr-step" id="eval-step-1">
           <div class="info-block" style="border-left-color:#f59e0b;margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div>
-              <strong style="color:#f59e0b">📋 Étape 1 / 3 — Contexte de l'évaluation</strong><br>
-              Spécifiez la matière, le niveau, la filière et les paramètres du devoir surveillé.
+              <strong style="color:#f59e0b">{{ t('eval_s1_title') }}</strong><br>
+              {{ t('eval_s1_desc') }}
             </div>
             <div class="eval-save-load-controls" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
               <select class="field-input field-select" id="eval-saved-list" style="width:auto; padding:6px; font-size:12px; background:rgba(0,0,0,0.2)">
-                <option value="">— Profils sauvegardés —</option>
+                <option value="">{{ t('sheet_saved_profiles') }}</option>
               </select>
-              <button class="btn-ghost" id="eval-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">📂 Charger</button>
+              <button class="btn-ghost" id="eval-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">{{ t('sheet_btn_load') }}</button>
               <button class="btn-ghost" id="eval-delete-save-btn" @click="handleDeleteSave" style="border:1px dashed rgba(255,100,100,0.4); font-size:12px; padding:6px 12px; background:rgba(255,0,0,0.1); color:#ff6b6b">🗑️</button>
             </div>
           </div>
 
           <!-- Discipline -->
           <div class="field-group">
-            <label class="field-label">📚 Discipline / Matière <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('sheet_discipline') }} <span style="color:var(--danger)">*</span></label>
             <select class="field-input field-select" id="eval-discipline" @change="handleDisciplineChange">
-              <option value="">— Choisir une discipline —</option>
+              <option value="">{{ t('sheet_discipline_select') }}</option>
               <optgroup label="Sciences">
                 <option value="SVT" selected>SVT (Sciences de la Vie et de la Terre)</option>
                 <option value="Physique-Chimie">Physique-Chimie</option>
@@ -74,18 +74,18 @@
 
           <!-- Discipline personnalisée -->
           <div class="field-group" id="eval-custom-discipline-group" style="display:none">
-            <label class="field-label">✏️ Nom de la discipline</label>
+            <label class="field-label">{{ t('sheet_discipline_name') }}</label>
             <input type="text" class="field-input" id="eval-custom-discipline"
-              placeholder="Ex : Chimie Organique, Droit, Comptabilité…">
+              :placeholder="t('sheet_discipline_placeholder')">
           </div>
 
           <!-- Niveau & Filière/Option -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
             <!-- Niveau scolaire -->
             <div class="field-group">
-              <label class="field-label">🎓 Niveau scolaire <span style="color:var(--danger)">*</span></label>
+              <label class="field-label">{{ t('sheet_level') }} <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="eval-niveau">
-                <option value="">— Choisir —</option>
+                <option value="">{{ t('sheet_level_select') }}</option>
                 <optgroup label="Lycée">
                   <option value="Tronc Commun (TC)">Tronc Commun (TC)</option>
                   <option value="1ère Année Bac (1BAC)">1ère Année Bac (1BAC)</option>
@@ -101,7 +101,7 @@
 
             <!-- Filière / Option -->
             <div class="field-group">
-              <label class="field-label">🏫 Filière / Option</label>
+              <label class="field-label">{{ t('eval_filiere_label') }}</label>
               <input type="text" class="field-input" id="eval-filiere"
                 placeholder="Ex : PC — Option Français, SP, Lettres…" value="PC — Option Français">
             </div>
@@ -110,14 +110,14 @@
           <!-- Semestre & N° Devoir -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
             <div class="field-group">
-              <label class="field-label">📅 Semestre</label>
+              <label class="field-label">{{ t('eval_semestre_label') }}</label>
               <select class="field-input field-select" id="eval-semestre">
                 <option value="1">Semestre 1</option>
                 <option value="2" selected>Semestre 2</option>
               </select>
             </div>
             <div class="field-group">
-              <label class="field-label">🔢 N° du Devoir Surveillé</label>
+              <label class="field-label">{{ t('eval_num_devoir_label') }}</label>
               <select class="field-input field-select" id="eval-num-devoir">
                 <option value="1">Devoir N° 1</option>
                 <option value="2" selected>Devoir N° 2</option>
@@ -128,20 +128,20 @@
 
           <!-- Langue de génération -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🌍 Langue de génération de l'évaluation</label>
+            <label class="field-label">{{ t('eval_output_lang_label') }}</label>
             <select class="field-input field-select" id="eval-output-lang">
               <option value="fr" selected>🇫🇷 Français (par défaut)</option>
               <option value="en">🇬🇧 English</option>
               <option value="ar">🇲🇦 العربية (Arabe)</option>
             </select>
             <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
-              ℹ️ Détection automatique si la matière est « Arabe » ou « Anglais ».
+              {{ t('sheet_lang_hint') }}
             </div>
           </div>
 
           <!-- Modèle IA à utiliser -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🤖 Modèle IA à utiliser</label>
+            <label class="field-label">{{ t('sheet_model_label') }}</label>
             <select class="field-input field-select" id="eval-model-select">
               <option value="gemini-3.5-flash" selected>✨ Gemini 3.5 Flash — Vision & PDF (par défaut)</option>
             </select>
@@ -151,8 +151,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="close-evaluation-modal-step1" @click="handleClose">Annuler</button>
-            <button class="btn-primary" id="eval-next-1" @click="handleNext1">Suivant →</button>
+            <button class="btn-ghost" id="close-evaluation-modal-step1" @click="handleClose">{{ t('btn_cancel') }}</button>
+            <button class="btn-primary" id="eval-next-1" @click="handleNext1">{{ t('btn_next_arrow') }}</button>
           </div>
         </div>
 
@@ -162,13 +162,13 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="eval-step-2" style="display:none">
           <div class="info-block" style="border-left-color:var(--cyan);margin-bottom:16px">
-            <strong style="color:var(--cyan)">📖 Étape 2 / 3 — Contenu du cours à évaluer</strong><br>
-            Collez le texte du cours ou importez un PDF. L'IA analysera toutes les notions clés et les répartira en deux groupes équilibrés.
+            <strong style="color:var(--cyan)">{{ t('eval_s2_header') }}</strong><br>
+            {{ t('eval_s2_desc') }}
           </div>
 
           <!-- Zone Cours -->
           <div class="field-group">
-            <label class="field-label">📋 Contenu du cours <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('eval_cours_label') }} <span style="color:var(--danger)">*</span></label>
             <textarea class="field-textarea" id="eval-cours" rows="12"
               placeholder="Collez ici le texte intégral du cours, de la leçon ou du chapitre à évaluer…
 
@@ -181,7 +181,7 @@ L'IA va :
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="eval-pdf-upload" class="eval-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer fichiers (PDF, image ou TXT — sélection multiple possible)
+                {{ t('eval_import_files') }}
               </label>
               <input type="file" id="eval-pdf-upload" accept=".pdf,.txt,.md,image/*" multiple style="display:none">
               <span id="eval-pdf-badge" style="display:none;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
@@ -194,14 +194,14 @@ L'IA va :
 
           <!-- Consignes supplémentaires (optionnel) -->
           <div class="field-group" style="margin-top:16px">
-            <label class="field-label">⚙️ Consignes ou précisions supplémentaires <span style="font-weight:normal;color:var(--text-dim)">(Optionnel)</span></label>
+            <label class="field-label">{{ t('eval_consignes_label') }} <span style="font-weight:normal;color:var(--text-dim)">(Optionnel)</span></label>
             <textarea class="field-textarea" id="eval-consignes" rows="3"
               placeholder="Ex : Insistez sur les processus de la photosynthèse. Évitez les questions sur la mitose. Adaptez au niveau B1-B2 strict."></textarea>
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="eval-back-2" @click="handleBack(1)">← Retour</button>
-            <button class="btn-primary" id="eval-next-2" @click="handleNext2">Vérifier →</button>
+            <button class="btn-ghost" id="eval-back-2" @click="handleBack(1)">{{ t('btn_back') }}</button>
+            <button class="btn-primary" id="eval-next-2" @click="handleNext2">{{ t('btn_verify') }}</button>
           </div>
         </div>
 
@@ -210,8 +210,8 @@ L'IA va :
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="eval-step-3" style="display:none">
           <div class="info-block" style="border-left-color:#34d399;margin-bottom:16px">
-            <strong style="color:#34d399">🚀 Étape 3 / 3 — Prêt à générer</strong><br>
-            Vérifiez le résumé ci-dessous avant de lancer la génération.
+            <strong style="color:#34d399">{{ t('eval_s3_header') }}</strong><br>
+            {{ t('eval_s3_desc') }}
           </div>
 
           <!-- Résumé -->
@@ -221,7 +221,7 @@ L'IA va :
 
           <!-- Ce que va générer l'IA -->
           <div style="padding:12px 16px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:8px;margin-bottom:16px;font-size:12px">
-            <div style="font-weight:700;color:#f59e0b;margin-bottom:8px">📋 L'IA va générer :</div>
+            <div style="font-weight:700;color:#f59e0b;margin-bottom:8px">{{ t('eval_ai_generates') }}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="color:var(--text-dim)">
                 <div style="color:#60a5fa;font-weight:600;margin-bottom:4px">📄 VERSION A</div>
@@ -251,15 +251,15 @@ L'IA va :
           <div class="field-group" style="margin-bottom:12px">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim)">
               <input type="checkbox" id="eval-export-word" style="accent-color:var(--neon)">
-              <span>📄 Exporter automatiquement en Word (.doc) après génération</span>
+              <span>{{ t('sheet_export_word') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="eval-export-html" checked style="accent-color:var(--neon)">
-              <span>🌐 Exporter automatiquement en HTML (mise en page impression parfaite)</span>
+              <span>{{ t('eval_export_html') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="eval-export-pdf" style="accent-color:var(--neon)">
-              <span>📕 Exporter automatiquement en PDF</span>
+              <span>{{ t('eval_export_pdf_short') }}</span>
             </label>
           </div>
 
@@ -269,10 +269,10 @@ L'IA va :
           </div>
 
           <div class="btn-row" style="flex-wrap: wrap;">
-            <button class="btn-ghost" id="eval-back-3" @click="handleBack(2)">← Retour</button>
-            <button class="btn-ghost" id="eval-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">💾 Sauvegarder config</button>
+            <button class="btn-ghost" id="eval-back-3" @click="handleBack(2)">{{ t('btn_back') }}</button>
+            <button class="btn-ghost" id="eval-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">{{ t('sheet_btn_save_config_short') }}</button>
             <button class="btn-primary" id="eval-generate-btn" @click="handleGenerate" style="background:linear-gradient(135deg,#f59e0b,#f97316);color:#000;font-weight:700;gap:8px">
-              <span>📝</span> GÉNÉRER LES ÉVALUATIONS A/B
+              <span>📝</span> {{ t('eval_btn_generate') }}
             </button>
           </div>
         </div>
@@ -284,6 +284,7 @@ L'IA va :
 
 <script setup>
 import { onMounted } from 'vue';
+import { t } from '../../i18n.js';
 
 onMounted(() => {
   // Rien à faire au montage — la logique est dans legacy.js

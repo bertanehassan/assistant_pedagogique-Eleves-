@@ -11,7 +11,7 @@
       <div class="modal-header">
         <div class="modal-title" style="display:flex;align-items:center;gap:8px">
           <span style="font-size:18px">👨‍🏫</span>
-          Générateur de Fiche Didactique
+          {{ t('didac_modal_title') }}
         </div>
         <button class="modal-close" id="close-didactique-modal">✕</button>
       </div>
@@ -27,7 +27,7 @@
           <div class="corr-step-dot" id="ddot-3">3</div>
           <div class="corr-step-line" id="dline-3"></div>
           <div class="corr-step-dot" id="ddot-4">4</div>
-          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="didac-step-label">Contexte pédagogique</div>
+          <div style="margin-left:10px;font-size:11px;color:var(--text-dim)" id="didac-step-label">{{ t('lbl_didac_step_1') }}</div>
         </div>
 
         <!-- ══════════════════════════════════════════
@@ -36,21 +36,21 @@
         <div class="corr-step" id="didac-step-1">
           <div class="info-block" style="border-left-color:var(--neon);margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div>
-              <strong style="color:var(--neon)">🎯 Étape 1 / 4 — Contexte pédagogique</strong><br>
-              Renseignez la discipline et le niveau. (Optimisé pour SVT 2BAC BIOF).
+              <strong style="color:var(--neon)">{{ t('didac_s1_title') }}</strong><br>
+              {{ t('didac_s1_desc') }}
             </div>
             <div class="corr-save-load-controls" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
               <select class="field-input field-select" id="didac-saved-list" style="width:auto; padding:6px; font-size:12px; background:rgba(0,0,0,0.2)">
-                <option value="">— Profils sauvegardés —</option>
+                <option value="">{{ t('sheet_saved_profiles') }}</option>
               </select>
-              <button class="btn-ghost" id="didac-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">📂 Charger</button>
+              <button class="btn-ghost" id="didac-load-btn" @click="handleLoadConfig" style="border:1px dashed rgba(255,255,255,0.2); font-size:12px; padding:6px 12px; background:rgba(0,0,0,0.2)">{{ t('sheet_btn_load') }}</button>
               <button class="btn-ghost" id="didac-delete-save-btn" @click="handleDeleteSave" style="border:1px dashed rgba(255,100,100,0.4); font-size:12px; padding:6px 12px; background:rgba(255,0,0,0.1); color:#ff6b6b">🗑️</button>
             </div>
           </div>
 
           <!-- Discipline -->
           <div class="field-group">
-            <label class="field-label">📚 Discipline <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('sheet_discipline') }} <span style="color:var(--danger)">*</span></label>
             <select class="field-input field-select" id="didac-discipline" @change="handleDisciplineChange">
               <option value="SVT" selected>SVT (Sciences de la Vie et de la Terre)</option>
               <option value="Physique-Chimie">Physique-Chimie</option>
@@ -65,18 +65,18 @@
 
           <!-- Discipline personnalisée -->
           <div class="field-group" id="didac-custom-discipline-group" style="display:none">
-            <label class="field-label">✏️ Nom de la discipline</label>
+            <label class="field-label">{{ t('sheet_discipline_name') }}</label>
             <input type="text" class="field-input" id="didac-custom-discipline"
-              placeholder="Ex : Chimie Organique, Droit, Comptabilité…">
+              :placeholder="t('sheet_discipline_placeholder')">
           </div>
 
           <!-- Paramètres de classe -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <!-- Niveau scolaire -->
             <div class="field-group">
-              <label class="field-label">🎓 Niveau scolaire <span style="color:var(--danger)">*</span></label>
+              <label class="field-label">{{ t('sheet_level') }} <span style="color:var(--danger)">*</span></label>
               <select class="field-input field-select" id="didac-niveau">
-                <option value="">— Choisir —</option>
+                <option value="">{{ t('sheet_level_select') }}</option>
                 <optgroup label="Lycée">
                   <option value="Tronc Commun (TC)">Tronc Commun (TC)</option>
                   <option value="1ère Année Bac (1BAC)">1ère Année Bac (1BAC)</option>
@@ -92,7 +92,7 @@
 
             <!-- Filière -->
             <div class="field-group">
-              <label class="field-label">📚 Filière</label>
+              <label class="field-label">{{ t('sheet_filiere') }}</label>
               <select class="field-input field-select" id="didac-filiere">
                 <option value="Sciences Physiques (SP)" selected>Sciences Physiques (SP)</option>
                 <option value="Sciences Mathématiques (SM)">Sciences Mathématiques (SM)</option>
@@ -104,7 +104,7 @@
 
             <!-- Option -->
             <div class="field-group">
-              <label class="field-label">🌍 Option (Langue)</label>
+              <label class="field-label">{{ t('sheet_option_lang') }}</label>
               <select class="field-input field-select" id="didac-option">
                 <option value="Section Internationale - Français (BIOF)" selected>Section Internationale - Français (BIOF)</option>
                 <option value="Générale (Arabe)">Générale (Arabe)</option>
@@ -116,20 +116,20 @@
 
           <!-- Langue de génération de la fiche -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🌍 Langue de génération de la fiche</label>
+            <label class="field-label">{{ t('sheet_output_lang') }}</label>
             <select class="field-input field-select" id="didac-output-lang">
               <option value="fr" selected>🇫🇷 Français (par défaut)</option>
               <option value="en">🇬🇧 English</option>
               <option value="ar">🇲🇦 العربية (Arabe)</option>
             </select>
             <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
-              ℹ️ Détection automatique si la matière est « Arabe » ou « Anglais ».
+              {{ t('sheet_lang_hint') }}
             </div>
           </div>
 
           <!-- Modèle IA à utiliser -->
           <div class="field-group" style="margin-top:12px">
-            <label class="field-label">🤖 Modèle IA à utiliser</label>
+            <label class="field-label">{{ t('sheet_model_label') }}</label>
             <select class="field-input field-select" id="didac-model-select">
               <option value="gemini-3.5-flash" selected>✨ Gemini 3.5 Flash — Vision & PDF (par défaut)</option>
             </select>
@@ -139,8 +139,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="close-didactique-modal-step1" @click="handleClose">Annuler</button>
-            <button class="btn-primary" id="didac-next-1" @click="handleNext1">Suivant →</button>
+            <button class="btn-ghost" id="close-didactique-modal-step1" @click="handleClose">{{ t('btn_cancel') }}</button>
+            <button class="btn-primary" id="didac-next-1" @click="handleNext1">{{ t('btn_next_arrow') }}</button>
           </div>
         </div>
 
@@ -150,19 +150,19 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="didac-step-2" style="display:none">
           <div class="info-block" style="border-left-color:var(--cyan);margin-bottom:16px">
-            <strong style="color:var(--cyan)">📄 Étape 2 / 4 — Support de cours / Activité</strong><br>
-            Collez le contenu de la leçon, de l'activité pédagogique, ou importez un PDF.
+            <strong style="color:var(--cyan)">{{ t('didac_s2_header') }}</strong><br>
+            {{ t('didac_s2_desc') }}
           </div>
 
           <!-- Zone cours -->
           <div class="field-group">
-            <label class="field-label">📋 Contenu de la séquence <span style="color:var(--danger)">*</span></label>
+            <label class="field-label">{{ t('didac_seq_label') }} <span style="color:var(--danger)">*</span></label>
             <textarea class="field-textarea" id="didac-cours" rows="10"
               placeholder="Collez ici le texte complet de votre cours, ou de l'activité pédagogique…"></textarea>
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="didac-pdf-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un fichier (PDF, image ou TXT)
+                {{ t('sheet_import_file') }}
               </label>
               <input type="file" id="didac-pdf-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="didac-pdf-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
@@ -174,8 +174,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="didac-back-2" @click="handleBack(1)">← Retour</button>
-            <button class="btn-primary" id="didac-next-2" @click="handleNext2">Suivant →</button>
+            <button class="btn-ghost" id="didac-back-2" @click="handleBack(1)">{{ t('btn_back') }}</button>
+            <button class="btn-primary" id="didac-next-2" @click="handleNext2">{{ t('btn_next_arrow') }}</button>
           </div>
         </div>
 
@@ -184,21 +184,21 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="didac-step-3" style="display:none">
           <div class="info-block" style="border-left-color:#a78bfa;margin-bottom:16px">
-            <strong style="color:#a78bfa">🧠 Étape 3 / 4 — Objectifs & Cadre</strong><br>
-            Définissez les objectifs pédagogiques et les compétences ciblées pour cette séquence.
+            <strong style="color:#a78bfa">{{ t('didac_s3_header') }}</strong><br>
+            {{ t('didac_s3_desc') }}
           </div>
 
           <!-- Objectifs Notionnels & Opérationnels -->
           <div class="field-group">
-            <label class="field-label">🎯 Objectifs (Notionnels, Opérationnels) & Compétences</label>
+            <label class="field-label">{{ t('didac_objectives_label') }}</label>
             <textarea class="field-textarea" id="didac-objectifs" rows="4"
-              placeholder="Ex : &#10;- Définir la mitose.&#10;- Analyser un caryotype.&#10;- Compétence de communication scientifique..."></textarea>
+              :placeholder="t('didac_objectives_placeholder')"></textarea>
             
             <!-- Import Cadre de référence (comme pour la correction) -->
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
               <label for="didac-ref-upload" class="corr-upload-btn">
                 <span style="font-size:13px">📎</span>
-                Importer un Cadre de Référence (PDF/Image/TXT)
+                {{ t('sheet_import_ref') }}
               </label>
               <input type="file" id="didac-ref-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="didac-ref-badge" style="display:none;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#a78bfa"></span>
@@ -208,35 +208,33 @@
 
           <!-- Exemple de fiche (Few-shot) -->
           <div class="field-group" style="margin-top: 16px;">
-            <label class="field-label">📎 Exemple de fiche réussie <span style="font-weight:normal;color:var(--text-dim)">(Few-Shot, Optionnel)</span></label>
+            <label class="field-label">{{ t('didac_example_label') }} <span style="font-weight:normal;color:var(--text-dim)">(Few-Shot, {{ t('txt_optional') }})</span></label>
             <textarea class="field-textarea" id="didac-exemple" rows="4"
-              placeholder="Collez ici une fiche didactique validée, ou importez-en une depuis un fichier. L'IA imitera son style, sa structure et son niveau de détail."></textarea>
+              :placeholder="t('didac_example_placeholder')"></textarea>
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
               <label for="didac-exemple-upload" class="corr-upload-btn" style="border-color:rgba(245,158,11,0.5);color:#f59e0b;background:rgba(245,158,11,0.07)">
                 <span style="font-size:13px">📄</span>
-                Importer une fiche exemple (PDF / Image / TXT)
+                {{ t('sheet_import_example') }}
               </label>
               <input type="file" id="didac-exemple-upload" accept=".pdf,.txt,.md,.doc,.docx,image/*" style="display:none">
               <span id="didac-exemple-badge" style="display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#f59e0b"></span>
               <button id="didac-exemple-remove" class="file-remove-btn" title="Supprimer ce fichier" style="display:none">✕</button>
             </div>
             <div id="didac-exemple-info" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:6px;font-size:11px;color:#f59e0b">
-              ✅ Fiche exemple importée — l'IA l'utilisera comme modèle de style et de structure.
+              ✅ {{ t('didac_example_success') }}
             </div>
-            <div class="field-hint" style="margin-top:4px">Fournir un exemple améliore grandement la qualité du tableau généré.</div>
+            <div class="field-hint" style="margin-top:4px">{{ t('didac_example_hint') }}</div>
           </div>
 
 
           <!-- Directives pédagogiques & didactiques spécifiques -->
           <div class="field-group" style="margin-top:16px; border:1px solid rgba(52,211,153,0.25); border-radius:8px; padding:14px; background:rgba(52,211,153,0.04);">
             <label class="field-label" style="color:#34d399">
-              📐 Directives pédagogiques & didactiques spécifiques
-              <span style="font-weight:normal;color:var(--text-dim);font-size:11px"> (Optionnel — fortement recommandé)</span>
+              📐 {{ t('didac_directives_label') }}
+              <span style="font-weight:normal;color:var(--text-dim);font-size:11px"> ({{ t('txt_optional') }} — {{ t('txt_recommended') }})</span>
             </label>
             <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.6">
-              Saisissez ou importez les instructions officielles, les approches pédagogiques imposées,
-              les démarches d'investigation, les contraintes institutionnelles ou tout autre directive
-              spécifique à votre matière. L'IA les intègrera comme contraintes prioritaires dans la fiche.
+              {{ t('didac_directives_hint') }}
             </div>
             <textarea class="field-textarea" id="didac-directives" rows="4"
               style="border-color:rgba(52,211,153,0.3); background:rgba(52,211,153,0.03)"
@@ -244,7 +242,7 @@
             <div class="field-hint" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
               <label for="didac-directives-upload" class="corr-upload-btn" style="border-color:rgba(52,211,153,0.5);color:#34d399;background:rgba(52,211,153,0.07)">
                 <span style="font-size:13px">📐</span>
-                Importer des directives (PDF / Image / TXT)
+                {{ t('didac_import_directives') }}
               </label>
               <input type="file" id="didac-directives-upload" accept=".pdf,.txt,.md,image/*" style="display:none">
               <span id="didac-directives-badge" style="display:none;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.4);border-radius:20px;padding:2px 10px;font-size:11px;color:#34d399"></span>
@@ -256,8 +254,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-ghost" id="didac-back-3" @click="handleBack(2)">← Retour</button>
-            <button class="btn-primary" id="didac-next-3" @click="handleNext3">Vérifier →</button>
+            <button class="btn-ghost" id="didac-back-3" @click="handleBack(2)">{{ t('btn_back') }}</button>
+            <button class="btn-primary" id="didac-next-3" @click="handleNext3">{{ t('btn_verify') }}</button>
           </div>
         </div>
 
@@ -266,8 +264,8 @@
         ══════════════════════════════════════════ -->
         <div class="corr-step" id="didac-step-4" style="display:none">
           <div class="info-block" style="border-left-color:#f59e0b;margin-bottom:16px">
-            <strong style="color:#f59e0b">🚀 Étape 4 / 4 — Prêt à générer</strong><br>
-            Vérifiez le résumé ci-dessous avant de lancer la génération.
+            <strong style="color:#f59e0b">{{ t('didac_s4_header') }}</strong><br>
+            {{ t('didac_s4_desc') }}
           </div>
 
           <!-- Résumé -->
@@ -279,15 +277,15 @@
           <div class="field-group" style="margin-bottom:12px">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim)">
               <input type="checkbox" id="didac-export-word" style="accent-color:var(--neon)">
-              <span>📄 Exporter automatiquement en Word (.doc) après génération</span>
+              <span>{{ t('sheet_export_word') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="didac-export-html" style="accent-color:var(--neon)">
-              <span>🌐 Exporter automatiquement en HTML (Idéal pour les formules scientifiques)</span>
+              <span>{{ t('sheet_export_html') }}</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-dim);margin-top:6px">
               <input type="checkbox" id="didac-export-pdf" style="accent-color:var(--neon)">
-              <span>📕 Exporter automatiquement en PDF (Rendu parfait)</span>
+              <span>{{ t('sheet_export_pdf') }}</span>
             </label>
           </div>
 
@@ -297,10 +295,10 @@
           </div>
 
           <div class="btn-row" style="flex-wrap: wrap;">
-            <button class="btn-ghost" id="didac-back-4" @click="handleBack(3)">← Retour</button>
-            <button class="btn-ghost" id="didac-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">💾 Sauvegarder config</button>
+            <button class="btn-ghost" id="didac-back-4" @click="handleBack(3)">{{ t('btn_back') }}</button>
+            <button class="btn-ghost" id="didac-save-btn" @click="handleSaveConfig" style="border:1px dashed var(--cyan); color:var(--cyan)">{{ t('sheet_btn_save_config_short') }}</button>
             <button class="btn-primary" id="didac-generate-btn" @click="handleGenerate" style="background:linear-gradient(135deg,var(--neon),var(--cyan));color:#000;font-weight:700;gap:8px">
-              <span>🎯</span> GÉNÉRER LA FICHE
+              <span>🎯</span> {{ t('didac_btn_generate') }}
             </button>
           </div>
         </div>

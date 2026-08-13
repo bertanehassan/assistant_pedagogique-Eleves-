@@ -8,8 +8,8 @@
           🎓
         </div>
         <div>
-          <h3 class="font-bold text-on-surface text-sm">Tuteur Expert</h3>
-          <div class="text-[9px] md:text-[10px] text-cyan font-mono tracking-widest uppercase opacity-80">Assistance Pédagogique</div>
+          <h3 class="font-bold text-on-surface text-sm">{{ t('tutor_expert') }}</h3>
+          <div class="text-[9px] md:text-[10px] text-cyan font-mono tracking-widest uppercase opacity-80">{{ t('tutor_assistance') }}</div>
         </div>
       </div>
       <div class="flex items-center gap-1 md:gap-2">
@@ -19,32 +19,32 @@
           <span id="tutor-model-name">—</span>
         </div>
         <!-- Bouton Synthèse Vocale (TTS) -->
-        <button id="tutor-tts-btn" onclick="toggleTutorTTS()" class="panel-close-btn" title="Lire les réponses à voix haute">
+        <button id="tutor-tts-btn" onclick="toggleTutorTTS()" class="panel-close-btn" :title="t('tutor_tts_title')">
           <span id="tutor-tts-icon" class="material-symbols-outlined" style="font-size: 18px;">volume_off</span>
         </button>
         <!-- Bouton Export -->
         <div class="relative" id="tutor-export-menu-wrapper">
-          <button onclick="toggleTutorExportMenu()" class="panel-close-btn" title="Exporter la conversation" style="color: #a78bfa;">
+          <button onclick="toggleTutorExportMenu()" class="panel-close-btn" :title="t('tutor_export_title')" style="color: #a78bfa;">
             <span class="material-symbols-outlined" style="font-size: 18px;">download</span>
           </button>
           <div id="tutor-export-menu" class="hidden absolute right-0 top-full mt-1 bg-black/90 border border-white/15 rounded-xl shadow-2xl overflow-hidden z-50 w-44 backdrop-blur-xl">
-            <button onclick="tutorExport('copy')" class="tutor-export-item">📋 Copier</button>
-            <button onclick="tutorExport('html')" class="tutor-export-item">🌐 HTML</button>
-            <button onclick="tutorExport('txt')" class="tutor-export-item">📄 Texte (.txt)</button>
-            <button onclick="tutorExport('word')" class="tutor-export-item">📝 Word (.doc)</button>
-            <button onclick="tutorExport('pdf')" class="tutor-export-item">🔴 PDF</button>
+            <button onclick="tutorExport('copy')" class="tutor-export-item">{{ t('tutor_export_copy') }}</button>
+            <button onclick="tutorExport('html')" class="tutor-export-item">{{ t('tutor_export_html') }}</button>
+            <button onclick="tutorExport('txt')" class="tutor-export-item">{{ t('tutor_export_txt') }}</button>
+            <button onclick="tutorExport('word')" class="tutor-export-item">{{ t('tutor_export_word') }}</button>
+            <button onclick="tutorExport('pdf')" class="tutor-export-item">{{ t('tutor_export_pdf') }}</button>
           </div>
         </div>
         <!-- Bouton Plein Écran -->
-        <button onclick="toggleTutorFullscreen()" class="panel-close-btn hidden md:flex" title="Plein écran">
+        <button onclick="toggleTutorFullscreen()" class="panel-close-btn hidden md:flex" :title="t('tutor_fullscreen')">
           <span id="tutor-fullscreen-icon" class="material-symbols-outlined" style="font-size: 18px;">fullscreen</span>
         </button>
         <!-- Bouton Nouvelle Conversation -->
-        <button onclick="clearTutorConversation()" class="panel-close-btn" title="Nouvelle conversation" style="color: var(--cyan);">
+        <button onclick="clearTutorConversation()" class="panel-close-btn" :title="t('tutor_new_chat')" style="color: var(--cyan);">
           <span class="material-symbols-outlined" style="font-size: 18px;">add_comment</span>
         </button>
         <!-- Bouton Fermer -->
-        <button class="panel-close-btn" onclick="closeTutorPanel()" title="Fermer">
+        <button class="panel-close-btn" onclick="closeTutorPanel()" :title="t('tutor_close')">
           <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
         </button>
       </div>
@@ -54,47 +54,46 @@
     <div class="flex-shrink-0 px-3 md:px-4 py-2 border-b border-white/10 bg-black/30 overflow-y-auto max-h-[25dvh] md:max-h-none custom-scrollbar">
       <div class="flex gap-2 md:gap-3 mb-2">
         <div class="flex-1">
-          <label class="block text-[9px] md:text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">🎓 Niveau scolaire</label>
+          <label class="block text-[9px] md:text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">🎓 {{ t('tutor_level') }}</label>
           <select id="tutor-niveau" class="w-full bg-black/50 border border-white/15 rounded-lg px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors">
-            <option value="">Non précisé</option>
-            <option value="Primaire">Primaire</option>
-
-            <option value="Collège">Collège</option>
-            <option value="Lycée">Lycée</option>
-            <option value="Supérieur">Supérieur</option>
+            <option value="">{{ t('tutor_level_unspecified') }}</option>
+            <option value="Primaire">{{ t('tutor_level_primary') }}</option>
+            <option value="Collège">{{ t('tutor_level_middle') }}</option>
+            <option value="Lycée">{{ t('tutor_level_high') }}</option>
+            <option value="Supérieur">{{ t('tutor_level_higher') }}</option>
           </select>
         </div>
         <div class="flex-1">
-          <label class="block text-[9px] md:text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">📚 Domaine / Matière</label>
+          <label class="block text-[9px] md:text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">📚 {{ t('tutor_subject') }}</label>
           <select id="tutor-domaine" class="w-full bg-black/50 border border-white/15 rounded-lg px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors">
-            <option value="">Non précisé</option>
-            <option value="Mathématiques">Mathématiques</option>
-            <option value="Physique-Chimie">Physique-Chimie</option>
-            <option value="SVT">SVT</option>
-            <option value="Français">Français</option>
-            <option value="Anglais">Anglais</option>
-            <option value="Histoire-Géographie">Histoire-Géographie</option>
-            <option value="Philosophie">Philosophie</option>
-            <option value="Informatique">Informatique</option>
-            <option value="Autre">Autre</option>
+            <option value="">{{ t('tutor_subject_unspecified') }}</option>
+            <option value="Mathématiques">{{ t('tutor_subject_maths') }}</option>
+            <option value="Physique-Chimie">{{ t('tutor_subject_physics') }}</option>
+            <option value="SVT">{{ t('tutor_subject_svt') }}</option>
+            <option value="Français">{{ t('tutor_subject_french') }}</option>
+            <option value="Anglais">{{ t('tutor_subject_english') }}</option>
+            <option value="Histoire-Géographie">{{ t('tutor_subject_history') }}</option>
+            <option value="Philosophie">{{ t('tutor_subject_philosophy') }}</option>
+            <option value="Informatique">{{ t('tutor_subject_computer') }}</option>
+            <option value="Autre">{{ t('tutor_subject_other') }}</option>
           </select>
         </div>
       </div>
       <!-- Niveau de guidage -->
       <div class="flex md:block items-center gap-2">
-        <label class="hidden md:block text-[10px] text-on-surface-variant mb-1.5 uppercase tracking-wider">🧭 Niveau de guidage</label>
+        <label class="hidden md:block text-[10px] text-on-surface-variant mb-1.5 uppercase tracking-wider">🧭 {{ t('tutor_guidance') }}</label>
         <div class="tutor-guidance-selector flex-1 flex flex-wrap gap-1" id="tutor-guidance-selector">
-          <button class="guidance-btn active py-1 md:py-1.5" data-value="socratic" onclick="setTutorGuidance('socratic', this)" title="Socratique : questions guidées">
-            <span class="guidance-label">🧠 Socratique</span>
+          <button class="guidance-btn active py-1 md:py-1.5" data-value="socratic" onclick="setTutorGuidance('socratic', this)" :title="t('tutor_guidance_hint_socratic')">
+            <span class="guidance-label">{{ t('tutor_guidance_socratic') }}</span>
           </button>
-          <button class="guidance-btn py-1 md:py-1.5" data-value="balanced" onclick="setTutorGuidance('balanced', this)" title="Équilibré : indices progressifs">
-            <span class="guidance-label">⚖️ Équilibré</span>
+          <button class="guidance-btn py-1 md:py-1.5" data-value="balanced" onclick="setTutorGuidance('balanced', this)" :title="t('tutor_guidance_hint_balanced')">
+            <span class="guidance-label">{{ t('tutor_guidance_balanced') }}</span>
           </button>
-          <button class="guidance-btn py-1 md:py-1.5" data-value="corrector" onclick="setTutorGuidance('corrector', this)" title="Correcteur : notation et feedback">
-            <span class="guidance-label">✍️ Correcteur</span>
+          <button class="guidance-btn py-1 md:py-1.5" data-value="corrector" onclick="setTutorGuidance('corrector', this)" :title="t('tutor_guidance_hint_corrector')">
+            <span class="guidance-label">{{ t('tutor_guidance_corrector') }}</span>
           </button>
         </div>
-        <div id="tutor-guidance-hint" class="hidden md:block text-[10px] text-on-surface-variant/60 mt-1 italic">Questions guidées · jamais de réponse directe</div>
+        <div id="tutor-guidance-hint" class="hidden md:block text-[10px] text-on-surface-variant/60 mt-1 italic">{{ t('tutor_guidance_hint_socratic') }}</div>
       </div>
     </div>
 
@@ -103,9 +102,9 @@
       <!-- Les messages seront injectés ici par legacy.js -->
       <div id="tutor-welcome-banner" class="text-center opacity-90 mt-6">
         <div class="text-4xl mb-3">👋</div>
-        <div class="text-cyan font-bold mb-2">Bonjour !</div>
-        <div class="text-on-surface-variant text-xs px-4">Je suis votre Tuteur. Posez-moi des questions sur vos exercices, demandez-moi de l'aide pour comprendre une notion, mais ne vous attendez pas à ce que je vous donne les réponses toutes faites ! 😉</div>
-        <div class="text-on-surface-variant/50 text-[10px] mt-3">Sélectionnez votre niveau et matière ci-dessus, puis posez votre question. Vous pouvez aussi joindre un PDF, une image ou un texte 📎</div>
+        <div class="text-cyan font-bold mb-2">{{ t('tutor_welcome_title') }}</div>
+        <div class="text-on-surface-variant text-xs px-4">{{ t('tutor_welcome_text') }}</div>
+        <div class="text-on-surface-variant/50 text-[10px] mt-3">{{ t('tutor_welcome_sub') }}</div>
       </div>
     </div>
 
@@ -121,13 +120,13 @@
         <!-- Bouton pièce jointe -->
         <button onclick="document.getElementById('tutor-file-input').click()"
                 class="w-10 h-10 min-w-[40px] rounded-xl flex items-center justify-center bg-white/5 text-on-surface-variant border border-white/10 hover:bg-cyan/10 hover:text-cyan hover:border-cyan/30 transition-colors"
-                title="Joindre un fichier (PDF, image, texte)">
+                :title="t('tutor_attach_title')">
           <span class="material-symbols-outlined" style="font-size:20px">attach_file</span>
         </button>
         <div class="flex-1 bg-white/5 border border-white/10 rounded-xl flex items-center px-3 py-2 min-h-[44px]">
           <textarea id="tutor-user-input"
                     class="bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant/50 w-full font-body-md resize-none py-1 px-1 focus:outline-none text-sm" 
-                    placeholder="Posez votre question..."
+                    :placeholder="t('tutor_input_placeholder')"
                     rows="1"
                     dir="auto"
                     oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';"
@@ -135,7 +134,7 @@
           <!-- Bouton micro pour dictée vocale dans le tuteur -->
           <button id="tutor-voice-btn" onclick="toggleTutorVoice()"
                   class="tutor-voice-btn flex-shrink-0 ml-1"
-                  title="Dicter votre question à voix haute">
+                  :title="t('tutor_mic_title')">
             <span id="tutor-voice-icon" class="material-symbols-outlined" style="font-size:20px">mic</span>
           </button>
         </div>
@@ -149,6 +148,7 @@
 </template>
 
 <script setup>
+import { t } from '../../i18n.js';
 </script>
 
 <style scoped>
