@@ -3825,3 +3825,13 @@ html[dir="rtl"] .message.user::before {
 button, a, select {
   touch-action: manipulation;
 }
+
+/* ── Fix Mermaid & SVG text clipping ── */
+.mermaid svg, svg[id^="mermaid-"] {
+  max-width: 100% !important;
+  height: auto !important;
+}
+svg[id^="mermaid-"] text {
+  font-family: 'Outfit', sans-serif !important;
+}
+
