@@ -181,20 +181,6 @@
               <span class="material-symbols-outlined" style="font-size:14px">account_tree</span>
               {{ t('btn_manage_workflows') }}
             </button>
-            <button id="open-correction-modal" class="sb-btn" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)">
-              <span class="material-symbols-outlined" style="font-size:14px">assignment</span>
-              📋 Fiche de Correction
-            </button>
-            <button id="open-didactique-modal" class="sb-btn" style="color:#60a5fa;border-color:rgba(96,165,250,0.35)">
-              <span class="material-symbols-outlined" style="font-size:14px">school</span>
-              👨‍🏫 Fiche Didactique
-            </button>
-            <button id="open-methode-modal" class="sb-btn" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)">
-              <span class="material-symbols-outlined" style="font-size:14px">psychology</span>
-              🧠 Fiche Méthode
-            </button>
-
-
             <button id="open-data-modal" class="sb-btn">
               <span class="material-symbols-outlined" style="font-size:14px">database</span>
               {{ t('btn_data_export') }}
