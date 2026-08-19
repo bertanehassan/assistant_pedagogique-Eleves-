@@ -14,7 +14,7 @@
       </div>
       <div class="flex items-center gap-1 md:gap-2">
         <!-- Badge modèle actif -->
-        <div id="tutor-model-badge" class="flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-1 md:px-3 text-[10px] font-mono text-on-surface-variant whitespace-nowrap max-w-[90px] md:max-w-[130px] overflow-hidden text-ellipsis" title="Modèle actif">
+        <div id="tutor-model-badge" class="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-1 md:px-3 text-[10px] font-mono text-on-surface-variant whitespace-nowrap max-w-[90px] md:max-w-[130px] overflow-hidden text-ellipsis" title="Modèle actif">
           <span style="font-size:10px;">🤖</span>
           <span id="tutor-model-name">—</span>
         </div>
@@ -198,14 +198,20 @@ import { t } from '../../i18n.js';
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: rgba(255,255,255,0.08);
   border: none;
   cursor: pointer;
   color: rgba(218, 226, 253, 0.6);
   transition: all 0.15s ease;
+}
+@media (min-width: 768px) {
+  .panel-close-btn {
+    width: 36px;
+    height: 36px;
+  }
 }
 .panel-close-btn:hover {
   background: rgba(255,255,255,0.15);
