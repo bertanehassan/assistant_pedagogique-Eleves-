@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => ({
             src: 'icon-new.jpg',
             sizes: '1024x1024',
             type: 'image/jpeg',
-            purpose: 'any maskable'
+            purpose: 'any'
           }
         ],
         share_target: {
