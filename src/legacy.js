@@ -14617,6 +14617,38 @@ window.restoreTutorSession = async function(id) {
 
     container.scrollTop = container.scrollHeight;
 
+    // Déclencher le rendu MathJax pour les formules LaTeX
+    if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+      try {
+        window.MathJax.typesetPromise([container]).catch(err => console.error('MathJax error:', err));
+      } catch(e) {}
+    }
+
+    // Déclencher le rendu Mermaid
+    if (window.mermaid) {
+      setTimeout(() => {
+        const mermaidBlocks = container.querySelectorAll('pre code.language-mermaid');
+        mermaidBlocks.forEach(async (block, index) => {
+          try {
+            const rawCode = block.textContent || block.innerText;
+            const id = 'mermaid-render-restore-' + Date.now() + '-' + index;
+            const { svg } = await window.mermaid.render(id, rawCode);
+            const containerDiv = document.createElement('div');
+            containerDiv.className = 'mermaid-rendered glass-panel';
+            containerDiv.style = 'margin: 10px 0; padding: 10px; border-radius: 8px; overflow-x: auto; text-align: center; background: rgba(255,255,255,0.02);';
+            containerDiv.innerHTML = svg;
+            const pre = block.parentElement;
+            if (pre && pre.tagName === 'PRE') {
+              pre.parentNode.insertBefore(containerDiv, pre);
+              pre.style.display = 'none';
+            }
+          } catch(err) {
+            console.error('Mermaid render error on restore:', err);
+          }
+        });
+      }, 100);
+    }
+
     // Fermer le drawer
     window.closeTutorHistoryDrawer();
     _tutorToast('✅ Conversation restaurée !', '#4cd7f6');
