@@ -121,6 +121,16 @@
         </div>
         <div id="tutor-guidance-hint" class="hidden md:block text-[10px] text-on-surface-variant/60 mt-1 italic">{{ t('tutor_guidance_hint_socratic') }}</div>
       </div>
+      <!-- Sélecteur de modèle IA (indépendant du modèle global) -->
+      <div class="mt-2 flex items-center gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant/60 flex-shrink-0" style="font-size:14px;">smart_toy</span>
+        <select id="tutor-model-select"
+                class="flex-1 bg-black/50 border border-white/15 rounded-lg px-2 py-1 text-[11px] md:text-xs text-on-surface focus:outline-none focus:border-cyan transition-colors"
+                onchange="onTutorModelChange(this.value)"
+                title="Modèle IA utilisé par le tuteur (indépendant du modèle principal)">
+          <!-- Rempli dynamiquement par openTutorPanel() -->
+        </select>
+      </div>
     </div>
 
     <!-- CHAT AREA -->
@@ -382,5 +392,68 @@ import { t } from '../../i18n.js';
   border: 1px solid rgba(255,255,255,0.1);
   overflow-x: auto;
   margin-bottom: 1.2em;
+}
+
+/* ── Actions sur les bulles utilisateur (modifier / renvoyer) ── */
+:deep(.tutor-user-bubble) {
+  position: relative;
+}
+:deep(.tutor-msg-actions) {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+:deep(.tutor-action-btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: rgba(218,226,253,0.5);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+:deep(.tutor-action-btn:hover) {
+  background: rgba(76,215,246,0.12);
+  border-color: rgba(76,215,246,0.35);
+  color: var(--cyan, #4cd7f6);
+}
+:deep(.tutor-action-btn .material-symbols-outlined) {
+  font-size: 13px;
+}
+
+/* ── Séparateur changement de modèle ── */
+:deep(.tutor-model-separator) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin: 4px 0;
+  font-size: 10px;
+  color: rgba(218,226,253,0.35);
+  letter-spacing: 0.04em;
+}
+:deep(.tutor-model-separator::before),
+:deep(.tutor-model-separator::after) {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+}
+
+/* ── Select modèle tuteur ── */
+#tutor-model-select {
+  background-color: rgba(0,0,0,0.5);
+  color: rgba(218,226,253,0.85);
+}
+#tutor-model-select option,
+#tutor-model-select optgroup {
+  background: #0b1326;
+  color: rgba(218,226,253,0.85);
 }
 </style>

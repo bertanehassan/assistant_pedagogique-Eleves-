@@ -14420,6 +14420,9 @@ state.tutorAttachedFiles = state.tutorAttachedFiles || [];
 // Niveau de guidage du tuteur (socratic | balanced | direct)
 state.tutorGuidance = state.tutorGuidance || 'socratic';
 
+// Modèle IA dédié au tuteur (indépendant du modèle global)
+state.tutorModel = state.tutorModel || state.model || 'mistral-large-2512';
+
 const GUIDANCE_HINTS = {
   socratic: "Questions guidées · jamais de réponse directe",
   balanced: "Indices progressifs · réponse si vraiment bloqué",
@@ -14437,6 +14440,82 @@ window.setTutorGuidance = function(value, btn) {
   if (hint) hint.textContent = GUIDANCE_HINTS[value] || '';
 };
 
+// ── Changement de modèle IA dans le tuteur ──
+window.onTutorModelChange = function(value) {
+  if (!value) return;
+  const previousModel = state.tutorModel;
+  state.tutorModel = value;
+  // Mettre à jour le badge
+  const badgeEl = document.getElementById('tutor-model-name');
+  if (badgeEl) badgeEl.textContent = value;
+  // Insérer un séparateur dans le chat si une conversation est en cours
+  const container = document.getElementById('tutor-chat-container');
+  const hasMessages = state.tutorMessages && state.tutorMessages.length > 0;
+  if (container && hasMessages) {
+    const modelName = (window.APP_MODELS || []).find(m => m.id === value)?.name || value;
+    const sep = document.createElement('div');
+    sep.className = 'tutor-model-separator';
+    sep.textContent = `🤖 Modèle changé → ${modelName}`;
+    container.appendChild(sep);
+    container.scrollTop = container.scrollHeight;
+  }
+};
+
+// ── Éditer un message utilisateur précédent ──
+window.tutorEditMessage = function(index) {
+  const msgs = state.tutorMessages;
+  if (index < 0 || index >= msgs.length) return;
+  const msgContent = msgs[index].content || '';
+  // Remettre le texte dans le textarea (sans les pièces jointes texte qui ont pu être concaténées)
+  // On extrait juste la partie avant le premier '\n\n---\n' s'il y en a
+  const cleanContent = msgContent.split('\n\n---\n')[0];
+  const input = document.getElementById('tutor-user-input');
+  if (input) {
+    input.value = cleanContent;
+    input.style.height = '';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    input.focus();
+  }
+  // Tronquer l'historique à partir de cet index (exclus)
+  state.tutorMessages.splice(index);
+  // Supprimer les bulles DOM correspondantes (user + toutes les suivantes)
+  const container = document.getElementById('tutor-chat-container');
+  if (container) {
+    const allBubbles = container.querySelectorAll('[data-msg-index]');
+    allBubbles.forEach(bubble => {
+      const bubbleIndex = parseInt(bubble.getAttribute('data-msg-index'), 10);
+      if (bubbleIndex >= index) bubble.remove();
+    });
+    // Supprimer aussi les séparateurs de modèle qui seraient après le point d'édition
+    // On garde ceux existants, seuls les futurs changements seront enregistrés
+  }
+};
+
+// ── Renvoyer exactement le même message ──
+window.tutorResendMessage = function(index) {
+  const msgs = state.tutorMessages;
+  if (index < 0 || index >= msgs.length) return;
+  const content = msgs[index].content || '';
+  const cleanContent = content.split('\n\n---\n')[0];
+  // Couper l'historique à partir de cet index
+  state.tutorMessages.splice(index);
+  // Supprimer les bulles DOM à partir de cet index
+  const container = document.getElementById('tutor-chat-container');
+  if (container) {
+    const allBubbles = container.querySelectorAll('[data-msg-index]');
+    allBubbles.forEach(bubble => {
+      const bubbleIndex = parseInt(bubble.getAttribute('data-msg-index'), 10);
+      if (bubbleIndex >= index) bubble.remove();
+    });
+  }
+  // Injecter dans le textarea et envoyer
+  const input = document.getElementById('tutor-user-input');
+  if (input) {
+    input.value = cleanContent;
+  }
+  window.sendTutorMessage();
+};
+
 
 
 window.openTutorPanel = function() {
@@ -14446,7 +14525,40 @@ window.openTutorPanel = function() {
     setTimeout(() => panel.classList.remove('translate-x-full'), 10);
     // Mettre à jour le badge du modèle
     const badgeEl = document.getElementById('tutor-model-name');
-    if (badgeEl) badgeEl.textContent = state.model || 'mistral-large-2512';
+    if (badgeEl) badgeEl.textContent = state.tutorModel || state.model || 'mistral-large-2512';
+    // Peupler le sélecteur de modèle tuteur
+    const modelSelect = document.getElementById('tutor-model-select');
+    if (modelSelect && (window.APP_MODELS || []).length > 0) {
+      const models = window.APP_MODELS || [];
+      // Grouper par fournisseur (préfixe du badge ou du name)
+      const groups = {};
+      models.forEach(m => {
+        // Extraire le groupe à partir de l'emoji du name
+        const firstChar = m.name.charAt(0);
+        let group = 'Autres';
+        if (m.name.includes('Mistral') || m.name.includes('Ministral') || m.name.includes('Codestral') || m.name.includes('DevMind') || m.name.includes('MagiCore') || m.name.includes('NanoMind') || m.name.includes('MicroGenius') || m.name.includes('MiniTitan') || m.name.includes('Nemo') || m.name.includes('CreatiFlow') || m.name.includes('Voxtral') || m.name.includes('CodeForge')) group = '🔥 Mistral AI';
+        else if (m.name.includes('Gemini') || m.name.includes('Gemma')) group = '✨ Google';
+        else if (m.name.includes('DeepSeek')) group = '🧠 DeepSeek';
+        else if (m.name.includes('Llama')) group = '🦙 Meta';
+        else if (m.name.includes('Qwen')) group = '🌐 Alibaba / Qwen';
+        else if (m.name.includes('Nemotron')) group = '⚡ NVIDIA';
+        else if (m.name.includes('Phi')) group = '💡 Microsoft';
+        else if (m.name.includes('Grok')) group = '🤖 xAI';
+        if (!groups[group]) groups[group] = [];
+        groups[group].push(m);
+      });
+      const currentModel = state.tutorModel || state.model || 'mistral-large-2512';
+      let html = '';
+      for (const [groupName, groupModels] of Object.entries(groups)) {
+        html += `<optgroup label="${escapeHtml(groupName)}">`;
+        groupModels.forEach(m => {
+          const selected = m.id === currentModel ? ' selected' : '';
+          html += `<option value="${escapeHtml(m.id)}"${selected}>${escapeHtml(m.name)}</option>`;
+        });
+        html += '</optgroup>';
+      }
+      modelSelect.innerHTML = html;
+    }
     // Masquer le bouton micro si le navigateur ne supporte pas la dictée vocale
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const voiceBtn = document.getElementById('tutor-voice-btn');
@@ -14598,13 +14710,26 @@ window.restoreTutorSession = async function(id) {
     // Rejouer les messages dans le DOM
     for (const msg of session.messages) {
       state.tutorMessages.push({ role: msg.role, content: msg.content });
+      const msgIdx = state.tutorMessages.length - 1;
 
       const div = document.createElement('div');
       div.setAttribute('dir', 'auto');
 
       if (msg.role === 'user') {
+        div.className = 'tutor-user-bubble';
+        div.setAttribute('data-msg-index', msgIdx);
         div.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
-        div.innerHTML = '<b style="color:var(--neon)">Vous :</b> <span dir="auto">' + escapeHtml(msg.content) + '</span>';
+        // Afficher uniquement la partie avant les pièces jointes
+        const displayContent = (msg.content || '').split('\n\n---\n')[0];
+        div.innerHTML = `<b style="color:var(--neon)">Vous :</b> <span dir="auto">${escapeHtml(displayContent)}</span>
+          <div class="tutor-msg-actions">
+            <button class="tutor-action-btn" onclick="tutorEditMessage(${msgIdx})" title="Modifier ce message">
+              <span class="material-symbols-outlined">edit</span> Modifier
+            </button>
+            <button class="tutor-action-btn" onclick="tutorResendMessage(${msgIdx})" title="Renvoyer ce message tel quel">
+              <span class="material-symbols-outlined">refresh</span> Renvoyer
+            </button>
+          </div>`;
       } else {
         div.className = 'tutor-message assistant';
         div.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;max-width:90%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
@@ -15056,9 +15181,12 @@ window.sendTutorMessage = async function() {
   }
 
   state.tutorMessages.push({ role: 'user', content: fullUserContent });
+  const currentMsgIdx = state.tutorMessages.length - 1; // index de ce message dans l'historique
 
   const userDiv = document.createElement('div');
   userDiv.setAttribute('dir', 'auto');
+  userDiv.className = 'tutor-user-bubble';
+  userDiv.setAttribute('data-msg-index', currentMsgIdx);
   userDiv.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
   let userHtml = '<b style="color:var(--neon)">Vous :</b> <span dir="auto">' + escapeHtml(content) + '</span>';
   if (files.length > 0) {
@@ -15068,6 +15196,15 @@ window.sendTutorMessage = async function() {
         return `<span style="font-size:11px;padding:2px 8px;background:rgba(76,215,246,0.08);border:1px solid rgba(76,215,246,0.2);border-radius:6px;color:var(--neon);">\ud83d\udcc4 ${escapeHtml(f.name)}</span>`;
       }).join('') + '</div>';
   }
+  // Boutons d'action : Modifier et Renvoyer
+  userHtml += `<div class="tutor-msg-actions">
+    <button class="tutor-action-btn" onclick="tutorEditMessage(${currentMsgIdx})" title="Modifier ce message">
+      <span class="material-symbols-outlined">edit</span> Modifier
+    </button>
+    <button class="tutor-action-btn" onclick="tutorResendMessage(${currentMsgIdx})" title="Renvoyer ce message tel quel">
+      <span class="material-symbols-outlined">refresh</span> Renvoyer
+    </button>
+  </div>`;
   userDiv.innerHTML = userHtml;
   container.appendChild(userDiv);
   container.scrollTop = container.scrollHeight;
@@ -15142,8 +15279,9 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
 
   try {
     // getLlmApiConfig retourne { provider, url, headers }
-    const aiConfig = getLlmApiConfig(state.model || 'mistral-large-2512');
-    const activeModel = state.model || 'mistral-large-2512';
+    // On utilise state.tutorModel (modèle dédié au tuteur) plutôt que le modèle global
+    const activeModel = state.tutorModel || state.model || 'mistral-large-2512';
+    const aiConfig = getLlmApiConfig(activeModel);
     
     // Vérifier la compatibilité image depuis la config MODELS
     const hasImages = imageFiles && imageFiles.length > 0;
