@@ -14457,9 +14457,30 @@ window.openTutorPanel = function() {
   }
 };
 
-window.clearTutorConversation = function() {
+window.clearTutorConversation = function(skipSavePrompt = false) {
+  const hasMessages = state.tutorMessages && state.tutorMessages.length > 0;
+  if (!skipSavePrompt && hasMessages) {
+    // Afficher un mini-menu de confirmation
+    const existing = document.getElementById('tutor-clear-confirm');
+    if (existing) { existing.remove(); return; }
+    const panel = document.getElementById('tutor-panel');
+    const confirm = document.createElement('div');
+    confirm.id = 'tutor-clear-confirm';
+    confirm.style = 'position:absolute;top:56px;left:50%;transform:translateX(-50%);z-index:200;background:#1e293b;border:1px solid rgba(76,215,246,0.3);border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:10px;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+    confirm.innerHTML = `
+      <div style="font-size:13px;color:#dae2fd;text-align:center;">Que faire de la conversation actuelle ?</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="saveTutorSession().then(()=>{ document.getElementById('tutor-clear-confirm')?.remove(); window.clearTutorConversation(true); })" style="flex:1;padding:8px;background:rgba(76,215,246,0.15);border:1px solid rgba(76,215,246,0.4);border-radius:8px;color:#4cd7f6;font-size:12px;cursor:pointer;">💾 Sauvegarder</button>
+        <button onclick="window.clearTutorConversation(true); document.getElementById('tutor-clear-confirm')?.remove();" style="flex:1;padding:8px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:8px;color:#f87171;font-size:12px;cursor:pointer;">🗑 Effacer</button>
+      </div>
+      <button onclick="document.getElementById('tutor-clear-confirm')?.remove();" style="padding:4px;background:none;border:none;color:rgba(218,226,253,0.4);font-size:11px;cursor:pointer;text-align:center;">Annuler</button>
+    `;
+    if (panel) panel.appendChild(confirm);
+    return;
+  }
+
   state.tutorMessages = [];
-  
+
   const container = document.getElementById('tutor-chat-container');
   if (container) {
     const banner = document.getElementById('tutor-welcome-banner');
@@ -14469,16 +14490,182 @@ window.clearTutorConversation = function() {
       container.appendChild(banner);
     }
   }
-  
+
   state.tutorAttachedFiles = [];
   if (window.updateTutorFilePreview) window.updateTutorFilePreview();
-  
+
   const input = document.getElementById('tutor-user-input');
   if (input) {
     input.value = '';
     input.style.height = '';
   }
 };
+
+// ── Sauvegarde la conversation courante dans IndexedDB ──
+window.saveTutorSession = async function() {
+  const messages = state.tutorMessages || [];
+  if (messages.length === 0) {
+    _tutorToast('❌ Aucune conversation à sauvegarder.', '#f87171');
+    return;
+  }
+  const niveau = document.getElementById('tutor-niveau')?.value || '';
+  const domaine = document.getElementById('tutor-domaine')?.value || '';
+  const now = new Date();
+  const dateLabel = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  const parts = [domaine || 'Conversation', niveau ? `(${niveau})` : '', '·', dateLabel];
+  const title = parts.filter(Boolean).join(' ');
+
+  const session = {
+    id: now.getTime(),
+    title,
+    domaine,
+    niveau,
+    date: dateLabel,
+    guidance: state.tutorGuidance || 'socratic',
+    messages: JSON.parse(JSON.stringify(messages))
+  };
+
+  try {
+    await db.put('tutor_sessions', session);
+    _tutorToast('✅ Conversation sauvegardée !', '#4cd7f6');
+    // Rafraîchir le drawer si ouvert
+    if (document.getElementById('tutor-history-drawer')?.style.display !== 'none') {
+      window.loadTutorSessions();
+    }
+  } catch(e) {
+    console.error('Erreur sauvegarde session tuteur:', e);
+    _tutorToast('❌ Erreur lors de la sauvegarde.', '#f87171');
+  }
+};
+
+// ── Charge et affiche la liste des sessions dans le drawer ──
+window.loadTutorSessions = async function() {
+  const list = document.getElementById('tutor-history-list');
+  if (!list) return;
+
+  list.innerHTML = '<div style="text-align:center;color:rgba(218,226,253,0.4);font-size:12px;padding:20px;">Chargement…</div>';
+
+  try {
+    const metas = await db.getTutorSessionsMeta();
+    if (metas.length === 0) {
+      list.innerHTML = `<div style="text-align:center;padding:30px 16px;">
+        <div style="font-size:28px;margin-bottom:8px;">📂</div>
+        <div style="color:rgba(218,226,253,0.4);font-size:12px;">Aucune conversation sauvegardée.</div>
+        <div style="color:rgba(218,226,253,0.25);font-size:11px;margin-top:4px;">Cliquez sur 💾 pour sauvegarder.</div>
+      </div>`;
+      return;
+    }
+    list.innerHTML = metas.map(s => {
+      const domBadge = s.domaine ? `<span style="padding:1px 6px;background:rgba(76,215,246,0.1);border:1px solid rgba(76,215,246,0.25);border-radius:4px;font-size:10px;color:#4cd7f6;">${escapeHtml(s.domaine)}</span>` : '';
+      const nivBadge = s.niveau ? `<span style="padding:1px 6px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:4px;font-size:10px;color:#c4b5fd;">${escapeHtml(s.niveau)}</span>` : '';
+      return `
+      <div style="padding:10px 12px;border:1px solid rgba(255,255,255,0.07);border-radius:10px;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:12px;color:#dae2fd;font-weight:600;line-height:1.4;">${escapeHtml(s.title)}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">${domBadge}${nivBadge}<span style="font-size:10px;color:rgba(218,226,253,0.35);margin-left:auto;">${s.msgCount} msg</span></div>
+        <div style="display:flex;gap:6px;margin-top:2px;">
+          <button onclick="restoreTutorSession(${s.id})" style="flex:1;padding:6px 4px;background:rgba(76,215,246,0.12);border:1px solid rgba(76,215,246,0.3);border-radius:7px;color:#4cd7f6;font-size:11px;cursor:pointer;">▶ Reprendre</button>
+          <button onclick="deleteTutorSession(${s.id})" style="padding:6px 10px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:7px;color:#f87171;font-size:11px;cursor:pointer;">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('Erreur chargement sessions tuteur:', e);
+    list.innerHTML = '<div style="text-align:center;color:#f87171;font-size:12px;padding:20px;">Erreur de chargement.</div>';
+  }
+};
+
+// ── Restaure une session dans le chat ──
+window.restoreTutorSession = async function(id) {
+  const container = document.getElementById('tutor-chat-container');
+  const banner = document.getElementById('tutor-welcome-banner');
+  if (!container) return;
+
+  try {
+    const session = await db.get('tutor_sessions', id);
+    if (!session) { _tutorToast('❌ Session introuvable.', '#f87171'); return; }
+
+    // Vider le chat actuel
+    state.tutorMessages = [];
+    container.innerHTML = '';
+    if (banner) banner.style.display = 'none';
+
+    // Restaurer les paramètres de contexte
+    const niveauEl = document.getElementById('tutor-niveau');
+    const domaineEl = document.getElementById('tutor-domaine');
+    if (niveauEl && session.niveau) niveauEl.value = session.niveau;
+    if (domaineEl && session.domaine) domaineEl.value = session.domaine;
+
+    // Rejouer les messages dans le DOM
+    for (const msg of session.messages) {
+      state.tutorMessages.push({ role: msg.role, content: msg.content });
+
+      const div = document.createElement('div');
+      div.setAttribute('dir', 'auto');
+
+      if (msg.role === 'user') {
+        div.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
+        div.innerHTML = '<b style="color:var(--neon)">Vous :</b> <span dir="auto">' + escapeHtml(msg.content) + '</span>';
+      } else {
+        div.className = 'tutor-message assistant';
+        div.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;max-width:90%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
+        const rawHtml = parseMarkdownSafeMath(msg.content);
+        const safeHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+        div.innerHTML = '<b style="color:var(--cyan)">🎓 Tuteur :</b> <span class="tutor-response-content" dir="auto">' + safeHtml + '</span>';
+      }
+      container.appendChild(div);
+    }
+
+    container.scrollTop = container.scrollHeight;
+
+    // Fermer le drawer
+    window.closeTutorHistoryDrawer();
+    _tutorToast('✅ Conversation restaurée !', '#4cd7f6');
+  } catch(e) {
+    console.error('Erreur restauration session tuteur:', e);
+    _tutorToast('❌ Erreur lors du chargement.', '#f87171');
+  }
+};
+
+// ── Supprime une session sauvegardée ──
+window.deleteTutorSession = async function(id) {
+  if (!confirm('Supprimer cette conversation sauvegardée ?')) return;
+  try {
+    await db.delete('tutor_sessions', id);
+    _tutorToast('🗑 Session supprimée.', '#f87171');
+    window.loadTutorSessions();
+  } catch(e) {
+    console.error('Erreur suppression session tuteur:', e);
+    _tutorToast('❌ Erreur lors de la suppression.', '#f87171');
+  }
+};
+
+// ── Ouvre/ferme le drawer historique ──
+window.toggleTutorHistoryDrawer = function() {
+  const drawer = document.getElementById('tutor-history-drawer');
+  if (!drawer) return;
+  const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+  if (isHidden) {
+    drawer.style.display = 'flex';
+    window.loadTutorSessions();
+  } else {
+    drawer.style.display = 'none';
+  }
+};
+
+window.closeTutorHistoryDrawer = function() {
+  const drawer = document.getElementById('tutor-history-drawer');
+  if (drawer) drawer.style.display = 'none';
+};
+
+// ── Helper : toast discret ──
+function _tutorToast(msg, color = '#4cd7f6') {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style = `position:fixed;bottom:80px;right:20px;background:#1e293b;color:${color};padding:10px 18px;border-radius:12px;border:1px solid ${color}44;z-index:99999;font-size:13px;pointer-events:none;`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
 
 window.toggleTutorFullscreen = function() {
   const panel = document.getElementById('tutor-panel');

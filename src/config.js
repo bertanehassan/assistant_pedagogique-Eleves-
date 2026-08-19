@@ -63,7 +63,7 @@ export const MODELS = [
 ];
 
 export const DB_NAME = "QCM_EDU_MAROC_DB";
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 // ══════════════════════════════════════════════════════════════════════
 // 🤖 xAI PROXY URL (Cloudflare Worker)

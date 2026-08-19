@@ -5,7 +5,7 @@ export const db = {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = e => {
       const d = e.target.result;
-      ['chats','agents','settings','global_memory','workflows','agent_feedback','saved_quizzes'].forEach(s => {
+      ['chats','agents','settings','global_memory','workflows','agent_feedback','saved_quizzes','tutor_sessions'].forEach(s => {
         if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath:'id' });
       });
     };
@@ -55,6 +55,34 @@ export const db = {
            cursor.continue();
         } else {
            res(metas);
+        }
+      };
+      req.onerror = e => rej(e.target.error);
+    } catch(e) { rej(e); }
+  }),
+  getTutorSessionsMeta: () => new Promise((res, rej) => {
+    try {
+      const tx = db.conn.transaction('tutor_sessions', 'readonly');
+      const store = tx.objectStore('tutor_sessions');
+      const req = store.openCursor();
+      const metas = [];
+      req.onsuccess = e => {
+        const cursor = e.target.result;
+        if (cursor) {
+          const s = cursor.value;
+          metas.push({
+            id: s.id,
+            title: s.title,
+            domaine: s.domaine || '',
+            niveau: s.niveau || '',
+            date: s.date,
+            msgCount: (s.messages || []).filter(m => m.role !== 'system').length
+          });
+          cursor.continue();
+        } else {
+          // Trier par date décroissante
+          metas.sort((a, b) => b.id - a.id);
+          res(metas);
         }
       };
       req.onerror = e => rej(e.target.error);

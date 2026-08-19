@@ -35,6 +35,14 @@
             <button onclick="tutorExport('pdf')" class="tutor-export-item">{{ t('tutor_export_pdf') }}</button>
           </div>
         </div>
+        <!-- Bouton Sauvegarder la conversation -->
+        <button onclick="saveTutorSession()" class="panel-close-btn" title="Sauvegarder la conversation" style="color: #4cd7f6;">
+          <span class="material-symbols-outlined" style="font-size: 18px;">save</span>
+        </button>
+        <!-- Bouton Historique des conversations -->
+        <button onclick="toggleTutorHistoryDrawer()" class="panel-close-btn" title="Historique des conversations" style="color: #c4b5fd;">
+          <span class="material-symbols-outlined" style="font-size: 18px;">history</span>
+        </button>
         <!-- Bouton Plein Écran -->
         <button onclick="toggleTutorFullscreen()" class="panel-close-btn hidden md:flex" :title="t('tutor_fullscreen')">
           <span id="tutor-fullscreen-icon" class="material-symbols-outlined" style="font-size: 18px;">fullscreen</span>
@@ -47,6 +55,24 @@
         <button class="panel-close-btn" onclick="closeTutorPanel()" :title="t('tutor_close')">
           <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
         </button>
+      </div>
+    </div>
+
+    <!-- DRAWER HISTORIQUE DES CONVERSATIONS -->
+    <div id="tutor-history-drawer" style="display:none;max-height:55dvh;" class="flex-shrink-0 flex-col border-b border-white/10 bg-black/60 backdrop-blur-xl">
+      <!-- En-tête du drawer -->
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined" style="font-size:16px;color:#c4b5fd;">history</span>
+          <span class="text-xs font-semibold text-on-surface">Conversations sauvegardées</span>
+        </div>
+        <button onclick="closeTutorHistoryDrawer()" class="panel-close-btn" style="width:28px;height:28px;" title="Fermer">
+          <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+        </button>
+      </div>
+      <!-- Liste scrollable -->
+      <div id="tutor-history-list" class="overflow-y-auto custom-scrollbar p-3 flex flex-col gap-2" style="max-height:45dvh;min-height:80px;">
+        <!-- Rempli dynamiquement par loadTutorSessions() -->
       </div>
     </div>
 
