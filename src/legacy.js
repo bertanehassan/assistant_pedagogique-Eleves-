@@ -14476,18 +14476,20 @@ window.tutorEditMessage = function(index) {
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     input.focus();
   }
-  // Tronquer l'historique à partir de cet index (exclus)
+  // Tronquer l'historique à partir de cet index (inclus)
   state.tutorMessages.splice(index);
-  // Supprimer les bulles DOM correspondantes (user + toutes les suivantes)
+  // Supprimer la bulle utilisateur et TOUTES les bulles/séparateurs qui la suivent
   const container = document.getElementById('tutor-chat-container');
   if (container) {
-    const allBubbles = container.querySelectorAll('[data-msg-index]');
-    allBubbles.forEach(bubble => {
-      const bubbleIndex = parseInt(bubble.getAttribute('data-msg-index'), 10);
-      if (bubbleIndex >= index) bubble.remove();
+    const allNodes = Array.from(container.children);
+    let removeMode = false;
+    allNodes.forEach(node => {
+      if (node.hasAttribute('data-msg-index')) {
+        const bubbleIndex = parseInt(node.getAttribute('data-msg-index'), 10);
+        if (bubbleIndex >= index) removeMode = true;
+      }
+      if (removeMode) node.remove();
     });
-    // Supprimer aussi les séparateurs de modèle qui seraient après le point d'édition
-    // On garde ceux existants, seuls les futurs changements seront enregistrés
   }
 };
 
@@ -14502,10 +14504,14 @@ window.tutorResendMessage = function(index) {
   // Supprimer les bulles DOM à partir de cet index
   const container = document.getElementById('tutor-chat-container');
   if (container) {
-    const allBubbles = container.querySelectorAll('[data-msg-index]');
-    allBubbles.forEach(bubble => {
-      const bubbleIndex = parseInt(bubble.getAttribute('data-msg-index'), 10);
-      if (bubbleIndex >= index) bubble.remove();
+    const allNodes = Array.from(container.children);
+    let removeMode = false;
+    allNodes.forEach(node => {
+      if (node.hasAttribute('data-msg-index')) {
+        const bubbleIndex = parseInt(node.getAttribute('data-msg-index'), 10);
+        if (bubbleIndex >= index) removeMode = true;
+      }
+      if (removeMode) node.remove();
     });
   }
   // Injecter dans le textarea et envoyer
@@ -15262,9 +15268,26 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
   // Ajouter les images dans le système pour Gemini
   const imageFiles = files.filter(f => f.type === 'image');
 
+  // Nettoyer l'historique pour garantir l'alternance stricte (user/assistant) requise par Gemini
+  const rawHistory = state.tutorMessages.map(m => ({ role: m.role, content: m.content || ' ' }));
+  const cleanHistory = [];
+  let expectedRole = 'user';
+  for (const msg of rawHistory) {
+    if (msg.role === expectedRole) {
+      cleanHistory.push(msg);
+      expectedRole = expectedRole === 'user' ? 'assistant' : 'user';
+    } else if (msg.role === 'user' && expectedRole === 'assistant') {
+      // S'il manque un message assistant entre deux messages user, on insère un assistant vide
+      cleanHistory.push({ role: 'assistant', content: ' ' });
+      cleanHistory.push(msg);
+      // Le prochain attendu redevient assistant
+    }
+    // Si msg.role === 'assistant' et attendu === 'user', on l'ignore silencieusement (deux assistants de suite)
+  }
+
   const messagesToSend = [
     { role: 'system', content: systemMsg },
-    ...state.tutorMessages.map(m => ({ role: m.role, content: m.content }))
+    ...cleanHistory
   ];
 
   state.tutorMessages.push({ role: 'assistant', content: '' });
