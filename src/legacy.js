@@ -14588,7 +14588,7 @@ window.clearTutorConversation = function(skipSavePrompt = false) {
     confirm.innerHTML = `
       <div style="font-size:13px;color:#dae2fd;text-align:center;">Que faire de la conversation actuelle ?</div>
       <div style="display:flex;gap:8px;">
-        <button onclick="saveTutorSession().then(()=>{ document.getElementById('tutor-clear-confirm')?.remove(); window.clearTutorConversation(true); })" style="flex:1;padding:8px;background:rgba(76,215,246,0.15);border:1px solid rgba(76,215,246,0.4);border-radius:8px;color:#4cd7f6;font-size:12px;cursor:pointer;">💾 Sauvegarder</button>
+        <button onclick="document.getElementById('tutor-clear-confirm')?.remove(); window.saveTutorSession(() => window.clearTutorConversation(true));" style="flex:1;padding:8px;background:rgba(76,215,246,0.15);border:1px solid rgba(76,215,246,0.4);border-radius:8px;color:#4cd7f6;font-size:12px;cursor:pointer;">💾 Sauvegarder</button>
         <button onclick="window.clearTutorConversation(true); document.getElementById('tutor-clear-confirm')?.remove();" style="flex:1;padding:8px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:8px;color:#f87171;font-size:12px;cursor:pointer;">🗑 Effacer</button>
       </div>
       <button onclick="document.getElementById('tutor-clear-confirm')?.remove();" style="padding:4px;background:none;border:none;color:rgba(218,226,253,0.4);font-size:11px;cursor:pointer;text-align:center;">Annuler</button>
@@ -14620,24 +14620,90 @@ window.clearTutorConversation = function(skipSavePrompt = false) {
 };
 
 // ── Sauvegarde la conversation courante dans IndexedDB ──
-window.saveTutorSession = async function() {
+window.saveTutorSession = function(onSuccessCallback = null) {
   const messages = state.tutorMessages || [];
   if (messages.length === 0) {
     _tutorToast('❌ Aucune conversation à sauvegarder.', '#f87171');
     return;
   }
+  
+  // Conserver le callback pour l'exécuter après la sauvegarde (ex: effacer le chat)
+  window._tutorSaveCallback = onSuccessCallback;
+  
+  let modal = document.getElementById('tutor-save-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'tutor-save-modal';
+    modal.style = 'position:absolute;inset:0;background:rgba(15,23,42,0.85);backdrop-filter:blur(4px);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;';
+    
+    const currentDomaine = document.getElementById('tutor-domaine')?.value || '';
+    
+    modal.innerHTML = `
+      <div style="background:#1e293b;border:1px solid rgba(76,215,246,0.3);border-radius:16px;width:100%;max-width:320px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:12px;">
+        <h3 style="color:#4cd7f6;font-size:16px;margin:0;font-weight:600;">Sauvegarder la session</h3>
+        
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:11px;color:rgba(218,226,253,0.7);text-transform:uppercase;">Matière</label>
+          <input type="text" id="tutor-save-matiere" value="${escapeHtml(currentDomaine)}" placeholder="Ex: Mathématiques" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;outline:none;" />
+        </div>
+        
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:11px;color:rgba(218,226,253,0.7);text-transform:uppercase;">Leçon / Chapitre</label>
+          <input type="text" id="tutor-save-lecon" placeholder="Ex: Théorème de Pythagore" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;outline:none;" />
+        </div>
+        
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:11px;color:rgba(218,226,253,0.7);text-transform:uppercase;">Exercice / Notion</label>
+          <input type="text" id="tutor-save-exercice" placeholder="Ex: Exercice 3 page 45" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;outline:none;" />
+        </div>
+        
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button onclick="document.getElementById('tutor-save-modal').style.display='none'" style="flex:1;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#dae2fd;font-size:13px;cursor:pointer;">Annuler</button>
+          <button onclick="executeTutorSave()" style="flex:1;padding:10px;background:rgba(76,215,246,0.15);border:1px solid rgba(76,215,246,0.4);border-radius:8px;color:#4cd7f6;font-size:13px;font-weight:600;cursor:pointer;">Sauvegarder</button>
+        </div>
+      </div>
+    `;
+    const panel = document.getElementById('tutor-panel');
+    if (panel) panel.appendChild(modal);
+    else document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+    const currentDomaine = document.getElementById('tutor-domaine')?.value || '';
+    if (!document.getElementById('tutor-save-matiere').value) {
+      document.getElementById('tutor-save-matiere').value = currentDomaine;
+    }
+  }
+};
+
+window.executeTutorSave = async function() {
+  const modal = document.getElementById('tutor-save-modal');
+  if (modal) modal.style.display = 'none';
+  
+  const messages = state.tutorMessages || [];
+  const matiere = document.getElementById('tutor-save-matiere')?.value.trim() || '';
+  const lecon = document.getElementById('tutor-save-lecon')?.value.trim() || '';
+  const exercice = document.getElementById('tutor-save-exercice')?.value.trim() || '';
+  
   const niveau = document.getElementById('tutor-niveau')?.value || '';
-  const domaine = document.getElementById('tutor-domaine')?.value || '';
   const now = new Date();
-  const dateLabel = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
-  const parts = [domaine || 'Conversation', niveau ? `(${niveau})` : '', '·', dateLabel];
-  const title = parts.filter(Boolean).join(' ');
+  const dateLabel = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  
+  const titleParts = [];
+  if (exercice) titleParts.push(exercice);
+  else if (lecon) titleParts.push(lecon);
+  else if (matiere) titleParts.push(matiere);
+  else titleParts.push('Conversation');
+  
+  titleParts.push('·', dateLabel);
+  const title = titleParts.join(' ');
 
   const session = {
     id: now.getTime(),
     title,
-    domaine,
+    domaine: matiere || document.getElementById('tutor-domaine')?.value || '',
     niveau,
+    lecon,
+    exercice,
     date: dateLabel,
     guidance: state.tutorGuidance || 'socratic',
     messages: JSON.parse(JSON.stringify(messages))
@@ -14645,10 +14711,13 @@ window.saveTutorSession = async function() {
 
   try {
     await db.put('tutor_sessions', session);
-    _tutorToast('✅ Conversation sauvegardée !', '#4cd7f6');
-    // Rafraîchir le drawer si ouvert
+    _tutorToast('✅ Session sauvegardée !', '#4cd7f6');
     if (document.getElementById('tutor-history-drawer')?.style.display !== 'none') {
       window.loadTutorSessions();
+    }
+    if (typeof window._tutorSaveCallback === 'function') {
+      window._tutorSaveCallback();
+      window._tutorSaveCallback = null;
     }
   } catch(e) {
     console.error('Erreur sauvegarde session tuteur:', e);
@@ -14673,19 +14742,77 @@ window.loadTutorSessions = async function() {
       </div>`;
       return;
     }
-    list.innerHTML = metas.map(s => {
-      const domBadge = s.domaine ? `<span style="padding:1px 6px;background:rgba(76,215,246,0.1);border:1px solid rgba(76,215,246,0.25);border-radius:4px;font-size:10px;color:#4cd7f6;">${escapeHtml(s.domaine)}</span>` : '';
-      const nivBadge = s.niveau ? `<span style="padding:1px 6px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:4px;font-size:10px;color:#c4b5fd;">${escapeHtml(s.niveau)}</span>` : '';
-      return `
-      <div style="padding:10px 12px;border:1px solid rgba(255,255,255,0.07);border-radius:10px;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:6px;">
-        <div style="font-size:12px;color:#dae2fd;font-weight:600;line-height:1.4;">${escapeHtml(s.title)}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">${domBadge}${nivBadge}<span style="font-size:10px;color:rgba(218,226,253,0.35);margin-left:auto;">${s.msgCount} msg</span></div>
-        <div style="display:flex;gap:6px;margin-top:2px;">
-          <button onclick="restoreTutorSession(${s.id})" style="flex:1;padding:6px 4px;background:rgba(76,215,246,0.12);border:1px solid rgba(76,215,246,0.3);border-radius:7px;color:#4cd7f6;font-size:11px;cursor:pointer;">▶ Reprendre</button>
-          <button onclick="deleteTutorSession(${s.id})" style="padding:6px 10px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:7px;color:#f87171;font-size:11px;cursor:pointer;">🗑</button>
-        </div>
-      </div>`;
-    }).join('');
+    const groups = {}; // { matiere: { lecon: [sessions...] } }
+    metas.forEach(s => {
+      const mat = s.domaine || 'Général';
+      const lec = s.lecon || 'Autres leçons';
+      if (!groups[mat]) groups[mat] = {};
+      if (!groups[mat][lec]) groups[mat][lec] = [];
+      groups[mat][lec].push(s);
+    });
+
+    // Trier les matières alphabétiquement, en mettant "Général" à la fin
+    const matieres = Object.keys(groups).sort((a, b) => {
+      if (a === 'Général') return 1;
+      if (b === 'Général') return -1;
+      return a.localeCompare(b);
+    });
+
+    let html = '';
+    for (const mat of matieres) {
+      html += `
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 13px; font-weight: 700; color: #4cd7f6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(76,215,246,0.2); padding-bottom: 4px;">
+            📚 ${escapeHtml(mat)}
+          </div>
+      `;
+      
+      const leconsObj = groups[mat];
+      // Trier les leçons alphabétiquement, en mettant "Autres leçons" à la fin
+      const lecons = Object.keys(leconsObj).sort((a, b) => {
+        if (a === 'Autres leçons') return 1;
+        if (b === 'Autres leçons') return -1;
+        return a.localeCompare(b);
+      });
+
+      for (const lec of lecons) {
+        const sessions = leconsObj[lec];
+        if (lec !== 'Autres leçons' || lecons.length > 1) {
+          html += `
+            <div style="font-size: 11px; font-weight: 600; color: #c4b5fd; margin-top: 8px; margin-bottom: 6px; padding-left: 6px; border-left: 2px solid #c4b5fd;">
+              📖 ${escapeHtml(lec)}
+            </div>
+          `;
+        }
+        
+        html += `<div style="display: flex; flex-direction: column; gap: 6px; padding-left: 6px; margin-bottom: 8px;">`;
+        sessions.forEach(s => {
+          const titleText = s.exercice ? escapeHtml(s.exercice) : escapeHtml(s.title);
+          const nivBadge = s.niveau ? `<span style="padding:1px 6px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:4px;font-size:9px;color:#c4b5fd;">${escapeHtml(s.niveau)}</span>` : '';
+          const dateBadge = `<span style="font-size:9px;color:rgba(218,226,253,0.4);">${escapeHtml(s.date)}</span>`;
+          
+          html += `
+            <div style="padding:8px 10px;border:1px solid rgba(255,255,255,0.07);border-radius:8px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:4px;">
+              <div style="font-size:12px;color:#dae2fd;font-weight:600;line-height:1.3;">${titleText}</div>
+              <div style="display:flex;gap:4px;align-items:center;">
+                ${nivBadge}
+                <span style="font-size:9px;color:rgba(218,226,253,0.35);margin-left:auto;">${s.msgCount} msg</span>
+              </div>
+              <div style="display:flex;gap:4px;align-items:center;margin-top:2px;">
+                ${dateBadge}
+              </div>
+              <div style="display:flex;gap:6px;margin-top:4px;">
+                <button onclick="restoreTutorSession(${s.id})" style="flex:1;padding:6px 4px;background:rgba(76,215,246,0.12);border:1px solid rgba(76,215,246,0.3);border-radius:7px;color:#4cd7f6;font-size:11px;cursor:pointer;">▶ Reprendre</button>
+                <button onclick="deleteTutorSession(${s.id})" style="padding:6px 10px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:7px;color:#f87171;font-size:11px;cursor:pointer;">🗑</button>
+              </div>
+            </div>
+          `;
+        });
+        html += `</div>`; // end sessions wrapper
+      }
+      html += `</div>`; // end matiere wrapper
+    }
+    list.innerHTML = html;
   } catch(e) {
     console.error('Erreur chargement sessions tuteur:', e);
     list.innerHTML = '<div style="text-align:center;color:#f87171;font-size:12px;padding:20px;">Erreur de chargement.</div>';

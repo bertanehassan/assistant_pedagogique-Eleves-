@@ -75,6 +75,8 @@ export const db = {
             title: s.title,
             domaine: s.domaine || '',
             niveau: s.niveau || '',
+            lecon: s.lecon || '',
+            exercice: s.exercice || '',
             date: s.date,
             msgCount: (s.messages || []).filter(m => m.role !== 'system').length
           });
