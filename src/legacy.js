@@ -15290,27 +15290,30 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
     ...cleanHistory
   ];
 
+  const activeModel = state.tutorModel || state.model || 'mistral-large-2512';
+  const modelCfg = (window.APP_MODELS || []).find(m => m.id === activeModel);
+  let shortModelName = modelCfg ? modelCfg.name : activeModel;
+  if (shortModelName.includes(' — ')) shortModelName = shortModelName.split(' — ')[0];
+  // Retirer le badge emoji s'il y en a un au début
+  shortModelName = shortModelName.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim();
+
   state.tutorMessages.push({ role: 'assistant', content: '' });
 
   const aiDiv = document.createElement('div');
   aiDiv.className = 'tutor-message assistant';
   aiDiv.setAttribute('dir', 'auto');
   aiDiv.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;max-width:90%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
-  aiDiv.innerHTML = '<b style="color:var(--cyan)">🎓 Tuteur :</b> <span class="tutor-response-content" dir="auto"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
+  aiDiv.innerHTML = `<b style="color:var(--cyan)">🎓 Tuteur <span style="font-size:11.5px;opacity:0.75;font-weight:normal">(${shortModelName})</span> :</b> <span class="tutor-response-content" dir="auto"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>`;
   container.appendChild(aiDiv);
   container.scrollTop = container.scrollHeight;
 
   try {
     // getLlmApiConfig retourne { provider, url, headers }
-    // On utilise state.tutorModel (modèle dédié au tuteur) plutôt que le modèle global
-    const activeModel = state.tutorModel || state.model || 'mistral-large-2512';
     const aiConfig = getLlmApiConfig(activeModel);
     
     // Vérifier la compatibilité image depuis la config MODELS
     const hasImages = imageFiles && imageFiles.length > 0;
     const isTutorGemini = aiConfig.provider === 'gemini';
-    // Vérifier si le modèle est vision depuis la config MODELS
-    const modelCfg = (window.APP_MODELS || []).find(m => m.id === activeModel);
     const isTutorVision = isTutorGemini || !!(modelCfg && modelCfg.vision);
 
     // ── Si images présentes mais modèle non-vision → bloquer et avertir ──
