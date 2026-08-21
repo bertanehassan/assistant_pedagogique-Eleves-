@@ -14846,9 +14846,10 @@ window.restoreTutorSession = async function(id) {
           </div>`;
       } else {
         div.className = 'tutor-message assistant';
-        div.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;max-width:90%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
-        const rawHtml = parseMarkdownSafeMath(msg.content);
-        const safeHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+        div.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;width:100%;max-width:100%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;overflow-x:hidden;box-sizing:border-box;';
+        let rawHtml = parseMarkdownSafeMath(msg.content);
+        rawHtml = typeof wrapTutorTables === 'function' ? wrapTutorTables(rawHtml) : rawHtml;
+        const safeHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['class'] }) : rawHtml;
         div.innerHTML = '<b style="color:var(--cyan)">🎓 Tuteur :</b> <span class="tutor-response-content" dir="auto">' + safeHtml + '</span>';
       }
       container.appendChild(div);
@@ -15229,6 +15230,11 @@ window.closeTutorPanel = function() {
   }
 };
 
+function wrapTutorTables(html) {
+  // Enveloppe chaque <table> dans un .table-wrapper pour le scroll horizontal
+  return html.replace(/<table(\b[^>]*)>/gi, '<div class="table-wrapper"><table$1>').replace(/<\/table>/gi, '</table></div>');
+}
+
 function updateTutorLiveMessage(content) {
   const lastMsg = state.tutorMessages[state.tutorMessages.length - 1];
   if (lastMsg && lastMsg.role === 'assistant') {
@@ -15240,8 +15246,9 @@ function updateTutorLiveMessage(content) {
     if (lastEl) {
       const contentSpan = lastEl.querySelector('.tutor-response-content');
       if (contentSpan) {
-        const rawHtml = parseMarkdownSafeMath(content);
-        contentSpan.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+        let rawHtml = parseMarkdownSafeMath(content);
+        rawHtml = wrapTutorTables(rawHtml);
+        contentSpan.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['class'] }) : rawHtml;
       }
     }
     container.scrollTop = container.scrollHeight;
@@ -15410,7 +15417,7 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
   const aiDiv = document.createElement('div');
   aiDiv.className = 'tutor-message assistant';
   aiDiv.setAttribute('dir', 'auto');
-  aiDiv.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;max-width:90%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
+  aiDiv.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;width:100%;max-width:100%;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;overflow-x:hidden;box-sizing:border-box;';
   aiDiv.innerHTML = `<b style="color:var(--cyan)">🎓 Tuteur <span style="font-size:11.5px;opacity:0.75;font-weight:normal">(${shortModelName})</span> :</b> <span class="tutor-response-content" dir="auto"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>`;
   container.appendChild(aiDiv);
   container.scrollTop = container.scrollHeight;

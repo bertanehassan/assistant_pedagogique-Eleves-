@@ -1,5 +1,5 @@
 <template>
-  <div id="tutor-panel" class="fixed md:absolute top-14 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[600px] h-[calc(100dvh-56px)] md:h-[640px] md:max-h-[85vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
+  <div id="tutor-panel" class="fixed md:absolute top-14 md:top-24 left-0 md:left-auto md:right-4 w-full md:w-[780px] h-[calc(100dvh-56px)] md:h-[680px] md:max-h-[90vh] glass-panel p-0 md:rounded-2xl z-[70] flex flex-col shadow-2xl border-0 md:border border-white/10 bg-black/95 md:bg-black/80 backdrop-blur-xl transition-transform duration-300 transform translate-x-full" style="display:none;">
     
     <!-- HEADER -->
     <div class="flex justify-between items-center p-3 md:p-4 border-b border-white/10 bg-gradient-to-r from-cyan/20 to-transparent md:rounded-t-2xl flex-shrink-0">
@@ -134,7 +134,7 @@
     </div>
 
     <!-- CHAT AREA -->
-    <div id="tutor-chat-container" class="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar text-sm">
+    <div id="tutor-chat-container" class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-4 flex flex-col gap-4 custom-scrollbar tutor-chat-container text-sm">
       <!-- Les messages seront injectés ici par legacy.js -->
       <div id="tutor-welcome-banner" class="text-center opacity-90 mt-6">
         <div class="text-4xl mb-3">👋</div>
@@ -270,6 +270,14 @@ import { t } from '../../i18n.js';
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
 
+/* ── Scroll horizontal sur la scrollbar horizontale ── */
+.custom-scrollbar::-webkit-scrollbar:horizontal { height: 4px; }
+
+/* ── Chat container: les messages remplissent toute la largeur ── */
+.tutor-chat-container {
+  container-type: inline-size;
+}
+
 /* Guidance selector */
 .tutor-guidance-selector {
   display: flex;
@@ -392,6 +400,81 @@ import { t } from '../../i18n.js';
   border: 1px solid rgba(255,255,255,0.1);
   overflow-x: auto;
   margin-bottom: 1.2em;
+  /* Scrollbar fine pour les blocs de code */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(76, 215, 246, 0.3) transparent;
+}
+:deep(.tutor-response-content pre::-webkit-scrollbar) {
+  height: 5px;
+}
+:deep(.tutor-response-content pre::-webkit-scrollbar-thumb) {
+  background: rgba(76, 215, 246, 0.35);
+  border-radius: 4px;
+}
+
+/* ── Scroll horizontal sur les tableaux ── */
+:deep(.tutor-response-content table) {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 1.2em;
+}
+:deep(.tutor-response-content .table-wrapper) {
+  overflow-x: auto;
+  margin-bottom: 1.2em;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(76, 215, 246, 0.3) transparent;
+}
+:deep(.tutor-response-content .table-wrapper::-webkit-scrollbar) {
+  height: 5px;
+}
+:deep(.tutor-response-content .table-wrapper::-webkit-scrollbar-thumb) {
+  background: rgba(76, 215, 246, 0.35);
+  border-radius: 4px;
+}
+:deep(.tutor-response-content table th) {
+  background: rgba(76, 215, 246, 0.1);
+  color: var(--cyan, #4cd7f6);
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(76, 215, 246, 0.2);
+}
+:deep(.tutor-response-content table td) {
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  color: rgba(218,226,253,0.85);
+}
+:deep(.tutor-response-content table tr:last-child td) {
+  border-bottom: none;
+}
+
+/* ── Formules LaTeX (MathJax/KaTeX) scroll horizontal ── */
+:deep(.tutor-response-content .MathJax),
+:deep(.tutor-response-content .katex-display),
+:deep(.tutor-response-content mjx-container) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  display: block;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(192, 193, 255, 0.3) transparent;
+}
+:deep(.tutor-response-content .MathJax::-webkit-scrollbar),
+:deep(.tutor-response-content .katex-display::-webkit-scrollbar),
+:deep(.tutor-response-content mjx-container::-webkit-scrollbar) {
+  height: 4px;
+}
+:deep(.tutor-response-content .MathJax::-webkit-scrollbar-thumb),
+:deep(.tutor-response-content .katex-display::-webkit-scrollbar-thumb),
+:deep(.tutor-response-content mjx-container::-webkit-scrollbar-thumb) {
+  background: rgba(192, 193, 255, 0.3);
+  border-radius: 4px;
 }
 
 /* ── Actions sur les bulles utilisateur (modifier / renvoyer) ── */
