@@ -134,7 +134,7 @@
     </div>
 
     <!-- CHAT AREA -->
-    <div id="tutor-chat-container" class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-4 flex flex-col gap-4 custom-scrollbar text-sm">
+    <div id="tutor-chat-container" class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-4 flex flex-col gap-0 custom-scrollbar text-sm">
       <!-- Les messages seront injectés ici par legacy.js -->
       <div id="tutor-welcome-banner" class="text-center opacity-90 mt-6">
         <div class="text-4xl mb-3">👋</div>
@@ -459,7 +459,17 @@ import { t } from '../../i18n.js';
 :deep(.tutor-response-content mjx-container[display="true"]::-webkit-scrollbar-thumb),
 :deep(.tutor-response-content .katex-display::-webkit-scrollbar-thumb) { background: rgba(192, 193, 255, 0.3); border-radius: 4px; }
 
-/* ── Actions sur les bulles utilisateur (modifier / renvoyer) ── */
+/* ── Affichage en flux continu (sans bulles) ── */
+:deep(.tutor-user-bubble),
+:deep(.tutor-message) {
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+:deep(.tutor-user-bubble:first-child),
+:deep(.tutor-message:first-child) {
+  border-top: none;
+}
+
+/* ── Actions sur les messages utilisateur (modifier / renvoyer) ── */
 :deep(.tutor-user-bubble) {
   position: relative;
 }

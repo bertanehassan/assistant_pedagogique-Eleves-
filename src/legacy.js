@@ -14832,7 +14832,7 @@ window.restoreTutorSession = async function(id) {
       if (msg.role === 'user') {
         div.className = 'tutor-user-bubble';
         div.setAttribute('data-msg-index', msgIdx);
-        div.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
+        div.style = 'padding:4px 0 12px 0;word-break:break-word;';
         // Afficher uniquement la partie avant les pièces jointes
         const displayContent = (msg.content || '').split('\n\n---\n')[0];
         div.innerHTML = `<b style="color:var(--neon)">Vous :</b> <span dir="auto">${escapeHtml(displayContent)}</span>
@@ -14846,7 +14846,7 @@ window.restoreTutorSession = async function(id) {
           </div>`;
       } else {
         div.className = 'tutor-message assistant';
-        div.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;width:100%;box-sizing:border-box;overflow-x:hidden;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
+        div.style = 'padding:4px 0 16px 0;word-break:break-word;';
         let rawHtml = parseMarkdownSafeMath(msg.content);
         rawHtml = typeof wrapTutorTables === 'function' ? wrapTutorTables(rawHtml) : rawHtml;
         const safeHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['class'] }) : rawHtml;
@@ -15307,7 +15307,7 @@ window.sendTutorMessage = async function() {
   userDiv.setAttribute('dir', 'auto');
   userDiv.className = 'tutor-user-bubble';
   userDiv.setAttribute('data-msg-index', currentMsgIdx);
-  userDiv.style = 'background:var(--hull);padding:10px 14px;border-radius:12px;align-self:flex-end;max-width:90%;border-left:2px solid var(--neon);margin-bottom:8px;word-break:break-word;';
+  userDiv.style = 'padding:4px 0 12px 0;word-break:break-word;';
   let userHtml = '<b style="color:var(--neon)">Vous :</b> <span dir="auto">' + escapeHtml(content) + '</span>';
   if (files.length > 0) {
     userHtml += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">' +
@@ -15416,7 +15416,7 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
   const aiDiv = document.createElement('div');
   aiDiv.className = 'tutor-message assistant';
   aiDiv.setAttribute('dir', 'auto');
-  aiDiv.style = 'background:rgba(0,255,157,0.05);padding:10px 14px;border-radius:12px;width:100%;box-sizing:border-box;overflow-x:hidden;border-left:2px solid var(--neon);color:var(--text-bright);margin-bottom:8px;word-break:break-word;';
+  aiDiv.style = 'padding:4px 0 16px 0;word-break:break-word;';
   aiDiv.innerHTML = `<b style="color:var(--cyan)">🎓 Tuteur <span style="font-size:11.5px;opacity:0.75;font-weight:normal">(${shortModelName})</span> :</b> <span class="tutor-response-content" dir="auto"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>`;
   container.appendChild(aiDiv);
   container.scrollTop = container.scrollHeight;
