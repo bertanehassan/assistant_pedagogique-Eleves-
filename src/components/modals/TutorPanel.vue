@@ -134,15 +134,13 @@
     </div>
 
     <!-- CHAT AREA -->
-    <div id="tutor-chat-scroll-wrapper" class="flex-1 min-h-0 overflow-auto custom-scrollbar">
-      <div id="tutor-chat-container" class="p-3 md:p-4 flex flex-col gap-4 tutor-chat-canvas text-sm">
-        <!-- Les messages seront injectés ici par legacy.js -->
-        <div id="tutor-welcome-banner" class="text-center opacity-90 mt-6">
-          <div class="text-4xl mb-3">👋</div>
-          <div class="text-cyan font-bold mb-2">{{ t('tutor_welcome_title') }}</div>
-          <div class="text-on-surface-variant text-xs px-4">{{ t('tutor_welcome_text') }}</div>
-          <div class="text-on-surface-variant/50 text-[10px] mt-3">{{ t('tutor_welcome_sub') }}</div>
-        </div>
+    <div id="tutor-chat-container" class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-4 flex flex-col gap-4 custom-scrollbar text-sm">
+      <!-- Les messages seront injectés ici par legacy.js -->
+      <div id="tutor-welcome-banner" class="text-center opacity-90 mt-6">
+        <div class="text-4xl mb-3">👋</div>
+        <div class="text-cyan font-bold mb-2">{{ t('tutor_welcome_title') }}</div>
+        <div class="text-on-surface-variant text-xs px-4">{{ t('tutor_welcome_text') }}</div>
+        <div class="text-on-surface-variant/50 text-[10px] mt-3">{{ t('tutor_welcome_sub') }}</div>
       </div>
     </div>
 
@@ -401,27 +399,32 @@ import { t } from '../../i18n.js';
   border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.1);
   margin-bottom: 1.2em;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(76, 215, 246, 0.3) transparent;
 }
+:deep(.tutor-response-content pre::-webkit-scrollbar) { height: 5px; }
+:deep(.tutor-response-content pre::-webkit-scrollbar-thumb) { background: rgba(76, 215, 246, 0.35); border-radius: 4px; }
 
-/* ── Style global du Canvas du Chat ── */
-.tutor-chat-canvas {
-  min-width: 100%;
-}
-@media (max-width: 767px) {
-  .tutor-chat-canvas {
-    /* Élargit toute la zone sur mobile pour éviter d'écraser les tableaux et formules */
-    min-width: 750px;
-  }
-}
-
-/* ── Tableaux ── */
+/* ── Scroll horizontal sur les tableaux ── */
 :deep(.tutor-response-content table) {
   width: max-content;
   min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  margin-bottom: 1.2em;
+  margin-bottom: 0;
 }
+:deep(.tutor-response-content .table-wrapper) {
+  overflow-x: auto;
+  margin-bottom: 1.2em;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(76, 215, 246, 0.3) transparent;
+}
+:deep(.tutor-response-content .table-wrapper::-webkit-scrollbar) { height: 5px; }
+:deep(.tutor-response-content .table-wrapper::-webkit-scrollbar-thumb) { background: rgba(76, 215, 246, 0.35); border-radius: 4px; }
+
 :deep(.tutor-response-content table th) {
   background: rgba(76, 215, 246, 0.1);
   color: var(--cyan, #4cd7f6);
@@ -440,13 +443,21 @@ import { t } from '../../i18n.js';
   border-bottom: none;
 }
 
-/* ── Formules LaTeX (MathJax/KaTeX) ── */
-:deep(.tutor-response-content .MathJax),
-:deep(.tutor-response-content .katex-display),
-:deep(.tutor-response-content mjx-container) {
+/* ── Formules LaTeX (MathJax/KaTeX) scrollables ── */
+:deep(.tutor-response-content mjx-container[display="true"]),
+:deep(.tutor-response-content .katex-display) {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  max-width: 100%;
   display: block;
   padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(192, 193, 255, 0.3) transparent;
 }
+:deep(.tutor-response-content mjx-container[display="true"]::-webkit-scrollbar),
+:deep(.tutor-response-content .katex-display::-webkit-scrollbar) { height: 4px; }
+:deep(.tutor-response-content mjx-container[display="true"]::-webkit-scrollbar-thumb),
+:deep(.tutor-response-content .katex-display::-webkit-scrollbar-thumb) { background: rgba(192, 193, 255, 0.3); border-radius: 4px; }
 
 /* ── Actions sur les bulles utilisateur (modifier / renvoyer) ── */
 :deep(.tutor-user-bubble) {
