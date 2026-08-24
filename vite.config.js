@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => ({
             files: [
               {
                 name: 'shared_quiz_file',
-                accept: ['application/json', '.json']
+                accept: ['application/json', '.json', 'text/plain', 'application/octet-stream', '*/*']
               }
             ]
           }
