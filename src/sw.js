@@ -84,7 +84,7 @@ registerRoute(
       if (text) {
         debugInfo += "db_wait|";
         await new Promise((resolve, reject) => {
-          const request = indexedDB.open('QCM_EDU_MAROC_DB', 2);
+        const request = indexedDB.open('QCM_EDU_MAROC_DB', 3);
           request.onsuccess = (e) => {
             const db = e.target.result;
             const tx = db.transaction('settings', 'readwrite');
