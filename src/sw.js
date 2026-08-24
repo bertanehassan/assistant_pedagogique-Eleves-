@@ -49,57 +49,61 @@ registerRoute(
 
 // 3. Interception du Web Share Target (POST)
 registerRoute(
-  ({ url }) => url.pathname === '/' && url.searchParams.get('shared_file') === 'true',
+  ({ request, url }) => request.method === 'POST' && url.searchParams.get('shared_file') === 'true',
   async ({ event }) => {
+    let debugInfo = "sw_start|";
     try {
+      debugInfo += "form_wait|";
       const formData = await event.request.formData();
+      debugInfo += "form_ok|";
+      
       const file = formData.get('shared_quiz_file');
       let text = null;
 
       if (file && typeof file.text === 'function') {
+        debugInfo += `file(${file.name},${file.size})|`;
         text = await file.text();
       } else {
         const rawText = formData.get('text');
         if (rawText && rawText.includes('{')) {
-          text = rawText; // WhatsApp a partagé le contenu texte
+          text = rawText;
+          debugInfo += 'rawText_ok|';
         } else {
-        const rawTitle = formData.get('title');
-        if (rawTitle && rawTitle.includes('{')) text = rawTitle;
+          const rawTitle = formData.get('title');
+          if (rawTitle && rawTitle.includes('{')) {
+            text = rawTitle;
+            debugInfo += 'rawTitle_ok|';
+          }
         }
       }
       
-      let debugLog = `file=${!!file}, text=${!!formData.get('text')}, title=${!!formData.get('title')}, url=${!!formData.get('url')}`;
-      if (file) debugLog += `, fileName=${file.name}, fileSize=${file.size}`;
+      if (!text) {
+        debugInfo += `no_text(file=${!!file},text=${!!formData.get('text')},title=${!!formData.get('title')})|`;
+      }
 
-      // Sauvegarde dans IndexedDB (QCM_EDU_MAROC_DB)
-      await new Promise((resolve, reject) => {
-        // Version 2 d'après src/config.js
-        const request = indexedDB.open('QCM_EDU_MAROC_DB', 2);
-        
-        request.onsuccess = (e) => {
-          const db = e.target.result;
-          const tx = db.transaction('settings', 'readwrite');
-          const store = tx.objectStore('settings');
-          
-          if (text) {
+      if (text) {
+        debugInfo += "db_wait|";
+        await new Promise((resolve, reject) => {
+          const request = indexedDB.open('QCM_EDU_MAROC_DB', 2);
+          request.onsuccess = (e) => {
+            const db = e.target.result;
+            const tx = db.transaction('settings', 'readwrite');
+            const store = tx.objectStore('settings');
             store.put({ id: 'shared_quiz_pending', value: text });
-          }
-          store.put({ id: 'shared_quiz_debug', value: debugLog });
-          
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        };
-        
-        request.onerror = () => reject(request.error);
-      });
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          };
+          request.onerror = () => reject(request.error);
+        });
+        debugInfo += "db_ok|";
+      }
     } catch (err) {
       console.error('[SW] Erreur de traitement du share_target:', err);
+      debugInfo += "err=" + (err.message || 'unknown');
     }
     
-    // Redirection en GET vers la page d'accueil avec un paramètre pour déclencher le chargement
-    return Response.redirect('/?shared_file=true', 303);
-  },
-  'POST'
+    return Response.redirect(`/?shared_file=true&sw_debug=${encodeURIComponent(debugInfo)}`, 303);
+  }
 );
 
 // 4. Gestion de la mise à jour du Service Worker (Bouton "Mettre à jour")

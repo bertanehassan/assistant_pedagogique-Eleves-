@@ -41,8 +41,8 @@ onMounted(async () => {
         // Supprimer le fichier en attente
         await db.put('settings', { id: 'shared_quiz_pending', value: null });
       } else {
-        const debugInfo = await db.get('settings', 'shared_quiz_debug');
-        alert('Erreur : Aucun fichier reçu par l\'application. Détails SW : ' + (debugInfo ? debugInfo.value : 'Aucun'));
+        const swDebug = urlParams.get('sw_debug') || 'Non passé';
+        alert(`Erreur : Aucun fichier valide reçu. SW = ${swDebug}`);
       }
     } catch (err) {
       console.error('[WebShareTarget] Erreur lecture fichier partagé:', err);
