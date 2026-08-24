@@ -459,6 +459,20 @@ import { t } from '../../i18n.js';
 :deep(.tutor-response-content mjx-container[display="true"]::-webkit-scrollbar-thumb),
 :deep(.tutor-response-content .katex-display::-webkit-scrollbar-thumb) { background: rgba(192, 193, 255, 0.3); border-radius: 4px; }
 
+/* ── Formules LaTeX en jaune ── */
+:deep(.tutor-response-content mjx-container) {
+  color: #ffd60a !important;
+}
+:deep(.tutor-response-content mjx-container *) {
+  color: inherit !important;
+  border-color: #ffd60a !important;
+}
+/* KaTeX (fallback) */
+:deep(.tutor-response-content .katex),
+:deep(.tutor-response-content .katex *) {
+  color: #ffd60a !important;
+}
+
 /* ── Affichage en flux continu (sans bulles) ── */
 :deep(.tutor-user-bubble),
 :deep(.tutor-message) {
