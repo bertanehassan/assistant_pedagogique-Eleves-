@@ -49,7 +49,7 @@ registerRoute(
 
 // 3. Interception du Web Share Target (POST)
 registerRoute(
-  ({ request, url }) => request.method === 'POST' && url.searchParams.get('shared_file') === 'true',
+  ({ url }) => url.searchParams.get('shared_file') === 'true',
   async ({ event }) => {
     let debugInfo = "sw_start|";
     try {
@@ -103,7 +103,8 @@ registerRoute(
     }
     
     return Response.redirect(`/?shared_file=true&sw_debug=${encodeURIComponent(debugInfo)}`, 303);
-  }
+  },
+  'POST'
 );
 
 // 4. Gestion de la mise à jour du Service Worker (Bouton "Mettre à jour")
