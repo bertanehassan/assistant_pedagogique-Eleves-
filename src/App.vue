@@ -34,10 +34,15 @@ onMounted(async () => {
         
         if (typeof window.handleQuizJsonText === 'function') {
           window.handleQuizJsonText(pendingQuiz.value);
+        } else {
+          alert('Erreur interne : handleQuizJsonText non défini.');
         }
         
         // Supprimer le fichier en attente
         await db.put('settings', { id: 'shared_quiz_pending', value: null });
+      } else {
+        const debugInfo = await db.get('settings', 'shared_quiz_debug');
+        alert('Erreur : Aucun fichier reçu par l\'application. Détails SW : ' + (debugInfo ? debugInfo.value : 'Aucun'));
       }
     } catch (err) {
       console.error('[WebShareTarget] Erreur lecture fichier partagé:', err);

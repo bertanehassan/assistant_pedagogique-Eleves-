@@ -54,30 +54,44 @@ registerRoute(
     try {
       const formData = await event.request.formData();
       const file = formData.get('shared_quiz_file');
-      
-      if (file) {
-        const text = await file.text();
-        
-        // Sauvegarde dans IndexedDB (QCM_EDU_MAROC_DB)
-        await new Promise((resolve, reject) => {
-          // Version 2 d'après src/config.js
-          const request = indexedDB.open('QCM_EDU_MAROC_DB', 2);
-          
-          request.onsuccess = (e) => {
-            const db = e.target.result;
-            // On utilise le store 'settings' qui existe déjà
-            const tx = db.transaction('settings', 'readwrite');
-            const store = tx.objectStore('settings');
-            
-            store.put({ id: 'shared_quiz_pending', value: text });
-            
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-          };
-          
-          request.onerror = () => reject(request.error);
-        });
+      let text = null;
+
+      if (file && typeof file.text === 'function') {
+        text = await file.text();
+      } else {
+        const rawText = formData.get('text');
+        if (rawText && rawText.includes('{')) {
+          text = rawText; // WhatsApp a partagé le contenu texte
+        } else {
+        const rawTitle = formData.get('title');
+        if (rawTitle && rawTitle.includes('{')) text = rawTitle;
+        }
       }
+      
+      let debugLog = `file=${!!file}, text=${!!formData.get('text')}, title=${!!formData.get('title')}, url=${!!formData.get('url')}`;
+      if (file) debugLog += `, fileName=${file.name}, fileSize=${file.size}`;
+
+      // Sauvegarde dans IndexedDB (QCM_EDU_MAROC_DB)
+      await new Promise((resolve, reject) => {
+        // Version 2 d'après src/config.js
+        const request = indexedDB.open('QCM_EDU_MAROC_DB', 2);
+        
+        request.onsuccess = (e) => {
+          const db = e.target.result;
+          const tx = db.transaction('settings', 'readwrite');
+          const store = tx.objectStore('settings');
+          
+          if (text) {
+            store.put({ id: 'shared_quiz_pending', value: text });
+          }
+          store.put({ id: 'shared_quiz_debug', value: debugLog });
+          
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+        
+        request.onerror = () => reject(request.error);
+      });
     } catch (err) {
       console.error('[SW] Erreur de traitement du share_target:', err);
     }
