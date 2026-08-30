@@ -290,13 +290,13 @@ const escapeHtml = t => (t||'')
   .replace(/</g,"&lt;")
   .replace(/>/g,"&gt;");
 
-const toast = (msg, type = "info") => {
+const toast = (msg, type = "info", duration = 3800) => {
   const t = document.createElement("div");
   t.className = `toast ${type}`;
   const icon = type === "error" ? "⚠" : type === "success" ? "✓" : "◈";
   t.innerHTML = `<span style="color:${type==='error'?'var(--danger)':type==='success'?'var(--neon)':'var(--cyan)'}">${icon}</span><span>${msg}</span>`;
   $("#toast-container").appendChild(t);
-  setTimeout(() => t.remove(), 3800);
+  setTimeout(() => t.remove(), duration);
 };
 
 // ════════════════════════════════════════
@@ -1284,7 +1284,7 @@ async function deleteLesson(lessonId, agentId) {
 }
 
 function getLlmApiConfig(modelId) {
-  if (!modelId) modelId = state.model || "mistral-large-2512";
+  if (!modelId) modelId = state.model || "mistral-small-2603";
   
   if (modelId.includes("gemini")) {
     return {
@@ -1650,7 +1650,7 @@ function renderMessages(forceFull = false) {
 
 function showTyping(modelId = '') {
   let statusText = '';
-  const actualModel = modelId || state.model || "mistral-large-2512";
+  const actualModel = modelId || state.model || "mistral-small-2603";
   const apiConf = getLlmApiConfig(actualModel);
   
   let providerName = "Mistral API";
@@ -1808,7 +1808,9 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
       const errText = await res.text();
       let errMsg = errText.slice(0, 300);
       try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
-      throw new Error(`Gemini API: ${errMsg}`);
+      const err = new Error(`Gemini API: ${errMsg}`);
+      err.httpStatus = res.status;
+      throw err;
     }
 
     if (!reqBody.stream) {
@@ -1879,10 +1881,12 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      let errMsg = err.slice(0, 300);
-      try { const j = JSON.parse(err); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
-      throw new Error(errMsg);
+      const err2 = await res.text();
+      let errMsg = err2.slice(0, 300);
+      try { const j = JSON.parse(err2); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
+      const err = new Error(errMsg);
+      err.httpStatus = res.status;
+      throw err;
     }
 
     if (!reqBody.stream) {
@@ -2449,11 +2453,31 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
       await saveChat();
       toast("Génération stoppée", "info");
     } else {
+      // ── Détection 403 : clé API invalide ou expirée ──
+      const is403 = e.httpStatus === 403 || /\b403\b/.test(e.message);
       let errMsg = e.message?.slice(0, 300) || String(e);
       hideTyping();
-      toast(`Erreur API : ${errMsg}`, "error");
-      state.messages[state.messages.length - 1].content = `⚠ Requête échouée : ${errMsg}`;
-      renderMessages();
+
+      if (is403) {
+        // Identifier le provider concerné pour un message ciblé
+        const activeModel = state.model || "";
+        let providerHint = "Mistral";
+        if (activeModel.includes("gemini"))      providerHint = "Gemini (Google)";
+        else if (activeModel.startsWith("grok")) providerHint = "xAI (Grok)";
+        else if (activeModel.includes("/") || activeModel.includes(":free")) providerHint = "OpenRouter";
+
+        const msg403 = `🔑 Erreur 403 (${providerHint}) : Accès refusé au modèle.`;
+        toast(msg403, "error", 6000);
+        state.messages[state.messages.length - 1].content = `⚠ Erreur 403 — Accès refusé par l'API **${providerHint}**.\n\nLe serveur a bloqué la requête avec ce message précis :\n> *${errMsg}*\n\n**Causes probables :**\n- Vous essayez d'utiliser un modèle (ex: Mistral Large) qui nécessite d'ajouter une carte bancaire sur votre compte développeur.\n- Votre quota gratuit est épuisé.\n- La clé API n'a pas les permissions nécessaires.\n\n**Solution :** Changez de modèle dans le menu en haut (essayez les modèles tagués "Gratuit") ou vérifiez la facturation de votre compte API.`;
+        renderMessages();
+        // Ouvrir automatiquement le modal Paramètres API
+        const apiModal = document.getElementById('api-modal');
+        if (apiModal) apiModal.classList.add("active");
+      } else {
+        toast(`Erreur API : ${errMsg}`, "error");
+        state.messages[state.messages.length - 1].content = `⚠ Requête échouée : ${errMsg}`;
+        renderMessages();
+      }
     }
   } finally {
     state.isGenerating = false;
@@ -2515,7 +2539,7 @@ async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSign
     if (lessonsBlock) prompt += `\n\n[RAPPEL CRITIQUE - LIS CECI AVANT DE RÉPONDRE]\n${lessonsBlock}`;
   } catch(e) {}
 
-  let modelId = (agent.modelPref && agent.modelPref !== '') ? agent.modelPref : "mistral-large-2512";
+  let modelId = (agent.modelPref && agent.modelPref !== '') ? agent.modelPref : (state.model || "mistral-small-2603");
   const temp = agent.temperature !== undefined ? agent.temperature : 0.4;
   const maxTok = agent.maxTokens || 8192; // Autoriser des réponses longues
 
@@ -2561,7 +2585,15 @@ async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSign
       body: JSON.stringify(reqBody)
     });
 
-    if (!res.ok) throw new Error(`API ${res.status}`);
+    if (!res.ok) {
+      const errTxt = await res.text().catch(() => "");
+      let errMsg = errTxt.slice(0, 200);
+      try { const j = JSON.parse(errTxt); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
+      const err = new Error(`API ${res.status}${errMsg ? ' : ' + errMsg : ''}`);
+      err.httpStatus = res.status;
+      throw err;
+    }
+
 
     finalResult = "";
     if (onChunk) {
@@ -10082,7 +10114,13 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         const res = await fetch("https://api.mistral.ai/v1/models", {
           headers: { "Authorization": `Bearer ${k}` }
         });
-        if (res.ok) { resEl.textContent = "✅ Connecté (Mistral AI)"; resEl.style.color = "var(--neon)"; }
+        if (res.ok) { 
+          resEl.textContent = "✅ Connecté (Mistral AI)"; 
+          resEl.style.color = "var(--neon)"; 
+          // Sauvegarde automatique en cas de succès du test
+          await setCookie("mistral_api_key", k);
+          state.apiKey = k;
+        }
         else { resEl.textContent = `❌ Erreur ${res.status}`; resEl.style.color = "var(--danger)"; }
       } catch(e) {
         resEl.textContent = "❌ Échec réseau"; resEl.style.color = "var(--danger)";
@@ -10105,14 +10143,19 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
         
         // Test 2: POST (génération réelle)
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanKey}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${cleanKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: "ping" }] }]
           })
         });
-        if (res.ok) { resEl.textContent = "✅ Connecté (Google Gemini)"; resEl.style.color = "var(--cyan)"; }
+        if (res.ok) { 
+          resEl.textContent = "✅ Connecté (Google Gemini)"; 
+          resEl.style.color = "var(--cyan)"; 
+          await setCookie("gemini_api_key", cleanKey);
+          state.geminiApiKey = cleanKey;
+        }
         else { 
           const errData = await res.json().catch(()=>({}));
           const errMsg = errData.error?.message || "Erreur inconnue";
@@ -10153,7 +10196,12 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
             max_tokens: 1
           })
         });
-        if (res.ok) { resEl.textContent = "✅ Connecté (OpenRouter)"; resEl.style.color = "var(--cyan)"; }
+        if (res.ok) { 
+          resEl.textContent = "✅ Connecté (OpenRouter)"; 
+          resEl.style.color = "var(--cyan)"; 
+          await setCookie("openrouter_api_key", cleanKey);
+          state.openRouterApiKey = cleanKey;
+        }
         else { 
           const errData = await res.json().catch(()=>({}));
           const errMsg = errData.error?.message || "Erreur inconnue";
@@ -10184,7 +10232,12 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cleanKey}` },
           body: JSON.stringify({ model: "grok-3-mini", messages: [{ role: "user", content: "ping" }], max_tokens: 1 })
         });
-        if (res.ok) { resEl.textContent = "✅ Connecté (xAI Grok)"; resEl.style.color = "#f97316"; }
+        if (res.ok) { 
+          resEl.textContent = "✅ Connecté (xAI Grok)"; 
+          resEl.style.color = "#f97316"; 
+          await setCookie("xai_api_key", cleanKey);
+          state.xaiApiKey = cleanKey;
+        }
         else { 
           const errData = await res.json().catch(()=>({}));
           resEl.textContent = `❌ Err: ${res.status}`; 

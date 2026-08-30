@@ -21,7 +21,7 @@ export const MODELS = [
   // ══════════════════════════════════════════════════
   // ✨ GOOGLE  (Gemini API + OpenRouter)
   // ══════════════════════════════════════════════════
-  { id:"gemini-3.5-flash",                              name:"✨ Gemini 3.5 Flash — Vision & PDF",       badge:"✨ Vision",       desc:"Vision native PDF/images, graphiques, raisonnement avancé, très rapide", tokens:1000000, ctx:"1M",  temp:0.4, vision:true, pdfNative:true },
+  { id:"gemini-3.7-flash",                              name:"✨ Gemini 3.7 Flash — Vision & PDF",       badge:"✨ Vision",       desc:"Vision native PDF/images, graphiques, raisonnement avancé, très rapide", tokens:1000000, ctx:"1M",  temp:0.4, vision:true, pdfNative:true },
   { id:"google/gemma-3-27b-it:free",                    name:"🔷 Gemma 3 27B — Open Source (Gratuit)",   badge:"🆓 Gratuit",      desc:"Open-source Google, 27B paramètres, puissant et gratuit",               tokens:96000,  ctx:"96K",  temp:0.5 },
   { id:"google/gemma-3-12b-it:free",                    name:"🔷 Gemma 3 12B — Compact (Gratuit)",       badge:"🆓 Gratuit",      desc:"Open-source Google, 12B équilibré, rapide et gratuit",                  tokens:96000,  ctx:"96K",  temp:0.5 },
 
