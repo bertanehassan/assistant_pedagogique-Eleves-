@@ -2354,29 +2354,21 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
         { role: "user", content: `Question : "${txt}"\n\nRéponses experts :\n${expertBlock}` }
       ];
 
-      const _apiConf = getLlmApiConfig(activeModelId || state.model);
-      const res = await fetchWithRetry(_apiConf.url, {
-        method: "POST",
-        headers: _apiConf.headers,
-        signal: state.abortController?.signal,
-        body: JSON.stringify({
-          model: activeModelId || state.model,
-          messages: synthesisMessages,
-          temperature: agentTemp,
-          max_tokens: agentMaxTok,
-          stream: true,
-          top_p: 0.95
-        })
-      });
+      const reqBodySynthesis = {
+        model: activeModelId || state.model,
+        messages: synthesisMessages,
+        temperature: agentTemp,
+        max_tokens: agentMaxTok,
+        stream: true,
+        top_p: 0.95
+      };
 
-      if (!res.ok) {
-        const err = await res.text();
-        let errMsg = err.slice(0, 300);
-        try { const j = JSON.parse(err); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
-        throw new Error(errMsg);
-      }
-
-      await handleStreamingResponse(res, updateLiveMessage, () => {}, state.abortController?.signal);
+      await universalFetchLlmStream(
+        reqBodySynthesis,
+        state.abortController?.signal,
+        updateLiveMessage,
+        () => {}
+      );
       
       const finalMsg = state.messages[state.messages.length - 1];
       if (finalMsg && finalMsg.role === 'assistant' && finalMsg.content.match(/\[EXPORT_WORD\]/i)) {
@@ -2577,34 +2569,12 @@ async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSign
 
   while (loopCount < maxLoops) {
     loopCount++;
-    const _apiConf = getLlmApiConfig(reqBody.model);
-    const res = await fetchWithRetry(_apiConf.url, {
-      method: "POST",
-      headers: _apiConf.headers,
-      signal: abortSignal,
-      body: JSON.stringify(reqBody)
-    });
-
-    if (!res.ok) {
-      const errTxt = await res.text().catch(() => "");
-      let errMsg = errTxt.slice(0, 200);
-      try { const j = JSON.parse(errTxt); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
-      const err = new Error(`API ${res.status}${errMsg ? ' : ' + errMsg : ''}`);
-      err.httpStatus = res.status;
-      throw err;
-    }
-
-
-    finalResult = "";
-    if (onChunk) {
-      await handleStreamingResponse(res, (chunk) => {
-        finalResult = chunk;
-        onChunk(chunk);
-      }, () => {}, abortSignal);
-    } else {
-      const data = await res.json();
-      finalResult = data.choices?.[0]?.message?.content || "";
-    }
+    finalResult = await universalFetchLlmStream(
+      reqBody,
+      abortSignal,
+      onChunk ? onChunk : null,
+      () => {}
+    );
 
     // Interception de l'outil [RECHERCHE_WEB: ...]
     const webSearchMatch = finalResult.match(/\[RECHERCHE_WEB:\s*([^\]]+)\]/i);
@@ -3902,22 +3872,15 @@ const AgentFactory = {
 
   // ── Appel API mutualisé ──
   _callAPI: async (apiKey, messages, maxTokens = 16000, temperature = 0.6) => {
-    const _apiConf = getLlmApiConfig(state.model);
-    const res = await fetchWithRetry(_apiConf.url, {
-      method: "POST",
-      headers: _apiConf.headers,
-      body: JSON.stringify({
-        model: state.model || "mistral-large-2512",
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        top_p: 0.92
-      })
+    const text = await universalFetchLlmStream({
+      model: state.model || "gemini-2.5-flash",
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      top_p: 0.92,
+      stream: false
     });
-    if (!res.ok) throw new Error("API : " + res.status);
-    const data = await res.json();
-    const text = data.choices?.[0]?.message?.content || "";
-    return text.replace(/```json|```/g, '').trim();
+    return (text || "").replace(/```json|```/g, '').trim();
   },
 
   // ═══════════════════════════════════════════════════════════════════
@@ -9457,8 +9420,8 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
 
   // --- HELPER : REMPLISSAGE DES SÉLECTEURS DE MODÈLE DANS LES GÉNÉRATEURS ---
   // Peuple dynamiquement les menus déroulants de modèle dans chaque modale de fiche
-  // à partir de la liste globale MODELS, avec gemini-3.5-flash comme valeur par défaut.
-  window.populateGeneratorModels = function(selectId, defaultModel = 'gemini-3.5-flash') {
+  // à partir de la liste globale MODELS, avec gemini-3.7-flash comme valeur par défaut.
+  window.populateGeneratorModels = function(selectId, defaultModel = 'gemini-3.7-flash') {
     const sel = $(`#${selectId}`);
     if (!sel) return;
     const currentVal = sel.value;
@@ -9492,7 +9455,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         );
       }
       const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${cleanGeminiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${cleanGeminiKey}`;
   
       const payload = {
         systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
@@ -9500,8 +9463,8 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         generationConfig: { temperature: 0.35, maxOutputTokens: maxTokens, topP: 0.95 }
       };
       
-      assistantMsg.modelUsed = 'gemini-3.5-flash';
-      assistantMsg.content = `🔍 Gemini 3.5 Flash analyse votre demande et lit le(s) document(s) natif(s)…`;
+      assistantMsg.modelUsed = 'gemini-3.7-flash';
+      assistantMsg.content = `🔍 Gemini 3.7 Flash analyse votre demande et lit le(s) document(s) natif(s)…`;
       renderMessages();
   
       const res = await fetchWithRetry(geminiUrl, {
@@ -9681,7 +9644,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     state.messages.push({ role: 'user', content: chatUserText, ts: Date.now() });
     renderMessages();
 
-    const targetModel = ($('#corr-model-select')?.value) || state.model || 'gemini-3.5-flash';
+    const targetModel = ($('#corr-model-select')?.value) || state.model || 'gemini-3.7-flash';
     const isGemini = targetModel.includes('gemini');
     const needsMultimodal = isGemini && !!(_corrPdfBase64 || _corrRefBase64 || _corrExempleBase64);
 
@@ -10530,7 +10493,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     corrShowStep(1);
     corrFillCompetences();
     // Peupler le sélecteur de modèle local avec Gemini par défaut
-    if (window.populateGeneratorModels) window.populateGeneratorModels('corr-model-select', 'gemini-3.5-flash');
+    if (window.populateGeneratorModels) window.populateGeneratorModels('corr-model-select', 'gemini-3.7-flash');
     $('#correction-modal').classList.add('active');
   };
   const closeCorrectionModal = () => $('#correction-modal').classList.remove('active');
@@ -10978,7 +10941,7 @@ const openDidactiqueModal = async () => {
 
   didactiqueShowStep(1);
   // Peupler le sélecteur de modèle local avec Gemini par défaut
-  if (window.populateGeneratorModels) window.populateGeneratorModels('didac-model-select', 'gemini-3.5-flash');
+  if (window.populateGeneratorModels) window.populateGeneratorModels('didac-model-select', 'gemini-3.7-flash');
   $('#didactique-modal').classList.add('active');
 };
 const closeDidactiqueModal = () => $('#didactique-modal').classList.remove('active');
@@ -11031,7 +10994,7 @@ const generateDidactiqueSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const targetModel = ($('#didac-model-select')?.value) || state.model || 'gemini-3.5-flash';
+  const targetModel = ($('#didac-model-select')?.value) || state.model || 'gemini-3.7-flash';
   const isGemini = targetModel.includes('gemini');
   const needsMultimodal = isGemini && !!(_didacPdfBase64 || _didacRefBase64 || _didacDirectivesBase64 || _didacExempleBase64);
 
@@ -11949,7 +11912,7 @@ const openMethodeModal = async () => {
 
   methodeShowStep(1);
   // Peupler le sélecteur de modèle local avec Gemini par défaut
-  if (window.populateGeneratorModels) window.populateGeneratorModels('methode-model-select', 'gemini-3.5-flash');
+  if (window.populateGeneratorModels) window.populateGeneratorModels('methode-model-select', 'gemini-3.7-flash');
   $('#methode-modal').classList.add('active');
 
   // Injection différée du rôle par défaut (après rendu Vue)
@@ -12008,7 +11971,7 @@ const generateMethodeSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const targetModel = ($('#methode-model-select')?.value) || state.model || 'gemini-3.5-flash';
+  const targetModel = ($('#methode-model-select')?.value) || state.model || 'gemini-3.7-flash';
   const isGemini = targetModel.includes('gemini');
   const needsMultimodal = isGemini && !!(_methodePdfBase64 || _methodeRefBase64 || _methodeExempleBase64);
 
@@ -14072,7 +14035,7 @@ const openEvaluationModal = async () => {
 
   evalShowStep(1);
   // Peupler le sélecteur de modèle local avec Gemini par défaut
-  if (window.populateGeneratorModels) window.populateGeneratorModels('eval-model-select', 'gemini-3.5-flash');
+  if (window.populateGeneratorModels) window.populateGeneratorModels('eval-model-select', 'gemini-3.7-flash');
   const modal = document.getElementById('evaluation-modal');
   if (modal) modal.classList.add('active');
 };
@@ -14125,7 +14088,7 @@ const generateEvaluationSheet = async () => {
   state.messages.push({ role: 'user', content: titre, ts: Date.now() });
   renderMessages();
 
-  const targetModel = ($('#eval-model-select')?.value) || state.model || 'gemini-3.5-flash';
+  const targetModel = ($('#eval-model-select')?.value) || state.model || 'gemini-3.7-flash';
   const isGemini = targetModel.includes('gemini');
   const needsMultimodal = isGemini && hasPdf;
 
@@ -15492,7 +15455,7 @@ Mode **Correcteur** : Ton rôle EXCLUSIF est de corriger le travail de l'élève
           <div style="color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 14px;font-size:13px;">
             📷 <b>Ce modèle (${activeModel}) ne supporte pas les images.</b><br>
             Pour analyser une copie manuscrite, sélectionnez un modèle compatible :<br>
-            <span style="color:#4cd7f6">✨ Gemini 3.5 Flash · 🔥 Mistral Large / Medium / Small · ⚡ Ministral · 🦙 Llama 4 Maverick</span>
+            <span style="color:#4cd7f6">✨ Gemini 3.7 Flash · ✨ Gemini 2.5 Flash / Pro · 🔥 Mistral Small · 🦙 Llama 4 Maverick</span>
           </div>`;
       }
       // Retirer le message vide de l'historique

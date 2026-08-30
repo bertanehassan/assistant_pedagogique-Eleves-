@@ -130,10 +130,10 @@
           <div class="field-group" style="margin-top:12px">
             <label class="field-label">{{ t('sheet_model_label') }}</label>
             <select class="field-input field-select" id="methode-model-select">
-              <option value="gemini-3.5-flash" selected>✨ Gemini 3.5 Flash — Vision & PDF (par défaut)</option>
+              <option value="gemini-3.7-flash" selected>✨ Gemini 3.7 Flash — Raisonnement & Vision (par défaut)</option>
             </select>
             <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">
-              ✨ Gemini 3.5 Flash recommandé pour lire les PDF natifs (graphiques inclus). Les autres modèles liront le texte extrait du PDF.
+              ✨ Gemini 3.7 Flash recommandé pour lire les PDF natifs (graphiques inclus). Les autres modèles liront le texte extrait du PDF.
             </div>
           </div>
 
