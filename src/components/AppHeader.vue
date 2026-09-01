@@ -31,7 +31,11 @@
         <select id="agent-select" class="topbar-select" :title="t('title_agents')">
           <option value="">⏳ Chargement...</option>
         </select>
-        <select id="model-select" class="topbar-select" :title="t('title_models')"></select>
+        <div style="display:flex; align-items:center; gap: 4px;">
+          <select id="model-select" class="topbar-select" :title="t('title_models')"></select>
+          <button id="test-model-btn" class="topbar-btn" title="Tester le modèle sélectionné" style="padding: 2px 6px; font-size: 11px;">⚡ Tester</button>
+          <span id="test-model-status" style="font-size:12px; margin-left:2px;"></span>
+        </div>
       </div>
       
       <!-- Actions: Effacer & Nouveau -->
@@ -124,7 +128,11 @@
             <option value="">⏳ Chargement...</option>
           </select>
           <p class="sb-label mt-3">⚡ {{ t('title_models') }}</p>
-          <select id="model-select-mobile" class="sb-select mt-1"></select>
+          <div style="display:flex; align-items:center; gap: 4px;">
+            <select id="model-select-mobile" class="sb-select mt-1" style="flex:1"></select>
+            <button id="test-model-btn-mobile" class="sb-btn" title="Tester le modèle sélectionné" style="padding: 4px; font-size: 11px; margin-top:4px;">⚡</button>
+            <span id="test-model-status-mobile" style="font-size:12px; margin-left:2px; margin-top:4px;"></span>
+          </div>
         </div>
 
         <!-- ── MOBILE ONLY : Quiz Actions ── -->

@@ -9919,6 +9919,39 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     if (sys) { sys.content = buildSystemPrompt(); saveChat(); }
   };
 
+  const attachTestButton = (btnId, statusId) => {
+    const btn = $(`#${btnId}`);
+    if (!btn) return;
+    btn.onclick = async () => {
+      const statusSpan = $(`#${statusId}`);
+      statusSpan.textContent = "⏳";
+      btn.disabled = true;
+      try {
+        await universalFetchLlmStream({
+          model: state.model,
+          messages: [{ role: "user", content: "ping" }],
+          temperature: 0.1,
+          max_tokens: 5,
+          stream: false
+        });
+        statusSpan.textContent = "🟢";
+      } catch (err) {
+        console.error("Test model failed:", err);
+        statusSpan.textContent = "🔴";
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => { 
+          if (statusSpan.textContent === "🟢" || statusSpan.textContent === "🔴") {
+            statusSpan.textContent = ""; 
+          }
+        }, 5000);
+      }
+    };
+  };
+
+  attachTestButton("test-model-btn", "test-model-status");
+  attachTestButton("test-model-btn-mobile", "test-model-status-mobile");
+
   // Agent select
   $("#agent-select").onchange = async e => {
     try {
