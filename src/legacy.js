@@ -1743,11 +1743,14 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
 
   if (apiConf.provider === "gemini") {
     // ── TRADUCTION MISTRAL -> GEMINI ──
+    const isFlashModel = reqBody.model?.includes("flash");
     const geminiPayload = {
       contents: [],
       generationConfig: {
         temperature: reqBody.temperature ?? 0.4,
-        maxOutputTokens: reqBody.max_tokens ?? 8192
+        maxOutputTokens: reqBody.max_tokens ?? 4096,
+        // Désactiver le mode "thinking" sur les Flash pour éviter la latence supplémentaire
+        ...(isFlashModel ? { thinkingConfig: { thinkingBudget: 0 } } : {})
       }
     };
 
