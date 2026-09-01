@@ -9932,7 +9932,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
           messages: [{ role: "user", content: "ping" }],
           temperature: 0.1,
           max_tokens: 5,
-          stream: false
+          stream: true
         });
         statusSpan.textContent = "🟢";
       } catch (err) {
