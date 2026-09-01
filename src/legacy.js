@@ -1,7 +1,7 @@
 // ════════════════════════════════════════
 // CONFIG
 // ════════════════════════════════════════
-import { MODELS, DB_NAME, DB_VERSION, XAI_PROXY_URL } from './config.js';
+import { MODELS, DB_NAME, DB_VERSION, XAI_PROXY_URL, HF_PROXY_URL } from './config.js';
 import { state } from './state.js';
 import { fetchWithRetry as fetchWithRetryBase } from './composables/useMistral.js';
 import { t } from './i18n.js';
@@ -1305,9 +1305,10 @@ function getLlmApiConfig(modelId) {
     };
   } else if (modelId.startsWith("hf:")) {
     const realModelId = modelId.replace("hf:", "");
+    const hfBase = HF_PROXY_URL ? HF_PROXY_URL : "https://api-inference.huggingface.co";
     return {
       provider: "huggingface",
-      url: `https://api-inference.huggingface.co/models/${realModelId}/v1/chat/completions`,
+      url: `${hfBase}/models/${realModelId}/v1/chat/completions`,
       headers: {
         "Authorization": `Bearer ${state.hfApiKey || ""}`,
         "Content-Type": "application/json"

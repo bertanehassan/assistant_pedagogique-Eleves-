@@ -86,3 +86,11 @@ export const DB_VERSION = 3;
 // remplacez la valeur ci-dessous par l'URL de votre Worker :
 // Ex : "https://xai-proxy.votre-nom.workers.dev"
 export const XAI_PROXY_URL = "https://xai-proxy.bh-gravity8.workers.dev";
+
+// ══════════════════════════════════════════════════════════════════════
+// 🤗 HUGGING FACE PROXY URL (Cloudflare Worker)
+// ══════════════════════════════════════════════════════════════════════
+// Après avoir déployé cf-worker/hf-cors-proxy.js sur Cloudflare Workers,
+// remplacez la valeur ci-dessous par l'URL de votre Worker :
+// Ex : "https://hf-proxy.votre-nom.workers.dev"
+export const HF_PROXY_URL = "";
