@@ -1303,6 +1303,16 @@ function getLlmApiConfig(modelId) {
         "Content-Type": "application/json"
       }
     };
+  } else if (modelId.startsWith("hf:")) {
+    const realModelId = modelId.replace("hf:", "");
+    return {
+      provider: "huggingface",
+      url: `https://api-inference.huggingface.co/models/${realModelId}/v1/chat/completions`,
+      headers: {
+        "Authorization": `Bearer ${state.hfApiKey || ""}`,
+        "Content-Type": "application/json"
+      }
+    };
   } else if (modelId.includes("deepseek") || modelId.includes("openrouter") || modelId.includes("/") || modelId.includes(":free")) {
     return {
       provider: "openrouter",
@@ -1312,16 +1322,6 @@ function getLlmApiConfig(modelId) {
         "Content-Type": "application/json",
         "HTTP-Referer": window.location.origin,
         "X-Title": "Mon Assistant IA"
-      }
-    };
-  } else if (modelId.startsWith("hf:")) {
-    const realModelId = modelId.replace("hf:", "");
-    return {
-      provider: "huggingface",
-      url: `https://api-inference.huggingface.co/models/${realModelId}/v1/chat/completions`,
-      headers: {
-        "Authorization": `Bearer ${state.hfApiKey || ""}`,
-        "Content-Type": "application/json"
       }
     };
   } else {
