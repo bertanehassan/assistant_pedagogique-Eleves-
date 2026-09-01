@@ -61,6 +61,18 @@
           </div>
         </div>
 
+        <div class="field-group" style="margin-top:16px">
+          <label class="field-label" style="color:#ffcc00">🤗 Clé API Hugging Face (Modèles HF)</label>
+          <input type="password" class="field-input" id="hf-api-key-input" placeholder="Collez votre token Hugging Face ici...">
+          <div class="field-hint">Obtenez un token sur <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#ffcc00;text-decoration:underline">huggingface.co/settings/tokens</a>. <code
+              style="font-family:var(--font-mono);color:var(--text-code);font-size:11px">hf_...</code>
+          </div>
+          <div style="margin-top:6px; display:flex; align-items:center;">
+            <button class="btn-ghost" id="test-hf-api" style="font-size:11px;padding:4px 8px;border:1px solid rgba(255,204,0,0.3);color:#ffcc00">📡 Tester Hugging Face</button>
+            <span id="test-hf-result" style="font-size:11px;margin-left:8px;font-weight:600"></span>
+          </div>
+        </div>
+
         <div class="btn-row" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:20px">
           <button class="btn-ghost" id="close-api-modal-2">{{ t('btn_cancel') }}</button>
           <button class="btn-ghost danger" id="delete-api-key"

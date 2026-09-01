@@ -1314,6 +1314,16 @@ function getLlmApiConfig(modelId) {
         "X-Title": "Mon Assistant IA"
       }
     };
+  } else if (modelId.startsWith("hf:")) {
+    const realModelId = modelId.replace("hf:", "");
+    return {
+      provider: "huggingface",
+      url: `https://api-inference.huggingface.co/models/${realModelId}/v1/chat/completions`,
+      headers: {
+        "Authorization": `Bearer ${state.hfApiKey || ""}`,
+        "Content-Type": "application/json"
+      }
+    };
   } else {
     return {
       provider: "mistral",
@@ -1514,6 +1524,7 @@ function createMessageElement(m) {
     if (apiConf.provider === 'gemini') providerName = "Gemini API";
     else if (apiConf.provider === 'xai') providerName = "xAI (Grok)";
     else if (apiConf.provider === 'openrouter') providerName = "OpenRouter API";
+    else if (apiConf.provider === 'huggingface') providerName = "Hugging Face API";
     modelTagText = `${providerName} • ${m.modelUsed}`;
   }
   const modelTag = modelTagText ? `<span class="mem-tag" style="background:rgba(138,180,248,0.15);color:#8ab4f8;border-color:rgba(138,180,248,0.4)" title="API et Modèle">⚡ ${modelTagText}</span>` : '';
@@ -1657,6 +1668,7 @@ function showTyping(modelId = '') {
   if (apiConf.provider === 'gemini') providerName = "Gemini API";
   else if (apiConf.provider === 'xai') providerName = "xAI (Grok)";
   else if (apiConf.provider === 'openrouter') providerName = "OpenRouter API";
+  else if (apiConf.provider === 'huggingface') providerName = "Hugging Face API";
   
   statusText = `⚡ ${providerName} (${actualModel})`;
   
@@ -2193,8 +2205,9 @@ async function _sendMessageOriginal() {
   const activeModelForCheck = state.model || '';
   const isGeminiModel = activeModelForCheck.includes('gemini');
   const isXAIModel = activeModelForCheck.startsWith('grok');
-  const isOpenRouterModel = !isXAIModel && (activeModelForCheck.includes('deepseek') || activeModelForCheck.includes('openrouter') || activeModelForCheck.includes('/') || activeModelForCheck.includes(':free'));
-  if (!state.apiKey && !isGeminiModel && !isOpenRouterModel && !isXAIModel) {
+  const isHFModel = activeModelForCheck.startsWith('hf:');
+  const isOpenRouterModel = !isXAIModel && !isHFModel && (activeModelForCheck.includes('deepseek') || activeModelForCheck.includes('openrouter') || activeModelForCheck.includes('/') || activeModelForCheck.includes(':free'));
+  if (!state.apiKey && !isGeminiModel && !isOpenRouterModel && !isXAIModel && !isHFModel) {
     toast("Configurez votre clé API d'abord", "error");
     $("#api-modal").classList.add("active");
     return;
@@ -2211,6 +2224,11 @@ async function _sendMessageOriginal() {
   }
   if (isOpenRouterModel && !state.openRouterApiKey) {
     toast("Clé API OpenRouter requise. Configurez-la dans Paramètres API.", "error");
+    $("#api-modal").classList.add("active");
+    return;
+  }
+  if (isHFModel && !state.hfApiKey) {
+    toast("Token API Hugging Face requis. Configurez-le dans Paramètres API.", "error");
     $("#api-modal").classList.add("active");
     return;
   }
@@ -6923,18 +6941,20 @@ export const mountApp = async () => {
     else modelSel.value = state.model;
   } catch(e) {}
 
-  // API Key Mistral & Gemini & OpenRouter & xAI
+  // API Key Mistral & Gemini & OpenRouter & xAI & Hugging Face
   const cookieKey = await getCookie("mistral_api_key");
   const geminiCookieKey = await getCookie("gemini_api_key");
   const orCookieKey = await getCookie("openrouter_api_key");
   const xaiCookieKey = await getCookie("xai_api_key");
+  const hfCookieKey = await getCookie("hf_api_key");
   
   if (cookieKey && isValidApiKey(cookieKey)) state.apiKey = cookieKey;
   if (geminiCookieKey) state.geminiApiKey = geminiCookieKey;
   if (orCookieKey) state.openRouterApiKey = orCookieKey;
   if (xaiCookieKey) state.xaiApiKey = xaiCookieKey;
+  if (hfCookieKey) state.hfApiKey = hfCookieKey;
 
-  if (state.apiKey || state.geminiApiKey || state.openRouterApiKey || state.xaiApiKey) {
+  if (state.apiKey || state.geminiApiKey || state.openRouterApiKey || state.xaiApiKey || state.hfApiKey) {
     const apiBtn = $("#open-api-modal");
     if (apiBtn) {
       apiBtn.classList.add("active");
@@ -10074,6 +10094,9 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     if (state.xaiApiKey && $("#xai-api-key-input")) {
       $("#xai-api-key-input").value = state.xaiApiKey;
     }
+    if (state.hfApiKey && $("#hf-api-key-input")) {
+      $("#hf-api-key-input").value = state.hfApiKey;
+    }
     $("#api-modal").classList.add("active");
   };
   const closeApiModal = () => $("#api-modal").classList.remove("active");
@@ -10250,11 +10273,55 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     };
   }
 
+  // ── TEST HUGGING FACE ──
+  const btnTestHF = $("#test-hf-api");
+  if (btnTestHF) {
+    btnTestHF.onclick = async () => {
+      const hK = $("#hf-api-key-input").value.trim() || state.hfApiKey;
+      const resEl = $("#test-hf-result");
+      if (!hK) { resEl.textContent = "❌ Token manquant"; resEl.style.color = "var(--danger)"; return; }
+      resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
+      try {
+        const cleanKey = hK.replace(/[\r\n\s]+/g, '');
+        const res = await fetch(`https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta/v1/chat/completions`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${cleanKey}`
+          },
+          body: JSON.stringify({
+            model: "HuggingFaceH4/zephyr-7b-beta",
+            messages: [{ role: "user", content: "ping" }],
+            max_tokens: 1
+          })
+        });
+        if (res.ok) { 
+          resEl.textContent = "✅ Connecté (Hugging Face)"; 
+          resEl.style.color = "#ffcc00"; 
+          await setCookie("hf_api_key", cleanKey);
+          state.hfApiKey = cleanKey;
+        }
+        else { 
+          const errData = await res.json().catch(()=>({}));
+          const errMsg = errData.error || errData.message || "Erreur inconnue";
+          resEl.textContent = `❌ Err: ${res.status}`; 
+          resEl.style.color = "var(--danger)"; 
+          resEl.title = errMsg;
+        }
+      } catch(e) {
+        console.error("HF Test Error:", e);
+        resEl.textContent = `❌ Échec: ${e.message}`; 
+        resEl.style.color = "var(--danger)";
+      }
+    };
+  }
+
   $("#save-api-key").onclick = async () => {
     const k = $("#api-key-input").value.trim();
     const gK = $("#gemini-api-key-input") ? $("#gemini-api-key-input").value.trim() : "";
     const oK = $("#openrouter-api-key-input") ? $("#openrouter-api-key-input").value.trim() : "";
     const xK = $("#xai-api-key-input") ? $("#xai-api-key-input").value.trim() : "";
+    const hK = $("#hf-api-key-input") ? $("#hf-api-key-input").value.trim() : "";
 
     if (k && !isValidApiKey(k)) {
       toast("Clé Mistral invalide — min. 20 caractères alphanumériques", "error");
@@ -10277,8 +10344,12 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       await setCookie("xai_api_key", xK);
       state.xaiApiKey = xK;
     }
+    if (hK) {
+      await setCookie("hf_api_key", hK);
+      state.hfApiKey = hK;
+    }
 
-    if (state.apiKey || state.geminiApiKey || state.openRouterApiKey || state.xaiApiKey) {
+    if (state.apiKey || state.geminiApiKey || state.openRouterApiKey || state.xaiApiKey || state.hfApiKey) {
       const apiBtn = $("#open-api-modal");
       if (apiBtn) {
         apiBtn.classList.add("active");
@@ -10302,21 +10373,24 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     }
   };
 
-  if ($("#delete-api-key")) {
+    if ($("#delete-api-key")) {
     $("#delete-api-key").onclick = () => {
-      if (!confirm("Supprimer vos clés API sauvegardées (Mistral, Gemini, OpenRouter, xAI) ?")) return;
+      if (!confirm("Supprimer vos clés API sauvegardées (Mistral, Gemini, OpenRouter, xAI, Hugging Face) ?")) return;
       deleteCookie("mistral_api_key");
       deleteCookie("gemini_api_key");
       deleteCookie("openrouter_api_key");
       deleteCookie("xai_api_key");
+      deleteCookie("hf_api_key");
       state.apiKey = null;
       state.geminiApiKey = null;
       state.openRouterApiKey = null;
       state.xaiApiKey = null;
+      state.hfApiKey = null;
       $("#api-key-input").value = "";
       if ($("#gemini-api-key-input")) $("#gemini-api-key-input").value = "";
       if ($("#openrouter-api-key-input")) $("#openrouter-api-key-input").value = "";
       if ($("#xai-api-key-input")) $("#xai-api-key-input").value = "";
+      if ($("#hf-api-key-input")) $("#hf-api-key-input").value = "";
       
       const apiBtn = $("#open-api-modal");
       if (apiBtn) {

@@ -62,7 +62,17 @@ export const MODELS = [
   // ══════════════════════════════════════════════════
   { id:"grok-4",                                          name:"🤖 Grok 4 — xAI Ultra",                        badge:"🤖 Ultra",       desc:"Grok 4 by xAI, raisonnement frontier, très avancé (2025)",               tokens:131072, ctx:"128K", temp:0.42, xai:true },
   { id:"grok-4-5",                                        name:"🤖 Grok 4.5 — xAI Frontier",                   badge:"🤖 Frontier",    desc:"Grok 4.5 by xAI, modèle de pointe avec raisonnement avancé",             tokens:131072, ctx:"128K", temp:0.42, xai:true },
-  { id:"grok-3-mini",                                     name:"🤖 Grok 3 Mini — xAI Rapide",                  badge:"🤖 Rapide",      desc:"Grok 3 Mini by xAI, rapide et efficace pour tâches quotidiennes",        tokens:131072, ctx:"128K", temp:0.42, xai:true }
+  { id:"grok-3-mini",                                     name:"🤖 Grok 3 Mini — xAI Rapide",                  badge:"🤖 Rapide",      desc:"Grok 3 Mini by xAI, rapide et efficace pour tâches quotidiennes",        tokens:131072, ctx:"128K", temp:0.42, xai:true },
+
+  // ══════════════════════════════════════════════════
+  // 🤗 HUGGING FACE  (api-inference.huggingface.co)
+  // ══════════════════════════════════════════════════
+  { id:"hf:meta-llama/Llama-3.3-70B-Instruct",           name:"🤗 Llama 3.3 70B — HF Puissant",             badge:"🤗 HF",          desc:"Meta Llama 3.3 70B via HF Inference API, très performant",               tokens:128000, ctx:"128K", temp:0.5, hf:true },
+  { id:"hf:meta-llama/Meta-Llama-3.1-8B-Instruct",       name:"🤗 Llama 3.1 8B — HF Rapide",               badge:"🤗 HF",          desc:"Meta Llama 3.1 8B, rapide et compact via HF Inference API",              tokens:128000, ctx:"128K", temp:0.5, hf:true },
+  { id:"hf:mistralai/Mistral-7B-Instruct-v0.3",          name:"🤗 Mistral 7B v0.3 — HF Open Source",        badge:"🤗 HF",          desc:"Mistral 7B Instruct open-source via HF Inference API",                   tokens:32768,  ctx:"32K",  temp:0.5, hf:true },
+  { id:"hf:Qwen/Qwen2.5-72B-Instruct",                   name:"🤗 Qwen 2.5 72B — HF Alibaba",               badge:"🤗 HF",          desc:"Alibaba Qwen 2.5 72B, multilingue, très performant via HF",              tokens:128000, ctx:"128K", temp:0.5, hf:true },
+  { id:"hf:microsoft/Phi-3.5-mini-instruct",             name:"🤗 Phi-3.5 Mini — HF Microsoft",             badge:"🤗 HF",          desc:"Microsoft Phi-3.5 Mini, ultra compact et efficace via HF",               tokens:128000, ctx:"128K", temp:0.4, hf:true },
+  { id:"hf:HuggingFaceH4/zephyr-7b-beta",                name:"🤗 Zephyr 7B Beta — HF Léger",               badge:"🤗 HF",          desc:"Modèle aligné HuggingFace, conversationnel, léger et gratuit",           tokens:32768,  ctx:"32K",  temp:0.5, hf:true }
 
 ];
 
