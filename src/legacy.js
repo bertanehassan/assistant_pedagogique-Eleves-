@@ -3873,7 +3873,7 @@ const AgentFactory = {
   // ── Appel API mutualisé ──
   _callAPI: async (apiKey, messages, maxTokens = 16000, temperature = 0.6) => {
     const text = await universalFetchLlmStream({
-      model: state.model || "gemini-2.5-flash",
+      model: state.model || "gemini-3.6-flash",
       messages,
       temperature,
       max_tokens: maxTokens,

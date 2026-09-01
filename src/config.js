@@ -22,7 +22,7 @@ export const MODELS = [
   // ✨ GOOGLE GEMINI  (api.generativelanguage.googleapis.com)
   // ══════════════════════════════════════════════════
   { id:"gemini-3.7-flash",                              name:"✨ Gemini 3.7 Flash — Raisonnement & Vision",badge:"✨ Nouveau",   desc:"Dernière génération, multimodal, pensée hybride et rapidité",           tokens:1000000, ctx:"1M",  temp:0.4, vision:true, pdfNative:true },
-  { id:"gemini-2.5-flash",                              name:"✨ Gemini 2.5 Flash — Ultra Réactif",      badge:"✨ Rapide",       desc:"Vision native PDF/images, ultra fluide et précis",                      tokens:1000000, ctx:"1M",  temp:0.4, vision:true, pdfNative:true },
+  { id:"gemini-3.6-flash",                              name:"✨ Gemini 3.6 Flash — Ultra Réactif",      badge:"✨ Rapide",       desc:"Vision native PDF/images, ultra fluide et précis",                      tokens:1000000, ctx:"1M",  temp:0.4, vision:true, pdfNative:true },
   { id:"gemini-2.5-pro",                                name:"🧠 Gemini 2.5 Pro — Expert Raisonnement",   badge:"🧠 Expert",       desc:"Raisonnement très poussé, correction d'épreuves complexes (contexte 2M)", tokens:2000000, ctx:"2M",  temp:0.4, vision:true, pdfNative:true },
   { id:"google/gemma-3-27b-it:free",                    name:"🔷 Gemma 3 27B — Open Source (Gratuit)",   badge:"🆓 Gratuit",      desc:"Open-source Google, 27B paramètres via OpenRouter",                     tokens:96000,  ctx:"96K",  temp:0.5 },
   { id:"google/gemma-3-12b-it:free",                    name:"🔷 Gemma 3 12B — Compact (Gratuit)",       badge:"🆓 Gratuit",      desc:"Open-source Google, 12B équilibré et gratuit via OpenRouter",            tokens:96000,  ctx:"96K",  temp:0.5 },
