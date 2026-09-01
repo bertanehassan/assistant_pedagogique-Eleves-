@@ -1304,15 +1304,33 @@ function getLlmApiConfig(modelId) {
       }
     };
   } else if (modelId.startsWith("hf:")) {
+    // ── Hugging Face via OpenRouter (résout le CORS navigateur) ──
+    // OpenRouter supporte les modèles HF avec le préfixe "huggingface/"
+    // Si un proxy CF est défini, on l'utilise ; sinon on passe par OpenRouter.
     const realModelId = modelId.replace("hf:", "");
-    const hfBase = HF_PROXY_URL ? HF_PROXY_URL : "https://api-inference.huggingface.co";
+    if (HF_PROXY_URL) {
+      return {
+        provider: "huggingface",
+        url: `${HF_PROXY_URL}/models/${realModelId}/v1/chat/completions`,
+        headers: {
+          "Authorization": `Bearer ${state.hfApiKey || ""}`,
+          "Content-Type": "application/json"
+        }
+      };
+    }
+    // Fallback : passer par OpenRouter (pas de CORS, clé OR requise)
     return {
-      provider: "huggingface",
-      url: `${hfBase}/models/${realModelId}/v1/chat/completions`,
+      provider: "openrouter",
+      url: "https://openrouter.ai/api/v1/chat/completions",
       headers: {
-        "Authorization": `Bearer ${state.hfApiKey || ""}`,
-        "Content-Type": "application/json"
-      }
+        "Authorization": `Bearer ${state.openRouterApiKey || state.hfApiKey || ""}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": window.location.origin,
+        "X-Title": "Mon Assistant IA"
+      },
+      // Le modèle sera préfixé "huggingface/" dans le body (voir universalFetchLlmStream)
+      hfViaOpenRouter: true,
+      realModelId: realModelId
     };
   } else if (modelId.includes("deepseek") || modelId.includes("openrouter") || modelId.includes("/") || modelId.includes(":free")) {
     return {
@@ -1889,8 +1907,12 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
     // mais on s'assure que le fallback texte est bien dans `messages`.
     delete reqBody.rawDocuments;
 
-    // Pour Hugging Face, le modèle dans le body ne doit pas avoir le préfixe "hf:"
-    if (apiConf.provider === "huggingface" && reqBody.model?.startsWith("hf:")) {
+    // Pour Hugging Face via OpenRouter : préfixer le modèle avec "huggingface/"
+    if (apiConf.hfViaOpenRouter && apiConf.realModelId) {
+      reqBody = { ...reqBody, model: `huggingface/${apiConf.realModelId}` };
+    }
+    // Pour Hugging Face direct (proxy CF) : retirer le préfixe "hf:"
+    else if (apiConf.provider === "huggingface" && reqBody.model?.startsWith("hf:")) {
       reqBody = { ...reqBody, model: reqBody.model.replace("hf:", "") };
     }
     
@@ -2233,8 +2255,8 @@ async function _sendMessageOriginal() {
     $("#api-modal").classList.add("active");
     return;
   }
-  if (isHFModel && !state.hfApiKey) {
-    toast("Token API Hugging Face requis. Configurez-le dans Paramètres API.", "error");
+  if (isHFModel && !state.hfApiKey && !state.openRouterApiKey) {
+    toast("Clé Hugging Face ou OpenRouter requise pour les modèles HF. Configurez-la dans Paramètres API.", "error");
     $("#api-modal").classList.add("active");
     return;
   }
