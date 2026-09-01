@@ -1883,10 +1883,15 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
     return fullContent;
 
   } else {
-    // ── STANDARD OPENAI (Mistral / OpenRouter) ──
+    // ── STANDARD OPENAI (Mistral / OpenRouter / Hugging Face) ──
     // Pour Mistral, on nettoie `rawDocuments` car il ne les supporte pas,
     // mais on s'assure que le fallback texte est bien dans `messages`.
     delete reqBody.rawDocuments;
+
+    // Pour Hugging Face, le modèle dans le body ne doit pas avoir le préfixe "hf:"
+    if (apiConf.provider === "huggingface" && reqBody.model?.startsWith("hf:")) {
+      reqBody = { ...reqBody, model: reqBody.model.replace("hf:", "") };
+    }
     
     const res = await fetchWithRetry(apiConf.url, {
       method: "POST",
@@ -10283,27 +10288,23 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       resEl.textContent = "⏳ Test en cours..."; resEl.style.color = "var(--text-dim)";
       try {
         const cleanKey = hK.replace(/[\r\n\s]+/g, '');
-        const res = await fetch(`https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta/v1/chat/completions`, {
-          method: "POST",
+        const res = await fetch(`https://huggingface.co/api/whoami-v2`, {
+          method: "GET",
           headers: { 
-            "Content-Type": "application/json",
             "Authorization": `Bearer ${cleanKey}`
-          },
-          body: JSON.stringify({
-            model: "HuggingFaceH4/zephyr-7b-beta",
-            messages: [{ role: "user", content: "ping" }],
-            max_tokens: 1
-          })
+          }
         });
-        if (res.ok) { 
-          resEl.textContent = "✅ Connecté (Hugging Face)"; 
+        if (res.ok) {
+          const data = await res.json();
+          const name = data.name || "Utilisateur";
+          resEl.textContent = `✅ Connecté (${name})`; 
           resEl.style.color = "#ffcc00"; 
           await setCookie("hf_api_key", cleanKey);
           state.hfApiKey = cleanKey;
         }
         else { 
           const errData = await res.json().catch(()=>({}));
-          const errMsg = errData.error || errData.message || "Erreur inconnue";
+          const errMsg = errData.error || errData.message || "Token invalide";
           resEl.textContent = `❌ Err: ${res.status}`; 
           resEl.style.color = "var(--danger)"; 
           resEl.title = errMsg;
