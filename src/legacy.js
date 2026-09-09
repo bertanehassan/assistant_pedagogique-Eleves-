@@ -13959,7 +13959,7 @@ function updateQuizTimerDisplay() {
   if (!timerEl) {
     timerEl = document.createElement('div');
     timerEl.id = 'wq-timer-display';
-    timerEl.style.cssText = 'position:absolute; top:12px; left:50%; transform:translateX(-50%); font-weight:bold; background:rgba(0,0,0,0.5); padding: 4px 16px; border-radius: 12px; font-family: monospace; font-size: 18px; border: 1px solid rgba(212,175,55,0.4); transition: color 0.3s;';
+    timerEl.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-weight:bold; background:rgba(0,0,0,0.85); padding: 2px 12px; border-radius: 6px; font-family: monospace; font-size: 14px; border: 1px solid rgba(212,175,55,0.4); z-index: 5; transition: color 0.3s;';
     const header = document.querySelector('#web-quiz-player-modal .wq-header');
     if (header) header.appendChild(timerEl);
   }
