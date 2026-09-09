@@ -13052,6 +13052,63 @@ window.toggleWebQuizFullscreen = function() {
   }
 };
 
+window.toggleWebQuizProjectorMode = function() {
+  const container = document.querySelector('.web-quiz-container');
+  const btn = document.getElementById('wq-btn-projector');
+  if (!container) return;
+  
+  const isActive = container.classList.toggle('projector-mode');
+  try {
+    localStorage.setItem('wq_projector_mode', isActive ? 'true' : 'false');
+  } catch(e) {}
+
+  if (btn) {
+    if (isActive) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  }
+};
+
+window.adjustWebQuizFontSize = function(delta) {
+  const container = document.querySelector('.web-quiz-container');
+  if (!container) return;
+  
+  let currentZoom = parseFloat(getComputedStyle(container).getPropertyValue('--wq-font-zoom')) || 1;
+  let newZoom = Math.min(1.6, Math.max(0.85, Math.round((currentZoom + delta * 0.15) * 100) / 100));
+  
+  container.style.setProperty('--wq-font-zoom', newZoom.toString());
+  try {
+    localStorage.setItem('wq_font_zoom', newZoom.toString());
+  } catch(e) {}
+};
+
+window.initWebQuizProjectorMode = function() {
+  const container = document.querySelector('.web-quiz-container');
+  const btn = document.getElementById('wq-btn-projector');
+  if (!container) return;
+  
+  try {
+    const isProjector = localStorage.getItem('wq_projector_mode') === 'true';
+    if (isProjector) {
+      container.classList.add('projector-mode');
+      if (btn) btn.classList.add('active');
+    } else {
+      container.classList.remove('projector-mode');
+      if (btn) btn.classList.remove('active');
+    }
+    
+    const savedZoom = localStorage.getItem('wq_font_zoom');
+    if (savedZoom) {
+      const zoom = parseFloat(savedZoom);
+      if (!isNaN(zoom) && zoom >= 0.85 && zoom <= 1.6) {
+        container.style.setProperty('--wq-font-zoom', zoom.toString());
+      }
+    }
+  } catch(e) {}
+};
+
 // ════════════════════════════════════════
 // WEB QUIZ PLAYER
 // ════════════════════════════════════════
@@ -13286,13 +13343,12 @@ document.getElementById('wq-counter').innerText = `Question ${wqState.currentInd
       if (m) return blocks[parseInt(m[1])]; // restore raw LaTeX for MathJax
       // plain text: HTML-escape then markdown tables
       let plain = seg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      // Markdown processing (simple bold/italics)
+      plain = plain.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>');
       let text = plain;
 
-  // Markdown processing (simple bold/italics)
-  plain = plain.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-  // Simple Markdown Tables
-  let mdLines = text.split('\n');
+      // Simple Markdown Tables
+      let mdLines = plain.split('\n');
   let inTable = false;
   let htmlLines = [];
   for (let i = 0; i < mdLines.length; i++) {
@@ -13665,13 +13721,13 @@ function showFinalScoreScreen() {
   let reportHtml = '';
   if (wrongQuestions.length > 0) {
     reportHtml = `
-      <div style="flex: 2 1 400px; min-width:300px; max-height:100%; display:flex; flex-direction:column; background:rgba(255,255,255,0.05); padding:24px; border-radius:16px; border:1px solid rgba(255,255,255,0.1); box-sizing:border-box; text-align:${lang === 'ar' ? 'right' : 'left'};">
-        <h3 style="color:#ffa500; margin-top:0; margin-bottom:16px; font-size:18px; flex-shrink:0;">${t.concepts}</h3>
-        <ul style="padding-${lang === 'ar' ? 'right' : 'left'}:20px; margin:0; font-size:14px; color:#ddd; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1; padding-right:10px;">
+      <div style="flex: 2 1 400px; min-width:300px; max-height:100%; display:flex; flex-direction:column; background:rgba(255,255,255,0.05); padding:24px; border-radius:16px; border:1px solid rgba(255,255,255,0.15); box-sizing:border-box; text-align:${lang === 'ar' ? 'right' : 'left'};">
+        <h3 style="color:#ffa500; margin-top:0; margin-bottom:16px; font-size:20px; font-weight:800; flex-shrink:0;">${t.concepts}</h3>
+        <ul style="padding-${lang === 'ar' ? 'right' : 'left'}:20px; margin:0; font-size:18px; color:#f8fafc; line-height:1.6; display:flex; flex-direction:column; gap:18px; overflow-y:auto; flex:1; padding-right:10px;">
           ${wrongQuestions.map(wq => `
-            <li>
-              <strong>${t.question} ${wq.index} :</strong> ${typeof renderWithLatex === 'function' ? renderWithLatex(wq.question) : wq.question}
-              ${wq.explication ? `<div style="margin-top:6px; color:#aaa; font-style:italic; line-height:1.4;">💡 ${typeof renderWithLatex === 'function' ? renderWithLatex(wq.explication) : wq.explication}</div>` : ''}
+            <li style="margin-bottom:8px;">
+              <strong style="color:var(--cyan,#00e5ff);">${t.question} ${wq.index} :</strong> ${typeof renderWithLatex === 'function' ? renderWithLatex(wq.question) : wq.question}
+              ${wq.explication ? `<div style="margin-top:8px; color:#ffffff; font-size:17px; background:rgba(0,0,0,0.35); padding:12px 16px; border-radius:10px; border-left:4px solid var(--cyan,#00e5ff); line-height:1.6;">💡 <strong>${t.question} ${wq.index} :</strong> ${typeof renderWithLatex === 'function' ? renderWithLatex(wq.explication) : wq.explication}</div>` : ''}
             </li>
           `).join('')}
         </ul>
@@ -13862,6 +13918,7 @@ function startWebQuizFromData(questions, mode) {
   }
 
   document.getElementById('web-quiz-player-modal').classList.add('active');
+  if (window.initWebQuizProjectorMode) window.initWebQuizProjectorMode();
   window.renderWebQuizPlayer();
 }
 

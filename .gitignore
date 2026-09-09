@@ -41,4 +41,5 @@ diff_utf8.patch
 
 # Fichiers avec clés secrètes ou de test
 cf-worker/deploy-via-api.js
+cf-worker/deploy-hf.cjs
 test.json
