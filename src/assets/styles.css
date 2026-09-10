@@ -2932,9 +2932,12 @@ option, optgroup {
 }
 
 /* L'overlay du quiz prend 100% de la fenêtre/écran sans aucune marge ni padding noir */
-#web-quiz-player-modal,
-#web-quiz-player-modal.modal-overlay,
-#web-quiz-player-modal.modal-overlay.active {
+#web-quiz-player-modal:not(.active) {
+  display: none !important;
+}
+
+#web-quiz-player-modal.modal-overlay.active,
+#web-quiz-player-modal.active {
   position: fixed !important;
   inset: 0 !important;
   top: 0 !important;
