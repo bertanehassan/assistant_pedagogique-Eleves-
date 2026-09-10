@@ -3156,7 +3156,7 @@ option, optgroup {
 .wq-question-text {
   font-size: calc(clamp(20px, 2.6vw, 32px) * var(--wq-scale));
   font-weight: 700;
-  color: #ffffff;
+  color: #ef4444; /* Rouge pour la question */
   line-height: 1.38;
   text-align: left;
   letter-spacing: 0.1px;
@@ -3213,8 +3213,8 @@ option, optgroup {
 }
 
 .wq-choice-letter {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
   border: 1.5px solid rgba(255, 255, 255, 0.2);
@@ -3222,7 +3222,7 @@ option, optgroup {
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: calc(16px * var(--wq-scale));
+  font-size: calc(20px * var(--wq-scale));
   flex-shrink: 0;
   color: #ffffff;
   transition: all 0.2s;
@@ -3498,7 +3498,7 @@ option, optgroup {
 
 .web-quiz-container.projector-mode .wq-question-text {
   font-weight: 800 !important;
-  color: #ffffff !important;
+  color: #ef4444 !important; /* Rouge pour la question (Vidéoprojecteur) */
   line-height: 1.4 !important;
 }
 
@@ -3534,9 +3534,9 @@ option, optgroup {
 }
 
 .web-quiz-container.projector-mode .wq-choice-letter {
-  width: 36px !important;
-  height: 36px !important;
-  border-width: 2px !important;
+  width: 50px !important;
+  height: 50px !important;
+  border-width: 3px !important;
   font-weight: 900 !important;
 }
 
