@@ -13116,10 +13116,19 @@ window.resetWebQuizSize = function() {
   container.style.height = '100%';
   container.style.maxWidth = '100%';
   container.style.maxHeight = '100%';
+  container.style.removeProperty('--wq-font-zoom');
   try {
     localStorage.removeItem('wq_custom_width');
     localStorage.removeItem('wq_custom_height');
+    localStorage.removeItem('wq_font_zoom');
   } catch(e) {}
+
+  const indicator = document.getElementById('wq-resize-indicator');
+  if (indicator) {
+    indicator.textContent = '100% Plein écran rétabli';
+    indicator.classList.add('visible');
+    setTimeout(() => indicator.classList.remove('visible'), 1200);
+  }
 };
 
 window.initWebQuizResizers = function() {
@@ -13131,7 +13140,7 @@ window.initWebQuizResizers = function() {
   try {
     const savedW = localStorage.getItem('wq_custom_width');
     const savedH = localStorage.getItem('wq_custom_height');
-    if (savedW && savedH) {
+    if (savedW && savedH && savedW !== '100%' && savedH !== '100%') {
       container.style.width = savedW;
       container.style.height = savedH;
       container.style.maxWidth = savedW;
@@ -13139,77 +13148,179 @@ window.initWebQuizResizers = function() {
     }
   } catch(e) {}
 
+  const indicator = document.getElementById('wq-resize-indicator');
   const resizers = container.querySelectorAll('.wq-resizer');
+
   resizers.forEach(resizer => {
-    resizer.addEventListener('mousedown', initDrag);
+    // Double-click on ANY handle immediately restores 100% full screen
+    resizer.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.resetWebQuizSize();
+    });
+
+    resizer.addEventListener('pointerdown', initDrag);
   });
 
   function initDrag(e) {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
     e.preventDefault();
     e.stopPropagation();
 
-    const dir = e.currentTarget.dataset.direction;
+    const resizer = e.currentTarget;
+    const dir = resizer.dataset.direction;
     const startX = e.clientX;
     const startY = e.clientY;
     const startWidth = container.offsetWidth;
     const startHeight = container.offsetHeight;
+    const maxW = window.innerWidth;
+    const maxH = window.innerHeight;
+    const isInitiallyMaxW = startWidth >= maxW - 12;
+    const isInitiallyMaxH = startHeight >= maxH - 12;
+
+    let initialZoom = parseFloat(getComputedStyle(container).getPropertyValue('--wq-font-zoom')) || 1;
+
+    try {
+      resizer.setPointerCapture(e.pointerId);
+    } catch(err) {}
 
     container.classList.add('wq-is-resizing');
+    resizer.classList.add('active');
     document.body.style.userSelect = 'none';
+
+    const cursorMap = {
+      'left': 'ew-resize',
+      'right': 'ew-resize',
+      'top': 'ns-resize',
+      'bottom': 'ns-resize',
+      'corner': 'nwse-resize',
+      'br': 'nwse-resize',
+      'bl': 'nesw-resize',
+      'tr': 'nesw-resize',
+      'tl': 'nwse-resize'
+    };
+    document.body.style.cursor = cursorMap[dir] || 'default';
+
+    if (indicator) indicator.classList.add('visible');
 
     function doDrag(moveEvent) {
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
 
+      // 1. OUTWARD DRAG WHEN AT 100% FULL SCREEN -> POSITIVE ZOOM OF DISPLAY ZONE!
+      let outwardX = (dir === 'right' || dir === 'br' || dir === 'tr' || dir === 'corner') ? deltaX :
+                     (dir === 'left' || dir === 'bl' || dir === 'tl') ? -deltaX : 0;
+      let outwardY = (dir === 'bottom' || dir === 'br' || dir === 'bl' || dir === 'corner') ? deltaY :
+                     (dir === 'top' || dir === 'tr' || dir === 'tl') ? -deltaY : 0;
+      let outwardDelta = Math.max(outwardX, outwardY);
+
+      if ((isInitiallyMaxW || isInitiallyMaxH) && outwardDelta > 10) {
+        // Boost display zone font and content scale dynamically
+        const zoomDelta = Math.min(0.65, (outwardDelta - 10) / 250);
+        const newZoom = Math.min(1.85, Math.max(0.85, Math.round((initialZoom + zoomDelta) * 100) / 100));
+        container.style.setProperty('--wq-font-zoom', newZoom.toString());
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.maxWidth = '100%';
+        container.style.maxHeight = '100%';
+        if (indicator) {
+          indicator.textContent = `Plein écran (100%) • Zoom affichage: ${Math.round(newZoom * 100)}%`;
+        }
+        return;
+      }
+
+      // 2. STANDARD BIDIRECTIONAL RESIZING (POSITIVE & NEGATIVE)
       let newWidth = startWidth;
       let newHeight = startHeight;
 
-      if (dir === 'right') {
+      if (dir === 'right' || dir === 'corner' || dir === 'br' || dir === 'tr') {
         newWidth = startWidth + deltaX * 2;
-      } else if (dir === 'left') {
+      } else if (dir === 'left' || dir === 'bl' || dir === 'tl') {
         newWidth = startWidth - deltaX * 2;
-      } else if (dir === 'bottom') {
-        newHeight = startHeight + deltaY * 2;
-      } else if (dir === 'top') {
-        newHeight = startHeight - deltaY * 2;
-      } else if (dir === 'corner') {
-        newWidth = startWidth + deltaX * 2;
-        newHeight = startHeight + deltaY * 2;
       }
 
-      // Clamp dimensions
-      const minW = 450;
-      const maxW = window.innerWidth;
-      const minH = 300;
-      const maxH = window.innerHeight;
+      if (dir === 'bottom' || dir === 'corner' || dir === 'br' || dir === 'bl') {
+        newHeight = startHeight + deltaY * 2;
+      } else if (dir === 'top' || dir === 'tr' || dir === 'tl') {
+        newHeight = startHeight - deltaY * 2;
+      }
 
+      const minW = 450;
+      const minH = 300;
       newWidth = Math.max(minW, Math.min(maxW, newWidth));
       newHeight = Math.max(minH, Math.min(maxH, newHeight));
 
-      if (dir === 'right' || dir === 'left' || dir === 'corner') {
-        container.style.width = newWidth + 'px';
-        container.style.maxWidth = newWidth + 'px';
+      const isFullW = newWidth >= maxW - 15;
+      const isFullH = newHeight >= maxH - 15;
+
+      if (dir === 'right' || dir === 'left' || dir === 'corner' || dir === 'br' || dir === 'bl' || dir === 'tr' || dir === 'tl') {
+        if (isFullW) {
+          container.style.width = '100%';
+          container.style.maxWidth = '100%';
+        } else {
+          container.style.width = newWidth + 'px';
+          container.style.maxWidth = newWidth + 'px';
+        }
       }
-      if (dir === 'bottom' || dir === 'top' || dir === 'corner') {
-        container.style.height = newHeight + 'px';
-        container.style.maxHeight = newHeight + 'px';
+
+      if (dir === 'bottom' || dir === 'top' || dir === 'corner' || dir === 'br' || dir === 'bl' || dir === 'tr' || dir === 'tl') {
+        if (isFullH) {
+          container.style.height = '100%';
+          container.style.maxHeight = '100%';
+        } else {
+          container.style.height = newHeight + 'px';
+          container.style.maxHeight = newHeight + 'px';
+        }
+      }
+
+      if (indicator) {
+        if (isFullW && isFullH) {
+          indicator.textContent = `100% Plein écran (${maxW} × ${maxH})`;
+        } else {
+          const curW = isFullW ? '100%' : newWidth + 'px';
+          const curH = isFullH ? '100%' : newHeight + 'px';
+          const pct = Math.round((newWidth / maxW) * 100);
+          indicator.textContent = `${curW} × ${curH} (${pct}%)`;
+        }
       }
     }
 
-    function stopDrag() {
+    function stopDrag(upEvent) {
+      try {
+        resizer.releasePointerCapture(upEvent.pointerId);
+      } catch(err) {}
+
       container.classList.remove('wq-is-resizing');
+      resizer.classList.remove('active');
       document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', doDrag);
-      window.removeEventListener('mouseup', stopDrag);
+      document.body.style.cursor = '';
+
+      if (indicator) {
+        setTimeout(() => indicator.classList.remove('visible'), 700);
+      }
+
+      resizer.removeEventListener('pointermove', doDrag);
+      resizer.removeEventListener('pointerup', stopDrag);
+      resizer.removeEventListener('pointercancel', stopDrag);
 
       try {
-        if (container.style.width) localStorage.setItem('wq_custom_width', container.style.width);
-        if (container.style.height) localStorage.setItem('wq_custom_height', container.style.height);
+        const finalW = container.style.width;
+        const finalH = container.style.height;
+        if (finalW === '100%' && finalH === '100%') {
+          localStorage.removeItem('wq_custom_width');
+          localStorage.removeItem('wq_custom_height');
+        } else {
+          if (finalW) localStorage.setItem('wq_custom_width', finalW);
+          if (finalH) localStorage.setItem('wq_custom_height', finalH);
+        }
+        const zoom = container.style.getPropertyValue('--wq-font-zoom');
+        if (zoom) localStorage.setItem('wq_font_zoom', zoom);
       } catch(e) {}
     }
 
-    window.addEventListener('mousemove', doDrag);
-    window.addEventListener('mouseup', stopDrag);
+    resizer.addEventListener('pointermove', doDrag);
+    resizer.addEventListener('pointerup', stopDrag);
+    resizer.addEventListener('pointercancel', stopDrag);
   }
 };
 

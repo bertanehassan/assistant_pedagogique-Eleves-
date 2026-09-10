@@ -2998,70 +2998,130 @@ option, optgroup {
   user-select: none !important;
 }
 
-/* ─── POIGNÉES DE REDIMENSIONNEMENT INTERACTIF À LA SOURIS ─── */
+/* ─── POIGNÉES DE REDIMENSIONNEMENT INTERACTIF À LA SOURIS (4 BORDS + 4 COINS) ─── */
 .wq-resizer {
   position: absolute;
-  z-index: 9999;
+  z-index: 99999;
   background: transparent;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+  touch-action: none;
 }
 
 .wq-resizer:hover, .wq-resizer.active {
-  background: rgba(0, 229, 255, 0.5) !important;
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.8) !important;
+  background: rgba(0, 229, 255, 0.45) !important;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.9) !important;
 }
 
-/* Bord gauche */
+/* Bord gauche (14px pour saisie confortable) */
 .wq-resizer-l {
   left: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
+  top: 12px;
+  bottom: 12px;
+  width: 14px;
   cursor: ew-resize;
 }
 
-/* Bord droit */
+/* Bord droit (14px pour saisie confortable) */
 .wq-resizer-r {
   right: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
+  top: 12px;
+  bottom: 12px;
+  width: 14px;
   cursor: ew-resize;
 }
 
-/* Bord supérieur */
+/* Bord supérieur (12px) */
 .wq-resizer-t {
   top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
+  left: 12px;
+  right: 12px;
+  height: 12px;
   cursor: ns-resize;
 }
 
-/* Bord inférieur */
+/* Bord inférieur (12px) */
 .wq-resizer-b {
   bottom: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
+  left: 12px;
+  right: 12px;
+  height: 12px;
   cursor: ns-resize;
 }
 
-/* Coin inférieur droit */
+/* Coins de redimensionnement libre (22px x 22px) */
 .wq-resizer-corner {
+  width: 22px;
+  height: 22px;
+  z-index: 100000;
+}
+
+.wq-resizer-br {
   bottom: 0;
   right: 0;
-  width: 16px;
-  height: 16px;
   cursor: nwse-resize;
-  border-right: 3px solid rgba(0, 229, 255, 0.5);
-  border-bottom: 3px solid rgba(0, 229, 255, 0.5);
+  border-right: 3px solid rgba(0, 229, 255, 0.6);
+  border-bottom: 3px solid rgba(0, 229, 255, 0.6);
   border-bottom-right-radius: 4px;
+}
+
+.wq-resizer-bl {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+  border-left: 3px solid rgba(0, 229, 255, 0.6);
+  border-bottom: 3px solid rgba(0, 229, 255, 0.6);
+  border-bottom-left-radius: 4px;
+}
+
+.wq-resizer-tr {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+  border-right: 3px solid rgba(0, 229, 255, 0.6);
+  border-top: 3px solid rgba(0, 229, 255, 0.6);
+  border-top-right-radius: 4px;
+}
+
+.wq-resizer-tl {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+  border-left: 3px solid rgba(0, 229, 255, 0.6);
+  border-top: 3px solid rgba(0, 229, 255, 0.6);
+  border-top-left-radius: 4px;
 }
 
 .wq-resizer-corner:hover, .wq-resizer-corner.active {
   border-color: #00e5ff !important;
-  background: rgba(0, 229, 255, 0.3) !important;
+  background: rgba(0, 229, 255, 0.4) !important;
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.9) !important;
+}
+
+/* ─── BADGE INDICATEUR DE DIMENSIONS EN TEMPS RÉEL ─── */
+.wq-resize-indicator {
+  position: absolute;
+  top: 45px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: rgba(11, 15, 25, 0.95);
+  border: 1.5px solid var(--cyan, #00e5ff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 229, 255, 0.35);
+  color: #ffffff;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  z-index: 100001;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.wq-resize-indicator.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* ─── EN-TÊTE ULTRA-COMPACT (UNE SEULE LIGNE SANS ESPACE PERDU) ─── */
@@ -3230,9 +3290,9 @@ option, optgroup {
 }
 
 .wq-choices {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 6px 12px;
 }
 
 .wq-choice-card {

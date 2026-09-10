@@ -2,12 +2,18 @@
   <!-- ═══════════════════ MODAL : WEB QUIZ PLAYER ═══════════════════ -->
   <div class="modal-overlay" id="web-quiz-player-modal">
     <div class="web-quiz-container">
-      <!-- Poignées de redimensionnement interactif à la souris -->
-      <div class="wq-resizer wq-resizer-l" data-direction="left" title="Glisser pour ajuster la marge gauche"></div>
-      <div class="wq-resizer wq-resizer-r" data-direction="right" title="Glisser pour ajuster la marge droite"></div>
-      <div class="wq-resizer wq-resizer-t" data-direction="top" title="Glisser pour ajuster la hauteur"></div>
-      <div class="wq-resizer wq-resizer-b" data-direction="bottom" title="Glisser pour ajuster la hauteur"></div>
-      <div class="wq-resizer wq-resizer-corner" data-direction="corner" title="Glisser pour redimensionner librement"></div>
+      <!-- Poignées de redimensionnement interactif à la souris (4 bords + 4 coins) -->
+      <div class="wq-resizer wq-resizer-l" data-direction="left" title="Glisser pour ajuster la largeur gauche (Double-clic pour plein écran)"></div>
+      <div class="wq-resizer wq-resizer-r" data-direction="right" title="Glisser pour ajuster la largeur droite (Double-clic pour plein écran)"></div>
+      <div class="wq-resizer wq-resizer-t" data-direction="top" title="Glisser pour ajuster la hauteur supérieure (Double-clic pour plein écran)"></div>
+      <div class="wq-resizer wq-resizer-b" data-direction="bottom" title="Glisser pour ajuster la hauteur inférieure (Double-clic pour plein écran)"></div>
+      <div class="wq-resizer wq-resizer-corner wq-resizer-br" data-direction="br" title="Glisser pour redimensionner librement (Double-clic pour plein écran)"></div>
+      <div class="wq-resizer wq-resizer-corner wq-resizer-bl" data-direction="bl" title="Glisser pour redimensionner librement (Double-clic pour plein écran)"></div>
+      <div class="wq-resizer wq-resizer-corner wq-resizer-tr" data-direction="tr" title="Glisser pour redimensionner librement (Double-clic pour plein écran)"></div>
+      <div class="wq-resizer wq-resizer-corner wq-resizer-tl" data-direction="tl" title="Glisser pour redimensionner librement (Double-clic pour plein écran)"></div>
+
+      <!-- Badge indicateur de dimension et zoom en temps réel -->
+      <div class="wq-resize-indicator" id="wq-resize-indicator"></div>
 
       <div class="wq-header" ondblclick="resetWebQuizSize()" title="Double-cliquer pour rétablir le plein écran 100%">
         <div class="wq-header-left">
