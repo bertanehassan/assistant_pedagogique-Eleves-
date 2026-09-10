@@ -1,7 +1,7 @@
 <template>
   <!-- ═══════════════════ MODAL : WEB QUIZ PLAYER ═══════════════════ -->
-  <div class="modal-overlay" id="web-quiz-player-modal">
-    <div class="web-quiz-container">
+  <div class="modal-overlay" id="web-quiz-player-modal" style="padding: 0 !important; margin: 0 !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; max-width: 100vw !important; max-height: 100vh !important;">
+    <div class="web-quiz-container" style="width: 100vw !important; height: 100vh !important; max-width: 100vw !important; max-height: 100vh !important; margin: 0 !important; border-radius: 0 !important;">
       <div class="wq-header">
         <div class="wq-header-left">
           <div class="wq-counter" id="wq-counter">Question 1/20</div>
