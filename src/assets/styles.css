@@ -2960,8 +2960,8 @@ option, optgroup {
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: stretch !important;
-  justify-content: stretch !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 #web-quiz-player-modal:fullscreen {
@@ -2973,26 +2973,95 @@ option, optgroup {
 
 .web-quiz-container {
   background: #0b0f19;
-  border-radius: 0 !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
-  flex: 1 1 100% !important;
-  align-self: stretch !important;
+  border-radius: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
   display: flex !important;
   flex-direction: column !important;
   position: relative !important;
   overflow: hidden !important;
-  box-shadow: none !important;
-  border: none !important;
-  margin: 0 !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  margin: auto !important;
   padding: 0 !important;
   box-sizing: border-box !important;
   color: #ffffff;
   font-family: var(--font-body-md, 'Inter', -apple-system, sans-serif);
   --wq-scale: var(--wq-font-zoom, 1);
   font-size: calc(16px * var(--wq-scale));
+}
+
+.web-quiz-container.wq-is-resizing {
+  transition: none !important;
+  user-select: none !important;
+}
+
+/* ─── POIGNÉES DE REDIMENSIONNEMENT INTERACTIF À LA SOURIS ─── */
+.wq-resizer {
+  position: absolute;
+  z-index: 9999;
+  background: transparent;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.wq-resizer:hover, .wq-resizer.active {
+  background: rgba(0, 229, 255, 0.5) !important;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.8) !important;
+}
+
+/* Bord gauche */
+.wq-resizer-l {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+/* Bord droit */
+.wq-resizer-r {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+/* Bord supérieur */
+.wq-resizer-t {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+/* Bord inférieur */
+.wq-resizer-b {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+/* Coin inférieur droit */
+.wq-resizer-corner {
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  border-right: 3px solid rgba(0, 229, 255, 0.5);
+  border-bottom: 3px solid rgba(0, 229, 255, 0.5);
+  border-bottom-right-radius: 4px;
+}
+
+.wq-resizer-corner:hover, .wq-resizer-corner.active {
+  border-color: #00e5ff !important;
+  background: rgba(0, 229, 255, 0.3) !important;
 }
 
 /* ─── EN-TÊTE ULTRA-COMPACT (UNE SEULE LIGNE SANS ESPACE PERDU) ─── */

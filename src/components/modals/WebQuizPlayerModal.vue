@@ -2,7 +2,14 @@
   <!-- ═══════════════════ MODAL : WEB QUIZ PLAYER ═══════════════════ -->
   <div class="modal-overlay" id="web-quiz-player-modal">
     <div class="web-quiz-container">
-      <div class="wq-header">
+      <!-- Poignées de redimensionnement interactif à la souris -->
+      <div class="wq-resizer wq-resizer-l" data-direction="left" title="Glisser pour ajuster la marge gauche"></div>
+      <div class="wq-resizer wq-resizer-r" data-direction="right" title="Glisser pour ajuster la marge droite"></div>
+      <div class="wq-resizer wq-resizer-t" data-direction="top" title="Glisser pour ajuster la hauteur"></div>
+      <div class="wq-resizer wq-resizer-b" data-direction="bottom" title="Glisser pour ajuster la hauteur"></div>
+      <div class="wq-resizer wq-resizer-corner" data-direction="corner" title="Glisser pour redimensionner librement"></div>
+
+      <div class="wq-header" ondblclick="resetWebQuizSize()" title="Double-cliquer pour rétablir le plein écran 100%">
         <div class="wq-header-left">
           <div class="wq-counter" id="wq-counter">Question 1/20</div>
           <div class="wq-metadata" id="wq-metadata"></div>
@@ -20,6 +27,9 @@
           </button>
           <button class="wq-close-btn" id="wq-btn-save-header" onclick="saveCurrentQuiz()" title="Sauvegarder ce quiz dans vos archives">
             💾
+          </button>
+          <button class="wq-close-btn" id="wq-btn-reset-size" onclick="resetWebQuizSize()" title="Rétablir 100% plein écran">
+            🗖
           </button>
           <button class="wq-close-btn" onclick="toggleWebQuizFullscreen()" title="Plein écran">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>

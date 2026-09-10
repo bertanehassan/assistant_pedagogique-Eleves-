@@ -13109,6 +13109,110 @@ window.initWebQuizProjectorMode = function() {
   } catch(e) {}
 };
 
+window.resetWebQuizSize = function() {
+  const container = document.querySelector('.web-quiz-container');
+  if (!container) return;
+  container.style.width = '100%';
+  container.style.height = '100%';
+  container.style.maxWidth = '100%';
+  container.style.maxHeight = '100%';
+  try {
+    localStorage.removeItem('wq_custom_width');
+    localStorage.removeItem('wq_custom_height');
+  } catch(e) {}
+};
+
+window.initWebQuizResizers = function() {
+  const container = document.querySelector('.web-quiz-container');
+  if (!container || container.dataset.resizersInitialized) return;
+  container.dataset.resizersInitialized = 'true';
+
+  // Restore saved custom dimensions if any
+  try {
+    const savedW = localStorage.getItem('wq_custom_width');
+    const savedH = localStorage.getItem('wq_custom_height');
+    if (savedW && savedH) {
+      container.style.width = savedW;
+      container.style.height = savedH;
+      container.style.maxWidth = savedW;
+      container.style.maxHeight = savedH;
+    }
+  } catch(e) {}
+
+  const resizers = container.querySelectorAll('.wq-resizer');
+  resizers.forEach(resizer => {
+    resizer.addEventListener('mousedown', initDrag);
+  });
+
+  function initDrag(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dir = e.currentTarget.dataset.direction;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = container.offsetWidth;
+    const startHeight = container.offsetHeight;
+
+    container.classList.add('wq-is-resizing');
+    document.body.style.userSelect = 'none';
+
+    function doDrag(moveEvent) {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+
+      if (dir === 'right') {
+        newWidth = startWidth + deltaX * 2;
+      } else if (dir === 'left') {
+        newWidth = startWidth - deltaX * 2;
+      } else if (dir === 'bottom') {
+        newHeight = startHeight + deltaY * 2;
+      } else if (dir === 'top') {
+        newHeight = startHeight - deltaY * 2;
+      } else if (dir === 'corner') {
+        newWidth = startWidth + deltaX * 2;
+        newHeight = startHeight + deltaY * 2;
+      }
+
+      // Clamp dimensions
+      const minW = 450;
+      const maxW = window.innerWidth;
+      const minH = 300;
+      const maxH = window.innerHeight;
+
+      newWidth = Math.max(minW, Math.min(maxW, newWidth));
+      newHeight = Math.max(minH, Math.min(maxH, newHeight));
+
+      if (dir === 'right' || dir === 'left' || dir === 'corner') {
+        container.style.width = newWidth + 'px';
+        container.style.maxWidth = newWidth + 'px';
+      }
+      if (dir === 'bottom' || dir === 'top' || dir === 'corner') {
+        container.style.height = newHeight + 'px';
+        container.style.maxHeight = newHeight + 'px';
+      }
+    }
+
+    function stopDrag() {
+      container.classList.remove('wq-is-resizing');
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', doDrag);
+      window.removeEventListener('mouseup', stopDrag);
+
+      try {
+        if (container.style.width) localStorage.setItem('wq_custom_width', container.style.width);
+        if (container.style.height) localStorage.setItem('wq_custom_height', container.style.height);
+      } catch(e) {}
+    }
+
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('mouseup', stopDrag);
+  }
+};
+
 // ════════════════════════════════════════
 // WEB QUIZ PLAYER
 // ════════════════════════════════════════
@@ -13919,6 +14023,7 @@ function startWebQuizFromData(questions, mode) {
 
   document.getElementById('web-quiz-player-modal').classList.add('active');
   if (window.initWebQuizProjectorMode) window.initWebQuizProjectorMode();
+  if (window.initWebQuizResizers) window.initWebQuizResizers();
   window.renderWebQuizPlayer();
 }
 
