@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <!-- ═══════════════════ MODAL : FICHE MÉTHODE ═══════════════════ -->
   <div class="modal-overlay" id="methode-modal">
     <div class="modal-box" style="max-width:680px;max-height:90vh;overflow-y:auto">
@@ -130,6 +130,7 @@
           <div class="field-group" style="margin-top:12px">
             <label class="field-label">{{ t('sheet_model_label') }}</label>
             <select class="field-input field-select" id="methode-model-select">
+              <option value="gemini-3.8-flash">🚀 Gemini 3.8 Flash — Nouveau (Recommandé)</option>
               <option value="gemini-3.7-flash" selected>✨ Gemini 3.7 Flash — Raisonnement & Vision (par défaut)</option>
             </select>
             <div class="field-hint" style="margin-top:4px;font-size:11px;color:var(--text-dim)">

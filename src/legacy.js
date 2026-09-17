@@ -1,4 +1,4 @@
-// ════════════════════════════════════════
+﻿// ════════════════════════════════════════
 // CONFIG
 // ════════════════════════════════════════
 import { MODELS, DB_NAME, DB_VERSION, XAI_PROXY_URL, HF_PROXY_URL } from './config.js';
@@ -1831,7 +1831,12 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
       geminiPayload.systemInstruction = { parts: [{ text: systemText.trim() }] };
     }
 
-    const res = await fetchWithRetry(apiConf.url, {
+    let fetchUrl = apiConf.url;
+    if (!reqBody.stream && fetchUrl.includes("streamGenerateContent")) {
+      fetchUrl = fetchUrl.replace("streamGenerateContent?alt=sse&", "generateContent?");
+    }
+
+    const res = await fetchWithRetry(fetchUrl, {
       method: "POST",
       headers: apiConf.headers,
       signal: signal,
@@ -9496,6 +9501,38 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   // - Si PDF/Image (multimodal) -> Force Gemini Vision
   // - Si Texte seul -> Utilise le modèle actuellement sélectionné par l'utilisateur
 
+  function buildFicheErrorContent(e, retryFn) {
+    if (e.name === 'AbortError' || (e.message && e.message.includes('Aborted'))) {
+      return `*— Génération de la fiche interrompue —*`;
+    }
+    const isQuota = e.message && (
+      e.message.includes('Quota Gemini') ||
+      e.message.includes('free_tier') ||
+      e.message.includes('quota') ||
+      e.message.includes('rate limit')
+    );
+    // Extraire le délai de retry depuis le message d'erreur
+    const retryMatch = e.message && e.message.match(/dans\s*~?(\d+)\s*s/i);
+    const retrySec = retryMatch ? parseInt(retryMatch[1]) : null;
+
+    let content = `❌ Erreur génération fiche : ${e.message}`;
+
+    if (isQuota && retryFn) {
+      // Enregistrer la fonction de retry dans window pour l'appel depuis le bouton HTML
+      const retryKey = `_ficheRetry_${Date.now()}`;
+      window[retryKey] = () => {
+        delete window[retryKey];
+        retryFn();
+      };
+      const btnLabel = retrySec ? `🔄 Réessayer dans ${retrySec}s` : '🔄 Réessayer';
+      const autoRetryNote = retrySec
+        ? `\n\n*Vous pouvez aussi cliquer sur le bouton ci-dessous après ~${retrySec}s.*`
+        : '';
+      content += `${autoRetryNote}\n\n<button onclick="window['${retryKey}']()" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#00ff9d,#00e5ff);color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">${btnLabel}</button>`;
+    }
+    return content;
+  }
+
   async function fetchGeneratorModel(assistantMsg, effectiveSystemPrompt, userContent, needsMultimodal, geminiPayloadParts, maxTokens = 65536, chosenModel = null) {
     if (needsMultimodal) {
       if (!state.geminiApiKey) {
@@ -9505,8 +9542,9 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
           'puis ajoutez-la dans Paramètres API (bouton 🔑 en haut à droite).'
         );
       }
+      const multimodalModel = (chosenModel && chosenModel.includes('gemini')) ? chosenModel : 'gemini-3.7-flash';
       const cleanGeminiKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${cleanGeminiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${multimodalModel}:generateContent?key=${cleanGeminiKey}`;
   
       const payload = {
         systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
@@ -9514,8 +9552,8 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         generationConfig: { temperature: 0.35, maxOutputTokens: maxTokens, topP: 0.95 }
       };
       
-      assistantMsg.modelUsed = 'gemini-3.7-flash';
-      assistantMsg.content = `🔍 Gemini 3.7 Flash analyse votre demande et lit le(s) document(s) natif(s)…`;
+      assistantMsg.modelUsed = multimodalModel;
+      assistantMsg.content = `🔍 ${multimodalModel} analyse votre demande et lit le(s) document(s) natif(s)…`;
       renderMessages();
   
       const res = await fetchWithRetry(geminiUrl, {
@@ -9527,9 +9565,24 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   
       if (!res.ok) {
         const errText = await res.text();
-        let errMsg = errText.slice(0, 500);
+        let errMsg = errText.slice(0, 800);
         try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
-        throw new Error(`Gemini API 503: ${errMsg}`);
+        const isQuota = errMsg.includes('free_tier') || errMsg.includes('quota') || errMsg.includes('Quota');
+        if (isQuota) {
+          // Extraire le délai depuis le message texte si présent
+          const retryMatch = errMsg.match(/retry in\s+([\d.]+)\s*s/i);
+          const retrySec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
+          const retryHint = retrySec ? ` (réessayez dans ~${retrySec}s)` : '';
+          throw new Error(
+            `⚠️ Quota Gemini free-tier atteint${retryHint}.\n\n` +
+            `Vous avez atteint la limite de 20 requêtes/minute du plan gratuit.\n` +
+            `💡 Solutions :\n` +
+            `• Attendez ${retrySec ? retrySec + 's' : 'quelques secondes'} et réessayez\n` +
+            `• Choisissez un modèle Gemini différent (ex: gemini-3.5-flash)\n` +
+            `• Vérifiez votre quota sur https://ai.dev/rate-limit`
+          );
+        }
+        throw new Error(`Gemini API ${res.status}: ${errMsg}`);
       }
   
       const data = await res.json();
@@ -9579,9 +9632,133 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
     } else {
       const targetModel = chosenModel || state.model || "mistral-large-2512";
       assistantMsg.modelUsed = targetModel;
+
+      // ── BRANCHE GEMINI SANS MULTIMODAL : streaming SSE pour affichage progressif ──
+      if (targetModel.includes('gemini') && state.geminiApiKey) {
+        const cleanKey = state.geminiApiKey.replace(/[\r\n\s]+/g, '');
+        // Tokens initiaux réduits (16 384) pour réduire la charge ; on étend uniquement si MAX_TOKENS
+        const initialTokens = Math.min(maxTokens, 16384);
+        const sseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:streamGenerateContent?alt=sse&key=${cleanKey}`;
+        const ssePayload = {
+          systemInstruction: { parts: [{ text: effectiveSystemPrompt }] },
+          contents: [{ role: 'user', parts: geminiPayloadParts.filter(p => p.text !== undefined) }],
+          generationConfig: { temperature: 0.35, maxOutputTokens: initialTokens, topP: 0.95 }
+        };
+
+        assistantMsg.content = `✍️ ${targetModel} génère votre fiche en temps réel…`;
+        renderMessages();
+
+        const sseRes = await fetchWithRetry(sseUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: state.abortController?.signal,
+          body: JSON.stringify(ssePayload)
+        });
+
+        if (!sseRes.ok) {
+          const errText = await sseRes.text();
+          let errMsg = errText.slice(0, 500);
+          try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch(e) {}
+          throw new Error(`Gemini SSE ${sseRes.status}: ${errMsg}`);
+        }
+
+        // Lecture progressive du flux SSE avec mise à jour visuelle
+        let accumulated = '';
+        let lastFinishReason = 'STOP';
+        const reader = sseRes.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let renderCounter = 0;
+
+        while (!state.abortController?.signal?.aborted) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue;
+            const raw = line.slice(5).trim();
+            if (raw === '[DONE]') break;
+            try {
+              const chunk = JSON.parse(raw);
+              const delta = chunk?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (delta) {
+                accumulated += delta;
+                renderCounter++;
+                // Rafraîchissement visuel tous les ~15 chunks pour éviter de surcharger le DOM
+                if (renderCounter % 15 === 0) {
+                  assistantMsg.content = accumulated + ' ▌';
+                  renderMessages(true);
+                }
+              }
+              const fr = chunk?.candidates?.[0]?.finishReason;
+              if (fr) lastFinishReason = fr;
+            } catch(_) {}
+          }
+        }
+
+        // ── Continuation unique si MAX_TOKENS atteint (1 seul appel supplémentaire) ──
+        if (lastFinishReason === 'MAX_TOKENS' && accumulated && !state.abortController?.signal?.aborted) {
+          assistantMsg.content = accumulated + '\n\n*⏳ Continuation automatique (1/1)…*';
+          renderMessages(true);
+          const extTokens = Math.min(maxTokens, 32768);
+          const contSseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:streamGenerateContent?alt=sse&key=${cleanKey}`;
+          const contPayload = {
+            systemInstruction: ssePayload.systemInstruction,
+            contents: [
+              { role: 'user', parts: ssePayload.contents[0].parts },
+              { role: 'model', parts: [{ text: accumulated }] },
+              { role: 'user', parts: [{ text: 'Continue EXACTEMENT où tu t\'es arrêté, sans répéter.' }] }
+            ],
+            generationConfig: { temperature: 0.35, maxOutputTokens: extTokens, topP: 0.95 }
+          };
+          const contRes = await fetchWithRetry(contSseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: state.abortController?.signal,
+            body: JSON.stringify(contPayload)
+          });
+          if (contRes.ok) {
+            const contReader = contRes.body.getReader();
+            let contBuffer = '';
+            let contCounter = 0;
+            while (!state.abortController?.signal?.aborted) {
+              const { done, value } = await contReader.read();
+              if (done) break;
+              contBuffer += decoder.decode(value, { stream: true });
+              const cLines = contBuffer.split('\n');
+              contBuffer = cLines.pop() || '';
+              for (const cl of cLines) {
+                if (!cl.startsWith('data:')) continue;
+                const raw2 = cl.slice(5).trim();
+                if (raw2 === '[DONE]') break;
+                try {
+                  const c2 = JSON.parse(raw2);
+                  const d2 = c2?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                  if (d2) {
+                    accumulated += d2;
+                    contCounter++;
+                    if (contCounter % 15 === 0) {
+                      assistantMsg.content = accumulated + ' ▌';
+                      renderMessages(true);
+                    }
+                  }
+                } catch(_) {}
+              }
+            }
+          }
+        }
+
+        let text = accumulated;
+        text = normalizeAiOutput(text);
+        if (text.includes('\\')) text = wrapNakedLatex(text);
+        return text;
+      }
+
+      // ── BRANCHE OpenAI / Mistral / OpenRouter (inchangé) ──
       assistantMsg.content = `⏳ ${targetModel} génère votre document…`;
       renderMessages();
-  
       const _apiConf = getLlmApiConfig(targetModel);
       const fullUserText = geminiPayloadParts.filter(p => p.text).map(p => p.text).join('\n');
   
@@ -9619,6 +9796,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
   }
   // Exposer fetchGeneratorModel globalement pour que les générateurs hors portée (ex: A/B) puissent l'utiliser
   window.fetchGeneratorModel = fetchGeneratorModel;
+
 
   const generateCorrectionSheet = async () => {
     if (state.isGenerating) {
@@ -9854,11 +10032,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       // pour permettre une sauvegarde ultérieure du profil ou une regénération.
 
     } catch(e) {
-      if (e.name === 'AbortError' || (e.message && e.message.includes('Aborted'))) {
-        assistantMsg.content = `*— Génération de la fiche interrompue —*`;
-      } else {
-        assistantMsg.content = `❌ Erreur génération fiche : ${e.message}`;
-      }
+      assistantMsg.content = buildFicheErrorContent(e, () => window.generateCorrectionSheet?.());
       assistantMsg.streaming = false;
       renderMessages(true);
       hideTyping();
@@ -10161,8 +10335,14 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
       if (!k) { resEl.textContent = "❌ Clé manquante"; resEl.style.color = "var(--danger)"; return; }
       resEl.textContent = "⏳ Test..."; resEl.style.color = "var(--text-dim)";
       try {
-        const res = await fetch("https://api.mistral.ai/v1/models", {
-          headers: { "Authorization": `Bearer ${k}` }
+        let modelToTest = state.model || "mistral-large-latest";
+        if (modelToTest.includes("/") || modelToTest.includes("gemini")) {
+          modelToTest = "mistral-large-latest";
+        }
+        const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${k}` },
+          body: JSON.stringify({ model: modelToTest, messages: [{ role: "user", content: "ping" }], max_tokens: 1 })
         });
         if (res.ok) { 
           resEl.textContent = "✅ Connecté (Mistral AI)"; 
@@ -10193,7 +10373,11 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
         await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
         
         // Test 2: POST (génération réelle)
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${cleanKey}`, {
+        let modelToTest = state.model || "gemini-3.8-flash";
+        if (!modelToTest.includes("gemini") && !modelToTest.includes("gemma")) {
+          modelToTest = "gemini-3.8-flash";
+        }
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelToTest}:generateContent?key=${cleanKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -10241,7 +10425,7 @@ ${langInstruction ? langInstruction + '\n---\n' : ''}
             "Authorization": `Bearer ${cleanKey}`
           },
           body: JSON.stringify({
-            model: "deepseek/deepseek-chat",
+            model: (state.model && (state.model.includes("/") || state.model.includes("openrouter"))) ? state.model : "deepseek/deepseek-chat",
             messages: [{ role: "user", content: "ping" }],
             max_tokens: 1
           })
@@ -11286,11 +11470,7 @@ const generateDidactiqueSheet = async () => {
     await saveChat();
 
   } catch(e) {
-    if (e.name === 'AbortError' || (e.message && e.message.includes('Aborted'))) {
-      assistantMsg.content = `*— Génération de la fiche interrompue —*`;
-    } else {
-      assistantMsg.content = `❌ Erreur génération fiche : ${e.message}`;
-    }
+    assistantMsg.content = buildFicheErrorContent(e, () => window.generateDidactiqueSheet?.());
     assistantMsg.streaming = false;
     renderMessages(true);
     hideTyping();
@@ -12219,11 +12399,7 @@ const generateMethodeSheet = async () => {
     await saveChat();
 
   } catch(e) {
-    if (e.name === 'AbortError' || (e.message && e.message.includes('Aborted'))) {
-      assistantMsg.content = `*— Génération de la fiche interrompue —*`;
-    } else {
-      assistantMsg.content = `❌ Erreur génération fiche : ${e.message}`;
-    }
+    assistantMsg.content = buildFicheErrorContent(e, () => window.generateMethodeSheet?.());
     assistantMsg.streaming = false;
     renderMessages(true);
     hideTyping();
