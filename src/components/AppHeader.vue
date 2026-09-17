@@ -203,6 +203,10 @@
             <span class="text-xs text-on-surface">{{ t('ui_time_per_question') }}</span>
             <input type="number" id="quiz-eval-timer-input" class="sb-select" style="width: 80px;" value="30" min="5" max="300" />
           </div>
+          <div class="flex items-center justify-between gap-2 mt-2">
+            <span class="text-xs text-on-surface">{{ t('ui_nb_questions') }}</span>
+            <input type="number" id="quiz-nb-questions-default-input" class="sb-select" style="width: 80px;" placeholder="Tout" min="1" max="999" />
+          </div>
         </div>
 
       </div><!-- /sidebar-body -->

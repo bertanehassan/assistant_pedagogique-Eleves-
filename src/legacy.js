@@ -7425,8 +7425,8 @@ export const mountApp = async () => {
       window.history.replaceState({}, document.title, window.location.pathname);
       toast("Quiz partag\u00e9 charg\u00e9 ! Choisissez votre mode.", "success");
       // Demander le mode avant de lancer
-      askQuizMode((mode) => {
-        startWebQuizFromData(quizData.questions, mode);
+      askQuizMode((mode, nbQuestions) => {
+        startWebQuizFromData(quizData.questions, mode, nbQuestions);
       });
     }).catch(e => {
       toast("Lien de quiz invalide ou expiré.", "error");
@@ -8831,8 +8831,8 @@ function bindEvents() {
 
       const questionsToLoad = q.questions;
       // Demander le mode avant de lancer
-      askQuizMode((mode) => {
-        startWebQuizFromData(questionsToLoad, mode);
+      askQuizMode((mode, nbQuestions) => {
+        startWebQuizFromData(questionsToLoad, mode, nbQuestions);
       });
     } catch(e) {
       console.error(e);
@@ -12976,16 +12976,34 @@ function askQuizMode(callback) {
   overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);animation:fadeIn .2s ease;';
 
   overlay.innerHTML = `
-    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:36px 40px;max-width:420px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,0.6);text-align:center;animation:slideUp .25s ease;">
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:36px 40px;max-width:440px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,0.6);text-align:center;animation:slideUp .25s ease;">
       <div style="font-size:48px;margin-bottom:12px;">&#127919;</div>
-      <h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 8px;">Choisir le mode</h2>
-      <p style="color:rgba(255,255,255,0.55);font-size:14px;margin:0 0 28px;line-height:1.5;">Comment souhaitez-vous jouer ce quiz ?</p>
+      <h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 8px;">Configurer le Quiz</h2>
+      <p style="color:rgba(255,255,255,0.55);font-size:14px;margin:0 0 20px;line-height:1.5;">Choisissez le nombre de questions et le mode de jeu.</p>
+
+      <!-- Sélecteur nombre de questions -->
+      <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px 18px;margin-bottom:20px;text-align:left;">
+        <div style="color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;margin-bottom:12px;">&#127358; Nombre de questions</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;" id="qmd-presets">
+          <button data-nb="5"  class="qmd-preset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;">5</button>
+          <button data-nb="10" class="qmd-preset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;">10</button>
+          <button data-nb="15" class="qmd-preset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;">15</button>
+          <button data-nb="20" class="qmd-preset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;">20</button>
+          <button data-nb="0"  class="qmd-preset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;">Tout</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="color:rgba(255,255,255,0.5);font-size:12px;">Ou personnalisez :</span>
+          <input type="number" id="qmd-nb-input" min="1" max="999" placeholder="ex: 7"
+            style="width:80px;padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;outline:none;text-align:center;" />
+        </div>
+      </div>
+
       <div style="display:flex;gap:14px;flex-direction:column;">
         <button id="qmd-eval-btn" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#ff6b35,#e63946);border:none;border-radius:14px;padding:18px 20px;cursor:pointer;text-align:left;box-shadow:0 8px 24px rgba(230,57,70,0.35);transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
           <span style="font-size:30px;">&#9201;</span>
           <div>
             <div style="color:#fff;font-weight:700;font-size:16px;">Mode &#201;valuation</div>
-            <div style="color:rgba(255,255,255,0.75);font-size:12px;margin-top:3px;">Chronom&#233;tr&#233; &middot; Score final &middot; Anti-triche</div>
+            <div style="color:rgba(255,255,255,0.75);font-size:12px;margin-top:3px;">Chronométré &middot; Score final &middot; Anti-triche</div>
           </div>
         </button>
         <button id="qmd-rev-btn" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#4361ee,#3a0ca3);border:none;border-radius:14px;padding:18px 20px;cursor:pointer;text-align:left;box-shadow:0 8px 24px rgba(67,97,238,0.35);transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
@@ -13002,9 +13020,55 @@ function askQuizMode(callback) {
   `;
 
   document.body.appendChild(overlay);
+
+  // Restore last saved nb from localStorage
+  const savedNb = localStorage.getItem('quiz_nb_questions');
+  const nbInput = document.getElementById('qmd-nb-input');
+  let selectedNb = savedNb !== null ? parseInt(savedNb) : 0; // 0 = Tout
+
+  // Helper: highlight active preset
+  function highlightPreset(nb) {
+    document.querySelectorAll('.qmd-preset-btn').forEach(btn => {
+      const isActive = parseInt(btn.dataset.nb) === nb;
+      btn.style.background = isActive ? 'linear-gradient(135deg,#4cc9f0,#4361ee)' : 'rgba(255,255,255,0.08)';
+      btn.style.borderColor = isActive ? '#4cc9f0' : 'rgba(255,255,255,0.2)';
+      btn.style.color = '#fff';
+    });
+  }
+
+  // Init highlight
+  highlightPreset(selectedNb);
+  if (selectedNb > 0) nbInput.value = selectedNb;
+
+  // Preset buttons click
+  document.getElementById('qmd-presets').addEventListener('click', e => {
+    const btn = e.target.closest('.qmd-preset-btn');
+    if (!btn) return;
+    selectedNb = parseInt(btn.dataset.nb);
+    highlightPreset(selectedNb);
+    nbInput.value = selectedNb > 0 ? selectedNb : '';
+  });
+
+  // Manual input change
+  nbInput.addEventListener('input', () => {
+    const v = parseInt(nbInput.value);
+    if (!isNaN(v) && v > 0) {
+      selectedNb = v;
+      highlightPreset(-1); // deselect all presets
+    }
+  });
+
   const close = () => overlay.remove();
-  document.getElementById('qmd-eval-btn').addEventListener('click', () => { close(); callback('evaluation'); });
-  document.getElementById('qmd-rev-btn').addEventListener('click',  () => { close(); callback('revision');   });
+
+  const getNb = () => {
+    const v = parseInt(nbInput.value);
+    const nb = (!isNaN(v) && v > 0) ? v : selectedNb;
+    try { localStorage.setItem('quiz_nb_questions', nb); } catch(e) {}
+    return nb;
+  };
+
+  document.getElementById('qmd-eval-btn').addEventListener('click', () => { close(); callback('evaluation', getNb()); });
+  document.getElementById('qmd-rev-btn').addEventListener('click',  () => { close(); callback('revision',   getNb()); });
   document.getElementById('qmd-cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 }
@@ -13250,8 +13314,8 @@ window.openWebQuizPlayer = function(msgId) {
   }
 
   // Demander le mode avant de lancer
-  askQuizMode((mode) => {
-    startWebQuizFromData(questions, mode);
+  askQuizMode((mode, nbQuestions) => {
+    startWebQuizFromData(questions, mode, nbQuestions);
   });
 };
 
@@ -13866,7 +13930,7 @@ window.handleQuizJsonText = function(content) {
       _showFlashCardPlayer(questions, json);
     } else {
       wqState.metadata = json;
-      askQuizMode((mode) => { startWebQuizFromData(questions, mode); });
+      askQuizMode((mode, nbQuestions) => { startWebQuizFromData(questions, mode, nbQuestions); });
     }
   } catch (err) {
     console.error(err);
@@ -13894,11 +13958,23 @@ document.addEventListener('change', (e) => {
   }
 });
 
-function startWebQuizFromData(questions, mode) {
-  wqState.questions = questions.map(q => {
+function startWebQuizFromData(questions, mode, nbQuestions) {
+  // Fisher-Yates shuffle pour mélanger les questions aléatoirement
+  let selected = questions.map(q => {
     if (typeof q === 'string') return { question: q, choix: [], explication: '' };
     return q;
   });
+  for (let i = selected.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [selected[i], selected[j]] = [selected[j], selected[i]];
+  }
+  // Limiter au nombre demandé (0 = tout)
+  const nb = parseInt(nbQuestions) || 0;
+  if (nb > 0 && nb < selected.length) {
+    selected = selected.slice(0, nb);
+  }
+
+  wqState.questions = selected;
   wqState.currentIndex = 0;
   wqState.selectedChoice = null;
   wqState.isVerified = false;
