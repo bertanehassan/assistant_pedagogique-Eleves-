@@ -1,4 +1,4 @@
-﻿// ════════════════════════════════════════
+// ════════════════════════════════════════
 // CONFIG
 // ════════════════════════════════════════
 import { MODELS, DB_NAME, DB_VERSION, XAI_PROXY_URL, HF_PROXY_URL } from './config.js';
@@ -2791,10 +2791,107 @@ async function executeWorkflow(userQuestion, workflow, images = [], rawDocuments
 
     } catch(e) {
       if (e.name === 'AbortError') throw e;
-      const errMsg = `Erreur à l'étape ${i + 1} (${agent.name}) : ${e.message?.slice(0, 150) || e}`;
-      stepResults.push({ agentName: agent.name, result: errMsg, displayStep: i + 1 });
-      currentInput = errMsg;
-      toast(errMsg, "error");
+
+      // ── Retry automatique sur surcharge Gemini (503 / "high demand" / 429) ──
+      const isOverload = e.message && (
+        e.message.includes('high demand') ||
+        e.message.includes('503') ||
+        e.message.includes('overloaded') ||
+        e.message.includes('RESOURCE_EXHAUSTED') ||
+        e.message.includes('429')
+      );
+
+      if (isOverload) {
+        const MAX_STEP_RETRIES = 3;
+        let stepRetry = 0;
+        let success = false;
+
+        while (stepRetry < MAX_STEP_RETRIES) {
+          stepRetry++;
+          // Délai exponentiel : 15s, 30s, 45s
+          const waitSec = 15 * stepRetry;
+          toast(`⏳ Surcharge Gemini — étape ${i + 1} (${agent.name}) — réessai ${stepRetry}/${MAX_STEP_RETRIES} dans ${waitSec}s…`, 'info');
+
+          // Compte à rebours
+          let elapsed = 0;
+          const tickInterval = 5000;
+          while (elapsed < waitSec * 1000 - tickInterval) {
+            await new Promise(r => setTimeout(r, tickInterval));
+            elapsed += tickInterval;
+            const remaining = Math.ceil((waitSec * 1000 - elapsed) / 1000);
+            if (remaining > 0) toast(`⏳ Réessai ${stepRetry}/${MAX_STEP_RETRIES} — étape ${i + 1} dans ${remaining}s…`, 'info');
+          }
+          await new Promise(r => setTimeout(r, waitSec * 1000 - elapsed));
+
+          try {
+            let finalOutputPrefix = `### 🔗 RAPPORT DE CHAÎNE : ${workflow.name}\n\n`;
+            stepResults.forEach(r => {
+              finalOutputPrefix += `#### ◈ Étape ${r.stepIndex + 1} : ${r.agentName}\n${r.result}\n\n---\n\n`;
+            });
+            const currentStepTitle = `#### ◈ Étape ${i + 1} : ${agent.name}\n`;
+            const agentImages = (i === 0) ? images : [];
+            const agentRawDocs = (i === 0) ? rawDocuments : [];
+
+            let result = await callSubAgentDirect(agent, stepPrompt, recentContext, state.abortController?.signal, (chunk) => {
+              let displayChunk = chunk.replace(/\[STOP\]/ig, '').replace(/\[GOTO:\d+\]/ig, '').replace(/\[EXPORT_WORD\]/ig, '');
+              updateLiveMessage(finalOutputPrefix + currentStepTitle + displayChunk);
+            }, agentImages, agentRawDocs);
+
+            toast(`✅ Étape ${i + 1} (${agent.name}) — réussie après ${stepRetry} réessai(s)`, 'success');
+
+            // Traitement des directives [STOP] / [GOTO] / [EXPORT_WORD]
+            const gotoMatch2 = result.match(/\[GOTO:(\d+)\]/i);
+            let branchMsg2 = "";
+            let stopChain2 = false;
+            if (result.match(/\[STOP\]/i)) {
+              stopChain2 = true;
+              result = result.replace(/\[STOP\]/ig, '').trim();
+              branchMsg2 = "\n\n*([STOP] Chaîne arrêtée par cet agent)*";
+            } else if (gotoMatch2) {
+              jumpCount++;
+              if (jumpCount > MAX_JUMPS) {
+                result = result.replace(/\[GOTO:\d+\]/ig, '').trim();
+                branchMsg2 = "\n\n*(⚠️ [GOTO] ignoré : Limite de sauts atteinte)*";
+              } else {
+                const targetStep2 = parseInt(gotoMatch2[1], 10);
+                result = result.replace(/\[GOTO:\d+\]/ig, '').trim();
+                if (targetStep2 > 0 && targetStep2 <= workflow.steps.length) {
+                  i = targetStep2 - 2;
+                  branchMsg2 = `\n\n*(Branchement vers l'étape ${targetStep2} - Saut ${jumpCount}/${MAX_JUMPS})*`;
+                }
+              }
+            }
+            if (result.match(/\[EXPORT_WORD\]/i)) {
+              result = result.replace(/\[EXPORT_WORD\]/ig, '').trim();
+              exportToWord(result, `Export_Workflow_${Date.now()}.doc`);
+              branchMsg2 += "\n\n*(📄 Fichier Word généré automatiquement)*";
+            }
+
+            currentInput = result;
+            fullContext += `--- Résultat Étape ${i + 1} (${agent.name}) ---\n${result}\n\n`;
+            stepResults.push({ agentName: agent.name, result: result + branchMsg2, displayStep: i + 1 });
+            if (stopChain2) { success = true; break; }
+            success = true;
+            break;
+          } catch(e2) {
+            if (e2.name === 'AbortError') throw e2;
+            if (stepRetry >= MAX_STEP_RETRIES) {
+              const errMsg = `Erreur à l'étape ${i + 1} (${agent.name}) : ${e2.message?.slice(0, 200) || e2}`;
+              stepResults.push({ agentName: agent.name, result: errMsg, displayStep: i + 1 });
+              currentInput = errMsg;
+              toast(errMsg, "error");
+            }
+          }
+        }
+        if (!success) {
+          // déjà enregistré dans la boucle retry
+        }
+      } else {
+        const errMsg = `Erreur à l'étape ${i + 1} (${agent.name}) : ${e.message?.slice(0, 150) || e}`;
+        stepResults.push({ agentName: agent.name, result: errMsg, displayStep: i + 1 });
+        currentInput = errMsg;
+        toast(errMsg, "error");
+      }
     }
   }
 
