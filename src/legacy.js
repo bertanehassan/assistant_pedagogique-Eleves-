@@ -15088,6 +15088,7 @@ window.openTutorPanel = function() {
       models.forEach(m => {
         // Extraire le groupe à partir de l'emoji du name
         const firstChar = m.name.charAt(0);
+        let group = 'Autres';
         if (m.name.includes('Auto-Router') || m.id.includes('openrouter/free')) group = '🔀 Routeur Intelligent';
         else if (m.name.includes('Mistral') || m.name.includes('Ministral') || m.name.includes('Pixtral')) group = '🔥 Mistral AI';
         else if (m.name.includes('Gemini') || m.name.includes('Gemma')) group = '✨ Google';
