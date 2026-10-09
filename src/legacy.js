@@ -1933,6 +1933,14 @@ async function universalFetchLlmStream(reqBody, signal, onChunk, onFinish) {
       const err2 = await res.text();
       let errMsg = err2.slice(0, 300);
       try { const j = JSON.parse(err2); errMsg = j.message || j.error?.message || errMsg; } catch(e) {}
+
+      // Auto-fallback pour les modèles OpenRouter qui n'ont pas d'endpoints actifs
+      if (apiConf.provider === "openrouter" && reqBody.model !== "openrouter/free" && (errMsg.includes("No endpoints found") || res.status === 404)) {
+        console.warn(`[OpenRouter Fallback] ${reqBody.model} indisponible (${errMsg}). Bascule automatique sur openrouter/free.`);
+        reqBody.model = "openrouter/free";
+        return universalFetchLlmStream(reqBody, signal, onChunk, onFinish);
+      }
+
       const err = new Error(errMsg);
       err.httpStatus = res.status;
       throw err;
@@ -2410,7 +2418,7 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
       ];
 
       const reqBodySynthesis = {
-        model: activeModelId || state.model,
+        model: model.id,
         messages: synthesisMessages,
         temperature: agentTemp,
         max_tokens: agentMaxTok,
@@ -2449,7 +2457,7 @@ Le système se chargera automatiquement de mélanger les positions. Toi, tu mets
     } else {
       // ── APPEL UNIVERSEL : supporte Mistral, Gemini, OpenRouter ──
       const reqBodyUniversal = {
-        model: activeModelId || state.model,
+        model: model.id,
         messages: contextMessages,
         temperature: agentTemp,
         max_tokens: agentMaxTok,
@@ -2586,7 +2594,10 @@ async function callSubAgentDirect(agent, userQuestion, recentMessages, abortSign
     if (lessonsBlock) prompt += `\n\n[RAPPEL CRITIQUE - LIS CECI AVANT DE RÉPONDRE]\n${lessonsBlock}`;
   } catch(e) {}
 
-  let modelId = (agent.modelPref && agent.modelPref !== '') ? agent.modelPref : (state.model || "mistral-small-2603");
+  let modelId = (agent.modelPref && agent.modelPref !== '') ? agent.modelPref : (state.model || "gemini-3.8-flash");
+  if (!MODELS.some(m => m.id === modelId)) {
+    modelId = (MODELS[0] && MODELS[0].id) || "gemini-3.8-flash";
+  }
   const temp = agent.temperature !== undefined ? agent.temperature : 0.4;
   const maxTok = agent.maxTokens || 8192; // Autoriser des réponses longues
 
@@ -7068,8 +7079,14 @@ export const mountApp = async () => {
   });
   try {
     const savedModel = await db.get('settings', 'model');
-    if (savedModel) { state.model = savedModel.value; modelSel.value = state.model; }
-    else modelSel.value = state.model;
+    if (savedModel && MODELS.some(m => m.id === savedModel.value)) { 
+      state.model = savedModel.value; 
+      modelSel.value = state.model; 
+    } else {
+      state.model = MODELS[0].id;
+      modelSel.value = state.model;
+      db.put('settings', { id: 'model', value: state.model }).catch(()=>{});
+    }
   } catch(e) {}
 
   // API Key Mistral & Gemini & OpenRouter & xAI & Hugging Face

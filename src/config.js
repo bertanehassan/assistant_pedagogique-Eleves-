@@ -15,21 +15,14 @@ export const MODELS = [
   { id:"ministral-8b-2512",                             name:"⚡ MicroGenius 8B — Usage Quotidien",       badge:"⚡ Rapide",      desc:"Compact, très rapide, texte + vision, idéal téléphones/tablettes",       tokens:256000, ctx:"256K", temp:0.42, vision:true },
 
   // ══════════════════════════════════════════════════
-  // 🆓 MODÈLES MULTIMODAUX & OMNI GRATUITS (OpenRouter :free)
+  // 🆓 MODÈLES MULTIMODAUX & OMNI GRATUITS (OpenRouter actifs)
   // ══════════════════════════════════════════════════
-  { id:"qwen/qwen-2.5-vl-72b-instruct:free",            name:"🌐 Qwen 2.5 VL 72B — Vision & Copies (Gratuit)", badge:"🆓 Vision", desc:"Leader open-source vision : OCR manuscrit, schémas, géométrie, 100% gratuit", tokens:32000, ctx:"32K", temp:0.4, vision:true },
-  { id:"meta-llama/llama-4-maverick:free",              name:"🦙 Llama 4 Maverick — Vision 1M (Gratuit)",  badge:"🆓 Vision",     desc:"Meta Llama 4, vision + texte, contexte géant 1M, 100% gratuit",          tokens:1000000, ctx:"1M", temp:0.5, vision:true },
-  { id:"mistralai/pixtral-12b:free",                    name:"🔥 Pixtral 12B — Vision Mistral (Gratuit)", badge:"🆓 Vision",     desc:"Modèle multimodal Mistral, excellent en français et documents, gratuit", tokens:128000, ctx:"128K", temp:0.42, vision:true },
-  { id:"openrouter/free",                               name:"🔀 Auto-Router Multimodal (Gratuit)",       badge:"🆓 Auto",       desc:"Bascule intelligente vers le meilleur modèle gratuit disponible avec vision", tokens:128000, ctx:"128K", temp:0.5, vision:true },
-
-  // ══════════════════════════════════════════════════
-  // 📚 MODÈLES ENSEIGNEMENT & RAISONNEMENT GRATUITS (OpenRouter)
-  // ══════════════════════════════════════════════════
-  { id:"qwen/qwen3-235b-a22b:free",                     name:"🌐 Qwen 3 235B — Expert Arabe & Maths (Gratuit)", badge:"🆓 Arabe/Maths", desc:"Très grand modèle multilingue, exceptionnel pour l'arabe et les sciences", tokens:40000, ctx:"40K", temp:0.5 },
-  { id:"nvidia/llama-3.1-nemotron-ultra-253b-v1:free",  name:"⚡ Nemotron Ultra 253B — Raisonnement (Gratuit)", badge:"🆓 Raisonnement", desc:"NVIDIA ultra performant 253B, explications pas-à-pas approfondies", tokens:128000, ctx:"128K", temp:0.5 },
-  { id:"google/gemma-3-27b-it:free",                    name:"🔷 Gemma 3 27B — Google Open (Gratuit)",    badge:"🆓 Gratuit",     desc:"Modèle open-source Google, 27B paramètres équilibré via OpenRouter",     tokens:96000, ctx:"96K", temp:0.5 },
-  { id:"meta-llama/llama-4-scout:free",                 name:"🦙 Llama 4 Scout — Ultra Rapide (Gratuit)", badge:"🆓 Rapide",      desc:"Meta Llama 4 Scout, réponse instantanée, multilingue, 100% gratuit",     tokens:512000, ctx:"512K", temp:0.5 },
-  { id:"mistralai/mistral-small-3.2-24b-instruct:free", name:"🔥 Mistral Small 3.2 24B (Gratuit)",        badge:"🆓 Gratuit",     desc:"Mistral 24B instruct, léger, rapide, multilingue, 100% gratuit",        tokens:128000, ctx:"128K", temp:0.42 },
+  { id:"openrouter/free",                               name:"🔀 Auto-Router Multimodal (Gratuit)",       badge:"🆓 Auto",       desc:"Routeur officiel OpenRouter : bascule automatique sur les modèles gratuits actifs avec vision", tokens:200000, ctx:"200K", temp:0.5, vision:true },
+  { id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", name:"⚡ Nemotron 3 Nano Omni (Gratuit)",    badge:"🆓 Omni",       desc:"NVIDIA Omni natif (texte, vision, audio), raisonnement poussé, 100% gratuit", tokens:256000, ctx:"256K", temp:0.5, vision:true, audio:true },
+  { id:"google/gemma-4-26b-a4b-it:free",               name:"🔷 Gemma 4 26B — Vision & Raisonnement (Gratuit)", badge:"🆓 Vision", desc:"Dernière génération Gemma 4 Google, multimodalité native et haute précision", tokens:262144, ctx:"262K", temp:0.5, vision:true },
+  { id:"google/gemma-4-31b-it:free",                   name:"🔷 Gemma 4 31B — Grand Format (Gratuit)",   badge:"🆓 Vision",     desc:"Version 31B Google Gemma 4, excellent pour rédactions et sciences", tokens:262144, ctx:"262K", temp:0.5, vision:true },
+  { id:"thinkingmachines/inkling:free",                 name:"✨ Inkling 1M — Contexte Géant (Gratuit)",  badge:"🆓 1M Ctx",     desc:"Modèle multimodal ThinkMachines avec 1 million de tokens de contexte, gratuit", tokens:1048576, ctx:"1M", temp:0.5, vision:true, audio:true },
+  { id:"nvidia/nemotron-3-super-120b-a12b:free",        name:"⚡ Nemotron 3 Super 120B (Gratuit)",        badge:"🆓 Raisonnement", desc:"NVIDIA 120B puissant pour analyse approfondie et synthèses", tokens:128000, ctx:"128K", temp:0.5 },
 
   // ══════════════════════════════════════════════════
   // 🧠 DEEPSEEK  (OpenRouter)
