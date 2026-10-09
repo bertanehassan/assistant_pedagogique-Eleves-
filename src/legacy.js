@@ -15002,10 +15002,15 @@ window.onTutorModelChange = function(value) {
 window.tutorEditMessage = function(index) {
   const msgs = state.tutorMessages;
   if (index < 0 || index >= msgs.length) return;
-  const msgContent = msgs[index].content || '';
+  const msg = msgs[index];
+  const msgContent = msg.content || '';
   // Remettre le texte dans le textarea (sans les pièces jointes texte qui ont pu être concaténées)
   // On extrait juste la partie avant le premier '\n\n---\n' s'il y en a
-  const cleanContent = msgContent.split('\n\n---\n')[0];
+  const cleanContent = msg.originalContent !== undefined ? msg.originalContent : msgContent.split('\n\n---\n')[0];
+  if (msg.files && msg.files.length > 0) {
+    state.tutorAttachedFiles = [...msg.files];
+    if (typeof updateTutorFilePreview === 'function') updateTutorFilePreview();
+  }
   const input = document.getElementById('tutor-user-input');
   if (input) {
     input.value = cleanContent;
@@ -15034,8 +15039,13 @@ window.tutorEditMessage = function(index) {
 window.tutorResendMessage = function(index) {
   const msgs = state.tutorMessages;
   if (index < 0 || index >= msgs.length) return;
-  const content = msgs[index].content || '';
-  const cleanContent = content.split('\n\n---\n')[0];
+  const msg = msgs[index];
+  const content = msg.content || '';
+  const cleanContent = msg.originalContent !== undefined ? msg.originalContent : content.split('\n\n---\n')[0];
+  if (msg.files && msg.files.length > 0) {
+    state.tutorAttachedFiles = [...msg.files];
+    if (typeof updateTutorFilePreview === 'function') updateTutorFilePreview();
+  }
   // Couper l'historique à partir de cet index
   state.tutorMessages.splice(index);
   // Supprimer les bulles DOM à partir de cet index
@@ -15379,7 +15389,7 @@ window.restoreTutorSession = async function(id) {
 
     // Rejouer les messages dans le DOM
     for (const msg of session.messages) {
-      state.tutorMessages.push({ role: msg.role, content: msg.content });
+      state.tutorMessages.push({ role: msg.role, content: msg.content, originalContent: msg.originalContent, files: msg.files ? [...msg.files] : [] });
       const msgIdx = state.tutorMessages.length - 1;
 
       const div = document.createElement('div');
@@ -15390,8 +15400,18 @@ window.restoreTutorSession = async function(id) {
         div.setAttribute('data-msg-index', msgIdx);
         div.style = 'padding:4px 0 12px 0;word-break:break-word;';
         // Afficher uniquement la partie avant les pièces jointes
-        const displayContent = (msg.content || '').split('\n\n---\n')[0];
-        div.innerHTML = `<b style="color:var(--neon)">Vous :</b> <span dir="auto">${escapeHtml(displayContent)}</span>
+        const displayContent = msg.originalContent !== undefined ? msg.originalContent : (msg.content || '').split('\n\n---\n')[0];
+        let userHtml = `<b style="color:var(--neon)">Vous :</b> <span dir="auto">${escapeHtml(displayContent)}</span>`;
+        
+        if (msg.files && msg.files.length > 0) {
+          userHtml += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">' +
+            msg.files.map(f => {
+              if (f.type === 'image') return `<img src="${f.data}" alt="${escapeHtml(f.name)}" style="max-height:80px;border-radius:6px;border:1px solid rgba(76,215,246,0.3);">`;
+              return `<span style="font-size:11px;padding:2px 8px;background:rgba(76,215,246,0.08);border:1px solid rgba(76,215,246,0.2);border-radius:6px;color:var(--neon);">\ud83d\udcc4 ${escapeHtml(f.name)}</span>`;
+            }).join('') + '</div>';
+        }
+        
+        userHtml += `
           <div class="tutor-msg-actions">
             <button class="tutor-action-btn" onclick="tutorEditMessage(${msgIdx})" title="Modifier ce message">
               <span class="material-symbols-outlined">edit</span> Modifier
@@ -15400,6 +15420,7 @@ window.restoreTutorSession = async function(id) {
               <span class="material-symbols-outlined">refresh</span> Renvoyer
             </button>
           </div>`;
+        div.innerHTML = userHtml;
       } else {
         div.className = 'tutor-message assistant';
         div.style = 'padding:4px 0 16px 0;word-break:break-word;';
@@ -15856,7 +15877,7 @@ window.sendTutorMessage = async function() {
     if (docParts) fullUserContent = content + docParts;
   }
 
-  state.tutorMessages.push({ role: 'user', content: fullUserContent });
+  state.tutorMessages.push({ role: 'user', content: fullUserContent, originalContent: content, files: files.length > 0 ? [...files] : [] });
   const currentMsgIdx = state.tutorMessages.length - 1; // index de ce message dans l'historique
 
   const userDiv = document.createElement('div');
