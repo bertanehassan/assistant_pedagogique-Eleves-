@@ -3,6 +3,7 @@
 // ════════════════════════════════════════
 import { MODELS, DB_NAME, DB_VERSION, XAI_PROXY_URL, HF_PROXY_URL } from './config.js';
 import { state } from './state.js';
+window.state = state;
 import { fetchWithRetry as fetchWithRetryBase } from './composables/useMistral.js';
 import { t } from './i18n.js';
 import { loginWithGoogle, logout, onAuthChange, shareQuiz, getSharedQuiz, saveUserScore, getUserScores } from './firebase.js';
@@ -15782,6 +15783,13 @@ window.tutorHandleFiles = async function(files) {
   }
 };
 
+window.removeTutorAttachedFile = function(index) {
+  if (state.tutorAttachedFiles && state.tutorAttachedFiles.length > index) {
+    state.tutorAttachedFiles.splice(index, 1);
+    updateTutorFilePreview();
+  }
+};
+
 function updateTutorFilePreview() {
   const bar = document.getElementById('tutor-file-preview-bar');
   if (!bar) return;
@@ -15795,7 +15803,7 @@ function updateTutorFilePreview() {
     const icon = f.type === 'image' ? '🖼' : '📄';
     return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(76,215,246,0.08);border:1px solid rgba(76,215,246,0.2);border-radius:8px;font-size:11px;color:var(--neon);">
       ${icon} <b>${escapeHtml(f.name)}</b>
-      <button onclick="state.tutorAttachedFiles.splice(${i},1);updateTutorFilePreview();" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:0 2px;">✕</button>
+      <button onclick="removeTutorAttachedFile(${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:0 2px;">✕</button>
     </span>`;
   }).join('');
 }
